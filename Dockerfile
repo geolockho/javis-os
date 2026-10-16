@@ -77,7 +77,9 @@ RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}" \
 # CI resolves latest to a concrete version before building: a new CLI version
 # changes this layer's cache key even when the Dockerfile itself is unchanged.
 ARG CODEX_CLI_VERSION=0.153.4
-RUN npm install -g @openai/codex@${CODEX_CLI_VERSION} && npm cache clean --force && codex --version
+RUN npm install -g --include=optional "@openai/codex@${CODEX_CLI_VERSION}" "@openai/codex-linux-x64@npm:@openai/codex@${CODEX_CLI_VERSION}-linux-x64" \
+    && npm cache clean --force \
+    && codex --version
 
 # Gemini CLI KHÔNG còn được cài sẵn (bỏ ở 0.29.1).
 #
