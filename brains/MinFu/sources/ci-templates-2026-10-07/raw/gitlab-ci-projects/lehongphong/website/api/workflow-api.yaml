@@ -1,0 +1,48 @@
+# build image user
+build-test-workflow:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/workflow
+    DOCKERFILE: ./Environments/Testing/WorkFlow.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.WorkFlow/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-lhp-onpremise-workflow:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/workflow
+    DOCKERFILE: ./Environments/Testing/WorkFlow.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.WorkFlow/**/*
+      - Services/Shared/**/*
+    refs:
+      - lhp-onpremise
+
+build-staging-workflow:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/workflow
+    DOCKERFILE: ./Environments/Staging/WorkFlow.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.WorkFlow/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-workflow:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/workflow
+    DOCKERFILE: ./Environments/Production/WorkFlow.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.WorkFlow/**/*
+      - Services/Shared/**/*
+    refs:
+      - "/^prod-[0-9]+\\.[0-9]+\\.[0-9]+$/"

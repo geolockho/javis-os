@@ -1,0 +1,25 @@
+# build image fe
+build-test-web:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/web/learning/lms
+    DOCKERFILE: ./Dockerfile.Testing
+  extends: .build-image-gitlab-registry
+  only:
+    - testing
+
+build-staging-web:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/web/learning/lms
+    DOCKERFILE: ./Dockerfile.Staging
+  extends: .build-image-gitlab-registry
+  only:
+    - staging
+
+build-prod-web:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/web/learning/lms
+    DOCKERFILE: ./Dockerfile.Production
+  extends: .build-image-gitlab-registry
+  only:
+    refs:
+      - /^prod-[0-9]+\.[0-9]+\.[0-9]+$/

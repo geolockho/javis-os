@@ -1,0 +1,48 @@
+# build image auth
+build-test-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/system
+    DOCKERFILE: ./Environments/Testing/System.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-lhp-onpremise-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/system
+    DOCKERFILE: ./Environments/Testing/System.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - lhp-onpremise
+
+build-staging-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/system
+    DOCKERFILE: ./Environments/Staging/System.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/system
+    DOCKERFILE: ./Environments/Production/System.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - "/^prod-[0-9]+\\.[0-9]+\\.[0-9]+$/"

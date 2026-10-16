@@ -1,0 +1,36 @@
+# build image learning
+build-test-learning:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/learning
+    DOCKERFILE: ./Environments/Testing/Learning.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Learning/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+
+build-staging-learning:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/learning
+    DOCKERFILE: ./Environments/Staging/Learning.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Learning/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+
+build-prod-learning:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/learning
+    DOCKERFILE: ./Environments/Production/Learning.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Learning/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

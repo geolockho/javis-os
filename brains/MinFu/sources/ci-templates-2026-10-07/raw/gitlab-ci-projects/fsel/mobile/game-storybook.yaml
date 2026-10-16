@@ -1,0 +1,25 @@
+# build image fe
+build-test-gamestorybook:
+  before_script:
+    - export PATH="$PATH:/home/flutter/bin"
+    - export PATH="$PATH:/home/gitlab-runner/.pub-cache/bin"
+    - flutter pub get
+    - make gen-code
+    - flutter build web --release
+    - ls -al ./build/web
+  extends: .build-image-gitlab-registry
+  tags:
+    - atlantic-shell
+  only:
+    - dev
+
+build-staging-gamestorybook:
+  extends: .build-image-gitlab-registry
+  only:
+    - staging
+
+build-prod-gamestorybook:
+  extends: .build-image-gitlab-registry
+  only:
+    refs:
+      - /^prod-[0-9]+\.[0-9]+\.[0-9]+$/

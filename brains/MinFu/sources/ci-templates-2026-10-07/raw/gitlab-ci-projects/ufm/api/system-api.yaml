@@ -1,0 +1,25 @@
+# build image system
+build-test-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/system
+    DOCKERFILE: ./Environments/Testing/System.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/system
+    DOCKERFILE: ./Environments/Staging/System.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.System/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+

@@ -1,0 +1,26 @@
+# build image auth
+build-test-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/auth
+    DOCKERFILE: ./Environments/Testing/Auth.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/auth
+    DOCKERFILE: ./Environments/Staging/Auth.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

@@ -1,0 +1,36 @@
+# build image cms
+build-test-cms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/cms
+    DOCKERFILE: ./Environments/Testing/Cms.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Cms/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-cms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/cms
+    DOCKERFILE: ./Environments/Staging/Cms.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Cms/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-cms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/cms
+    DOCKERFILE: ./Environments/Production/Cms.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Cms/**/*
+      - Services/Shared/**/*
+    refs:
+      - main

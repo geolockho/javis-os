@@ -1,0 +1,30 @@
+.build-image-gitlab-registry:
+  stage: build-image
+  retry:
+    max: 2
+  script:
+    - |
+      TAG="${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}-$(date +%d%m%y)"
+      export TAG
+
+      printf '%s' "$CI_JOB_TOKEN" |
+        docker login "$CI_REGISTRY" \
+          --username "$CI_REGISTRY_USER" \
+          --password-stdin
+
+      if [ -n "${PACKAGE_CONFIG_FILE:-}" ]; then
+        docker build \
+          --secret "id=${PACKAGE_CONFIG_SECRET_ID},src=${PACKAGE_CONFIG_FILE}" \
+          -f "$DOCKERFILE" \
+          -t "$IMAGE_NAME:$TAG" \
+          .
+      else
+        docker build \
+          -f "$DOCKERFILE" \
+          -t "$IMAGE_NAME:$TAG" \
+          .
+      fi
+
+      docker push "$IMAGE_NAME:$TAG"
+  tags:
+    - docker-runner

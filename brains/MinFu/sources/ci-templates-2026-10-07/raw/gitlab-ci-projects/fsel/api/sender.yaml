@@ -1,0 +1,47 @@
+# build image sender
+build-test-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Testing/Sender.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/Sender.Testing.Dockerfile
+        - Services/Fsel.Sender/**/*
+        - Services/Shared/**/*
+
+build-staging-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Staging/Sender.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Sender/**/*
+        - Services/Shared/**/*
+
+build-pre-prod-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Testing/Sender.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/Sender.Testing.Dockerfile
+        - Services/Fsel.Sender/**/*
+        - Services/Shared/**/*
+
+build-prod-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Production/Sender.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'

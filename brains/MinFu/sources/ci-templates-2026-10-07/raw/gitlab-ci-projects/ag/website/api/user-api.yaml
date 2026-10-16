@@ -1,0 +1,36 @@
+# build image user
+build-test-user:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/user
+    DOCKERFILE: ./Environments/Testing/User.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-user:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/user
+    DOCKERFILE: ./Environments/Staging/User.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-user:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/user
+    DOCKERFILE: ./Environments/Production/User.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - main

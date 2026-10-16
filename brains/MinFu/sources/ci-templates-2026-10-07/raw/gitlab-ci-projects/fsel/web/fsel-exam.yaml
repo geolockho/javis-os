@@ -1,0 +1,29 @@
+build-image-testing:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/web/fsel-exam
+    DOCKERFILE: ./Dockerfile.Testing
+  extends:
+    - .nexus-npm
+    - .build-image-gitlab-registry
+  rules:
+    - if: $CI_COMMIT_BRANCH == "testing"
+
+build-image-preproduction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/web/fsel-exam
+    DOCKERFILE: ./Dockerfile.PreProduction
+  extends:     
+    - .nexus-npm
+    - .build-image-gitlab-registry
+  rules:
+    - if: $CI_COMMIT_BRANCH == "pre-production"
+
+build-image-production:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/web/fsel-exam
+    DOCKERFILE: ./Dockerfile.Production
+  extends: 
+    - .nexus-npm
+    - .build-image-gitlab-registry
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/

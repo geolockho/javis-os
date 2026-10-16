@@ -109,4 +109,20 @@ if [ "${JAVIS_AUTO_INSTALL_CLIS:-1}" != "0" ] && mkdir -p "$CLI_STATE" 2>/dev/nu
     ) </dev/null >/dev/null 2>&1 & )
 fi
 
+# Seed all brains from the repo into the named volume /brains. Copy only missing
+# files so brain data already on the VPS always takes precedence.
+REPO_BRAINS_SEED="/app/brains"
+if [ -d "$REPO_BRAINS_SEED" ]; then
+    for seed in "$REPO_BRAINS_SEED"/*; do
+        [ -d "$seed" ] || continue
+        brain_name=${seed##*/}
+        persist_brain="/brains/$brain_name"
+        if mkdir -p "$persist_brain"; then
+            cp -an "$seed/." "$persist_brain/" || \
+                echo "[brain seed] Could not fully copy $brain_name into /brains" >&2
+        else
+            echo "[brain seed] Could not create $persist_brain" >&2
+        fi
+    done
+fi
 exec "$@"

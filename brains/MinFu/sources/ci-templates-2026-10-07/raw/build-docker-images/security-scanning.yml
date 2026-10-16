@@ -1,0 +1,102 @@
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  # - template: Code-Quality.gitlab-ci.yml
+
+bandit-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.py'
+
+brakeman-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.rb'
+        - '**/Gemfile'
+
+eslint-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.html'
+        - '**/*.js'
+        - '**/*.jsx'
+        - '**/*.ts'
+        - '**/*.tsx'
+
+flawfinder-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.c'
+        - '**/*.cc'
+        - '**/*.cpp'
+        - '**/*.c++'
+        - '**/*.cp'
+        - '**/*.cxx'
+
+gosec-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.go'
+
+nodejs-scan-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/package.json'
+
+phpcs-security-audit-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.php'
+
+pmd-apex-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.cls'
+
+security-code-scan-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.csproj'
+        - '**/*.vbproj'
+
+semgrep-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.py'
+        - '**/*.js'
+        - '**/*.jsx'
+        - '**/*.ts'
+        - '**/*.tsx'
+        - '**/*.c'
+        - '**/*.go'
+        - '**/*.java'
+        - '**/*.cs'
+        - '**/*.html'
+
+sobelow-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - 'mix.exs'
+
+spotbugs-sast:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"
+      exists:
+        - '**/*.groovy'
+        - '**/*.java'
+        - '**/*.scala'
+        - '**/*.kt'
+
+# code_quality:
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "prod"

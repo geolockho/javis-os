@@ -1,0 +1,26 @@
+# build image fe
+build-test-web:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/web
+    DOCKERFILE: ./docker/develop/Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    - testing
+
+#build-staging-web:
+#  variables:
+#    IMAGE_NAME: registry.fsel.edu.vn/5sis/web
+#    DOCKERFILE: ./docker/uat/Dockerfile
+#  extends: .build-image-gitlab-registry
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH == "staging"'
+
+build-prod-web:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/web
+    DOCKERFILE: ./docker/uat/Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    refs:
+      - /^prod-[0-9]+\.[0-9]+\.[0-9]+$/
+

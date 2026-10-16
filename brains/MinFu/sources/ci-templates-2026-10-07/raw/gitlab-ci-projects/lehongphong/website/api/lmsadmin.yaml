@@ -1,0 +1,48 @@
+# build image lmsadmin
+build-test-lmsadmin:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsadminapi
+    DOCKERFILE: ./Environments/Testing/LmsAdmin.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.LmsAdmin/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-lhp-onpremise-lmsadmin:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsadminapi
+    DOCKERFILE: ./Environments/Testing/LmsAdmin.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.LmsAdmin/**/*
+      - Services/Shared/**/*
+    refs:
+      - lhp-onpremise
+
+build-staging-lmsadmin:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsadminapi
+    DOCKERFILE: ./Environments/Staging/LmsAdmin.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.LmsAdmin/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-lmsadmin:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsadminapi
+    DOCKERFILE: ./Environments/Production/LmsAdmin.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.LmsAdmin/**/*
+      - Services/Shared/**/*
+    refs:
+      - "/^prod-[0-9]+\\.[0-9]+\\.[0-9]+$/"

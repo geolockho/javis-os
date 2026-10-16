@@ -1,0 +1,36 @@
+# build image sender
+build-test-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/sender
+    DOCKERFILE: ./Environments/Testing/Sender.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Sender/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/sender
+    DOCKERFILE: ./Environments/Staging/Sender.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Sender/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/atlantic-group/web/api/sender
+    DOCKERFILE: ./Environments/Production/Sender.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/AG.Sender/**/*
+      - Services/Shared/**/*
+    refs:
+      - main

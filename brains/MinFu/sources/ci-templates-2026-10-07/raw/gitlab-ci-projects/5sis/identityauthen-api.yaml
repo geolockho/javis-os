@@ -1,0 +1,36 @@
+# build image identityauthen
+build-test-identityauthen:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identityauthen
+    DOCKERFILE: ./Environments/Testing/Auth.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+
+build-staging-identityauthen:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identityauthen
+    DOCKERFILE: ./Environments/Staging/Auth.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+
+build-prod-identityauthen:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identityauthen
+    DOCKERFILE: ./Environments/Production/Auth.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

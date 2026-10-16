@@ -1,0 +1,26 @@
+# build image interaction
+build-test-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Testing/Interaction.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Interaction/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Staging/Interaction.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Interaction/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

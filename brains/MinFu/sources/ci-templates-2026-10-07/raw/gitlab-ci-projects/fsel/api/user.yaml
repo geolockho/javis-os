@@ -1,0 +1,47 @@
+# build image identity
+build-test-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Testing/User.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/User.Testing.Dockerfile
+        - Services/Fsel.Identity/**/*
+        - Services/Shared/**/*
+
+build-staging-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Staging/User.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Identity/**/*
+        - Services/Shared/**/*
+
+build-pre-prod-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Testing/User.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/User.Testing.Dockerfile
+        - Services/Fsel.Identity/**/*
+        - Services/Shared/**/*
+
+build-prod-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Production/User.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'

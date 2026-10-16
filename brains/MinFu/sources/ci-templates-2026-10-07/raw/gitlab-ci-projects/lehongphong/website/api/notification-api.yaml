@@ -1,0 +1,47 @@
+# build image notification
+build-test-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/notification
+    DOCKERFILE: ./Environments/Testing/Notification.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-lhp-onpremise-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/notification
+    DOCKERFILE: ./Environments/Testing/Notification.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - lhp-onpremise
+
+build-staging-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/notification
+    DOCKERFILE: ./Environments/Staging/Notification.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+build-prod-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/notification
+    DOCKERFILE: ./Environments/Production/Notification.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - "/^prod-[0-9]+\\.[0-9]+\\.[0-9]+$/"

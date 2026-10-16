@@ -1,0 +1,25 @@
+# build image gateway
+build-test-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Testing/Gateway.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Gateway/Fsel.Gateway.Api/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+build-staging-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Staging/Gateway.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Gateway/Fsel.Gateway.Api/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

@@ -1,0 +1,24 @@
+.nexus-npm:
+  variables:
+    PACKAGE_CONFIG_FILE: ".npmrc.nexus"
+    PACKAGE_CONFIG_SECRET_ID: "npmrc"
+    NPM_REGISTRY: "http://10.10.0.205:8081/repository/npm-group/"
+  before_script:
+    - |
+      NEXUS_BASIC_AUTH="$(
+        printf '%s:%s' "$NEXUS_CI_USERNAME" "$NEXUS_CI_PASSWORD" |
+        base64 |
+        tr -d '\r\n'
+      )"
+
+      NPM_AUTH_PATH="${NPM_REGISTRY#http:}"
+      NPM_AUTH_PATH="${NPM_AUTH_PATH#https:}"
+
+      printf \
+        'registry=%s\nreplace-registry-host=npmjs\nalways-auth=true\n%s:_auth=%s\naudit=false\nfund=false\n' \
+        "$NPM_REGISTRY" \
+        "$NPM_AUTH_PATH" \
+        "$NEXUS_BASIC_AUTH" \
+        > "$PACKAGE_CONFIG_FILE"
+  after_script:
+    - rm -f "$PACKAGE_CONFIG_FILE"

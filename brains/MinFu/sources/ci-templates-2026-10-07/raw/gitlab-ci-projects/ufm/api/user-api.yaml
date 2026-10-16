@@ -1,0 +1,26 @@
+# build image identity
+build-test-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Testing/User.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/user
+    DOCKERFILE: ./Environments/Staging/User.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Identity/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

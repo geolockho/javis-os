@@ -1,0 +1,26 @@
+# build image notification
+build-test-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/notification
+    DOCKERFILE: ./Environments/Testing/Notification.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-notification:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/notification
+    DOCKERFILE: ./Environments/Staging/Notification.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Notification/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

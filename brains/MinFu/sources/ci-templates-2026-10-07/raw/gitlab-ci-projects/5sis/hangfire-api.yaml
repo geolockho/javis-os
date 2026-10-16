@@ -1,0 +1,34 @@
+# build image hangfire
+build-test-hangfire:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/hangfire
+    DOCKERFILE: ./Environments/Testing/Hangfire.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Hangfire/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+build-staging-hangfire:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/hangfire
+    DOCKERFILE: ./Environments/Staging/Hangfire.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Hangfire/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+build-prod-hangfire:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/hangfire
+    DOCKERFILE: ./Environments/Production/Hangfire.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Hangfire/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

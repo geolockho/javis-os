@@ -1,0 +1,36 @@
+# build image activities
+build-test-activities:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/activities
+    DOCKERFILE: ./Environments/Testing/Activities.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Activities/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - testing
+build-staging-activities:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/activities
+    DOCKERFILE: ./Environments/Staging/Activities.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Activities/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - staging
+build-prod-activities:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/activities
+    DOCKERFILE: ./Environments/Production/Activities.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Activities/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - main
+  tags:
+    - atlantic-k8s

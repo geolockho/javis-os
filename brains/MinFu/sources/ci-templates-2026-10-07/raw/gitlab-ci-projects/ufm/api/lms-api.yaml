@@ -1,0 +1,26 @@
+# build image lmsapi
+build-test-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Testing/Lms.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Course/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Staging/Lms.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Course/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

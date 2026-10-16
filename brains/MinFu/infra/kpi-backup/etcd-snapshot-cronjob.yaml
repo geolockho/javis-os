@@ -1,0 +1,95 @@
+# etcd snapshot mỗi 6 giờ -> S3. Chạy trên 1 master (hostNetwork, mount pki của etcd).
+# initContainer 1: etcdctl snapshot save; initContainer 2: etcdutl verify.
+# rclone upload chạy trong initContainer; container cuối xoá bản cũ hơn 14 ngày.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-snapshot
+  namespace: kube-system
+spec:
+  schedule: "0 2 * * *"
+  timeZone: Asia/Ho_Chi_Minh
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: OnFailure
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          initContainers:
+            - name: snapshot
+              image: registry.k8s.io/etcd:3.6.8-0
+              securityContext:
+                runAsUser: 0
+              command: ["etcdctl"]
+              args:
+                - --endpoints=https://127.0.0.1:2379
+                - --cacert=/etc/kubernetes/pki/etcd/ca.crt
+                - --cert=/etc/kubernetes/pki/etcd/server.crt
+                - --key=/etc/kubernetes/pki/etcd/server.key
+                - snapshot
+                - save
+                - /backup/etcd-snapshot.db
+              volumeMounts:
+                - { name: etcd-certs, mountPath: /etc/kubernetes/pki/etcd, readOnly: true }
+                - { name: backup, mountPath: /backup }
+            - name: verify
+              image: registry.k8s.io/etcd:3.6.8-0
+              command: ["etcdutl"]
+              args: ["snapshot", "status", "/backup/etcd-snapshot.db", "-w", "table"]
+              volumeMounts:
+                - { name: backup, mountPath: /backup }
+            - name: upload
+              image: docker.io/rclone/rclone:1.75.2
+              env:
+                - { name: RCLONE_CONFIG_S3_TYPE, value: s3 }
+                - { name: RCLONE_CONFIG_S3_PROVIDER, value: Minio }
+                - { name: RCLONE_CONFIG_S3_ENDPOINT, value: "https://s3-storage-kpis.mof.gov.vn" }
+                - name: RCLONE_CONFIG_S3_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: { name: backup-s3, key: S3_ACCESS_KEY }
+                - name: RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: backup-s3, key: S3_SECRET_KEY }
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef: { fieldPath: metadata.name }
+              command: ["rclone"]
+              args: ["--ca-cert", "/etc/s3-ca/ca.pem", "copyto", "/backup/etcd-snapshot.db", "s3:btc/etcd-backup/kpi/etcd/etcd-$(POD_NAME).db"]
+              volumeMounts:
+                - { name: backup, mountPath: /backup }
+                - { name: s3-ca, mountPath: /etc/s3-ca, readOnly: true }
+          containers:
+            - name: retention
+              image: docker.io/rclone/rclone:1.75.2
+              env:
+                - { name: RCLONE_CONFIG_S3_TYPE, value: s3 }
+                - { name: RCLONE_CONFIG_S3_PROVIDER, value: Minio }
+                - { name: RCLONE_CONFIG_S3_ENDPOINT, value: "https://s3-storage-kpis.mof.gov.vn" }
+                - name: RCLONE_CONFIG_S3_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: { name: backup-s3, key: S3_ACCESS_KEY }
+                - name: RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: backup-s3, key: S3_SECRET_KEY }
+              command: ["rclone"]
+              args: ["--ca-cert", "/etc/s3-ca/ca.pem", "delete", "s3:btc/etcd-backup/kpi/etcd", "--min-age", "14d"]
+              volumeMounts:
+                - { name: s3-ca, mountPath: /etc/s3-ca, readOnly: true }
+          volumes:
+            - name: etcd-certs
+              hostPath: { path: /etc/kubernetes/pki/etcd, type: Directory }
+            - name: backup
+              emptyDir: {}
+            - name: s3-ca
+              configMap: { name: s3-ca }

@@ -2,6 +2,8 @@
 # LƯU Ý: KHÔNG loại .claude/skills và system/ - đó là TẦNG HỆ THỐNG (skill/loop mặc định)
 # phải nằm trong image để update theo phiên bản.
 .git
+**/.git
+**/.git/**
 .venv
 .claude/worktrees/
 .claude/settings.local.json
@@ -27,10 +29,10 @@ videos/
 # trước đó chúng rải trong server/ và dashboard/ nên không có cách nào loại mà không đụng nguồn.
 tests/
 
-# Dữ liệu brain
+# Toàn bộ brains/ được đóng gói làm seed cho named volume; bỏ file lock runtime.
+**/.javis-learn.lock
 Brain Default/
 brain/
-brains/
 **/brains-backup
 **/brain-trash
 vault/
@@ -99,3 +101,9 @@ server/javis.log
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Include all brain contents, but never nested Git metadata or runtime locks.
+!brains/**
+brains/**/.git
+brains/**/.git/**
+brains/**/.javis-learn.lock

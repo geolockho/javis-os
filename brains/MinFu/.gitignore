@@ -1,0 +1,79 @@
+# >>> javis giữ khối này, đừng sửa bên trong
+# Javis chỉ đưa CHỮ vào git, không đưa media. Lý do dài nằm ở server/git_brain.py;
+# nói gọn: git nhớ mãi mãi, nên một file video commit vào là nằm đó vĩnh viễn, xoá về
+# sau cũng không đòi lại được dung lượng. Media vẫn nằm nguyên trên đĩa, chỉ là không
+# đi vào lịch sử git.
+
+# 1. Chặn tất cả...
+*
+# 2. ...trừ thư mục (để git còn đi vào được) và các đuôi file là CHỮ:
+!*/
+!*.base
+!*.bat
+!*.canvas
+!*.cfg
+!*.cjs
+!*.css
+!*.csv
+!*.env-example
+!*.htm
+!*.html
+!*.ini
+!*.js
+!*.json
+!*.jsonl
+!*.markdown
+!*.md
+!*.mjs
+!*.org
+!*.ps1
+!*.py
+!*.rst
+!*.sh
+!*.sql
+!*.svg
+!*.toml
+!*.ts
+!*.tsv
+!*.txt
+!*.xml
+!*.yaml
+!*.yml
+!.gitattributes
+!.gitignore
+!CNAME
+!LICENSE
+!Makefile
+!README
+
+# 3. Và chặn lần nữa những thứ không được vào kể cả khi là chữ: khoá, log thô (có thể
+#    chứa secret), nhật ký nền, hội thoại chưa chưng cất.
+.javis-learn.lock
+Javis/learn-staging/
+Javis/learn-log/
+Javis/loop-log/
+Javis/skill-usage.json
+memory/conversations/
+Memory/conversations/
+# Nhật ký thô từng lượt chạy agent (memory/agents/<slug>/runs/) cùng loại với
+# loop-log: nguyên liệu chưa chưng cất, mỗi bước workflow đẻ thêm - không vào git.
+# MEMORY.md của agent (tri thức đã chưng) thì VẪN vào.
+memory/agents/*/runs/
+Memory/agents/*/runs/
+.javis-agy/
+# Cấu hình MCP của hai engine CLI Google - chứa hub token của Javis, không phải tri thức.
+.agents/mcp_config.json
+.antigravity/
+.antigravitycli/
+.gemini/
+*.tmp
+# Vùng cache media: ảnh sinh ra + file user gửi lên. Là NGUYÊN LIỆU đi qua, không phải
+# tri thức, và media_gc.py tự dọn theo hạn. Bốn dòng attachments vì tên thư mục có thể
+# là attachments / Attachments / 05 - attachments (git phân biệt hoa thường trên Linux,
+# còn dấu * phủ mọi tiền tố số thứ tự).
+attachments/
+Attachments/
+*attachments/
+*Attachments/
+inbox/
+# <<< hết khối của javis - viết luật riêng của bạn ở DƯỚI dòng này

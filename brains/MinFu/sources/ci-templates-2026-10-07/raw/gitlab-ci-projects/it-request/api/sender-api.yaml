@@ -1,0 +1,34 @@
+# build image sender
+build-test-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/sender
+    DOCKERFILE: ./Environments/Testing/Sender.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Sender/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - testing
+build-staging-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/sender
+    DOCKERFILE: ./Environments/Staging/Sender.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Sender/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - staging
+build-prod-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/sender
+    DOCKERFILE: ./Environments/Production/Sender.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Sender/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - main

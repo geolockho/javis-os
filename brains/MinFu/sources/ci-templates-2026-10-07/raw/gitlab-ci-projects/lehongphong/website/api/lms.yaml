@@ -1,0 +1,48 @@
+# build image lms
+build-test-lms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsapi
+    DOCKERFILE: ./Environments/Testing/Lms.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Lms/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-lhp-onpremise-lms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsapi
+    DOCKERFILE: ./Environments/Testing/Lms.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Lms/**/*
+      - Services/Shared/**/*
+    refs:
+      - lhp-onpremise
+
+build-staging-lms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsapi
+    DOCKERFILE: ./Environments/Staging/Lms.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Lms/**/*
+      - Services/Shared/**/*
+    refs:
+      - staging
+
+build-prod-lms:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/outsource/lehongphong/api/infoportal/lmsapi
+    DOCKERFILE: ./Environments/Production/Lms.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/LHP.Lms/**/*
+      - Services/Shared/**/*
+    refs:
+      - "/^prod-[0-9]+\\.[0-9]+\\.[0-9]+$/"

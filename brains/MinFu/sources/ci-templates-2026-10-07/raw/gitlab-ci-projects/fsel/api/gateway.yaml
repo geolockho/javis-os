@@ -1,0 +1,47 @@
+# build image gateway
+build-test-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Testing/Gateway.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/Gateway.Testing.Dockerfile
+        - Services/Fsel.Gateway/Fsel.Gateway.Api/**/*
+        - Services/Shared/**/*
+
+build-staging-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Staging/Gateway.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Gateway/Fsel.Gateway.Api/**/*
+        - Services/Shared/**/*
+        
+build-pre-prod-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Testing/Gateway.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/Gateway.Testing.Dockerfile
+        - Services/Fsel.Gateway/Fsel.Gateway.Api/**/*
+        - Services/Shared/**/*
+
+build-prod-gateway:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/api-gateway
+    DOCKERFILE: ./Environments/Production/Gateway.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'

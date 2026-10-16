@@ -1,0 +1,36 @@
+# build image system
+build-test-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/system
+    DOCKERFILE: ./Environments/Testing/System.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.System/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+
+build-staging-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/system
+    DOCKERFILE: ./Environments/Staging/System.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.System/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+
+build-prod-system:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/system
+    DOCKERFILE: ./Environments/Production/System.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.System/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

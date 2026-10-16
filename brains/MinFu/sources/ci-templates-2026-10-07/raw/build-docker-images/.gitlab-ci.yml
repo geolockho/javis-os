@@ -1,0 +1,11 @@
+build-ci-image:
+  stage: build
+  image: docker:27.5.1-cli
+  tags:
+    - docker-runner
+  variables:
+    DOCKER_BUILDKIT: "1"
+  script:
+    - printf '%s' "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+    - docker build -f ci-images/node22-docker27/Dockerfile -t "$CI_REGISTRY_IMAGE/node22-docker27:1.0.1" ci-images/node22-docker27
+    - docker push "$CI_REGISTRY_IMAGE/node22-docker27:1.0.1"

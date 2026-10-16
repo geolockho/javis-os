@@ -1,0 +1,36 @@
+# build image auth
+build-test-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/auth
+    DOCKERFILE: ./Environments/Testing/Auth.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Identity/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - testing
+build-staging-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/auth
+    DOCKERFILE: ./Environments/Staging/Auth.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Identity/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - staging
+build-prod-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/90days/api/auth
+    DOCKERFILE: ./Environments/Production/Auth.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/NinetyDays.Identity/**/*
+      - Services/Shared/NinetyDays.Shared/**/*
+    refs:
+      - main
+  tags:
+    - atlantic-k8s

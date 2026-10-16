@@ -1,0 +1,26 @@
+# build image storage
+build-test-storage:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/storage
+    DOCKERFILE: ./Environments/Testing/Storage.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Storage/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-storage:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/storage
+    DOCKERFILE: ./Environments/Staging/Storage.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Storage/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

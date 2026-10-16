@@ -1,0 +1,26 @@
+# build image training
+build-test-training:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/training
+    DOCKERFILE: ./Environments/Testing/Training.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Training/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-training:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/training
+    DOCKERFILE: ./Environments/Staging/Training.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Training/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

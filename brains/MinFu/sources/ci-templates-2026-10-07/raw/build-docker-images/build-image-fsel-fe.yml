@@ -1,0 +1,78 @@
+variables:
+  REGISTRY: registry.fsel.edu.vn
+  PNPM_VERSION: 11.24.0
+  DOCKER_BUILDKIT: '1'
+  NX_DAEMON: 'false'
+  NX_NO_CLOUD: 'true'
+  NODE_OPTIONS: --max-old-space-size=3900
+
+stages:
+  - build-image
+
+# Nhánh → cấu hình build.
+.resolve-config: &resolve-config
+  - |
+    case "$CI_COMMIT_REF_NAME" in
+      testing)                     CONFIGURATION=testing ;;
+      staging)                     CONFIGURATION=uat ;;
+      pre-production)              CONFIGURATION=pre-prod ;;
+      prod-*)                      CONFIGURATION=production ;;
+      *)                           CONFIGURATION=${CONFIGURATION:-testing} ;;
+    esac
+    export CONFIGURATION
+
+.build-image:
+  stage: build-image
+  image: registry.fsel.edu.vn/ci-templates/build-docker-images/node22-docker27:1.0.1
+  tags:
+    - docker-runner
+  cache:
+    key: pnpm-store-v1
+    paths:
+      - .pnpm-store/
+    policy: pull-push
+    when: on_success
+  before_script:
+    - corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
+    - pnpm config set store-dir "$CI_PROJECT_DIR/.pnpm-store"
+    - *resolve-config
+    - export IMAGE=${IMAGE:-$CI_REGISTRY_IMAGE/$APP}
+    - export TAG=${TAG_PREFIX:-$CI_COMMIT_REF_NAME}-$CI_COMMIT_SHORT_SHA-$(date +"%d%m%y")
+    - echo "APP=$APP CONFIGURATION=$CONFIGURATION IMAGE=$IMAGE:$TAG"
+  script:
+    - pnpm install --frozen-lockfile --prefer-offline --config.node-linker=hoisted
+    # App build targets are explicit in project.json. Avoid scanning every lib
+    # Vite/Vitest config in CI; Nx inference has been exhausting the runner.
+    - |
+      nx_config_backup="$(mktemp)"
+      cp nx.json "$nx_config_backup"
+      restore_nx_config() {
+        cp "$nx_config_backup" nx.json
+        rm -f "$nx_config_backup"
+      }
+      trap restore_nx_config EXIT
+
+      node <<'NODE'
+      const fs = require('node:fs');
+      const nx = JSON.parse(fs.readFileSync('nx.json', 'utf8'));
+      const skippedPlugins = new Set(['@nx/vite/plugin', '@nx/vitest']);
+      nx.plugins = (nx.plugins || []).filter((plugin) => {
+        const name = typeof plugin === 'string' ? plugin : plugin.plugin;
+        return !skippedPlugins.has(name);
+      });
+      fs.writeFileSync('nx.json', `${JSON.stringify(nx, null, 2)}\n`);
+      NODE
+
+      pnpm exec nx build "$APP" --configuration="$CONFIGURATION" --skip-nx-cache --verbose
+
+      restore_nx_config
+      trap - EXIT
+    # Xoá package không còn trong lockfile để kho không phình mãi.
+    - pnpm store prune
+    - printf '%s' "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+    - >
+      docker build -f docker/Dockerfile.runtime
+      --build-arg APP="$APP"
+      --build-arg CONFIGURATION="$CONFIGURATION"
+      -t "$IMAGE:$TAG" .
+    - docker push "$IMAGE:$TAG"

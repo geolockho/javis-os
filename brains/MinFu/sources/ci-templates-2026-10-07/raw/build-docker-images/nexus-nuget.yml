@@ -1,0 +1,43 @@
+.nexus-nuget:
+  variables:
+    DOCKER_BUILDKIT: "1"
+    PACKAGE_CONFIG_FILE: "NuGet.Config.ci"
+    PACKAGE_CONFIG_SECRET_ID: "nuget_config"
+    NUGET_REGISTRY: "http://10.10.0.205:8081/repository/nuget-group/index.json"
+  before_script:
+    - |
+      : "${NEXUS_CI_USERNAME:?NEXUS_CI_USERNAME is not configured}"
+      : "${NEXUS_CI_PASSWORD:?NEXUS_CI_PASSWORD is not configured}"
+
+      umask 077
+
+      xml_escape() {
+        printf '%s' "$1" | sed \
+          -e 's/&/\&amp;/g' \
+          -e 's/</\&lt;/g' \
+          -e 's/>/\&gt;/g' \
+          -e 's/"/\&quot;/g' \
+          -e "s/'/\&apos;/g"
+      }
+
+      NUGET_REGISTRY_XML="$(xml_escape "$NUGET_REGISTRY")"
+      NEXUS_CI_USERNAME_XML="$(xml_escape "$NEXUS_CI_USERNAME")"
+      NEXUS_CI_PASSWORD_XML="$(xml_escape "$NEXUS_CI_PASSWORD")"
+
+      cat > "$PACKAGE_CONFIG_FILE" <<EOF
+      <?xml version="1.0" encoding="utf-8"?>
+      <configuration>
+        <packageSources>
+          <clear />
+          <add key="Nexus" value="$NUGET_REGISTRY_XML" />
+        </packageSources>
+        <packageSourceCredentials>
+          <Nexus>
+            <add key="Username" value="$NEXUS_CI_USERNAME_XML" />
+            <add key="ClearTextPassword" value="$NEXUS_CI_PASSWORD_XML" />
+          </Nexus>
+        </packageSourceCredentials>
+      </configuration>
+      EOF
+  after_script:
+    - rm -f "$PACKAGE_CONFIG_FILE"

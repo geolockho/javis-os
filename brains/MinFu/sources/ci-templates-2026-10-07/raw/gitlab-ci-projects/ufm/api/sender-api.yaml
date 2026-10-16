@@ -1,0 +1,26 @@
+# build image sender
+build-test-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Testing/Sender.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Sender/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-sender:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/sender
+    DOCKERFILE: ./Environments/Staging/Sender.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Sender/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

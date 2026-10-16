@@ -1,0 +1,32 @@
+build-lms:
+  extends: .build-image
+  variables: { APP: lms, IMAGE: "${IMAGE_LMS}" }
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/ 
+    - if: '$CI_COMMIT_BRANCH =~ /^(testing|pre-production|hophu)$/'
+      changes:
+        - apps/lms/**/*
+        - libs/lms/**/*
+        - libs/shared/**/*
+
+build-lcms:
+  extends: .build-image
+  variables: { APP: lcms, IMAGE: "${IMAGE_LCMS}" }
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/ 
+    - if: '$CI_COMMIT_BRANCH =~ /^(testing|pre-production|hophu)$/'
+      changes:
+        - apps/lcms/**/*
+        - libs/lcms/**/*
+        - libs/shared/**/*
+
+build-lms-admin:
+  extends: .build-image
+  variables: { APP: lms-admin, IMAGE: "${IMAGE_LMS_ADMIN}" }
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/ 
+    - if: '$CI_COMMIT_BRANCH =~ /^(testing|pre-production|hophu)$/'
+      changes:
+        - apps/lms-admin/**/*
+        - libs/lms-admin/**/*
+        - libs/shared/**/*

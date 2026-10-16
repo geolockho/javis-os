@@ -1,0 +1,25 @@
+# build image hangfire
+build-test-hangfire:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/hangfire
+    DOCKERFILE: ./Environments/Testing/Hangfire.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Hangfire/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+build-staging-hangfire:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/hangfire
+    DOCKERFILE: ./Environments/Staging/Hangfire.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Hangfire/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

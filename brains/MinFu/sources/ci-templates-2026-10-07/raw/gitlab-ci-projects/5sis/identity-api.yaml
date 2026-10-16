@@ -1,0 +1,36 @@
+# build image identity
+build-test-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identity
+    DOCKERFILE: ./Environments/Testing/User.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+
+build-staging-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identity
+    DOCKERFILE: ./Environments/Staging/User.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+
+build-prod-identity:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/identity
+    DOCKERFILE: ./Environments/Production/User.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Identity/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

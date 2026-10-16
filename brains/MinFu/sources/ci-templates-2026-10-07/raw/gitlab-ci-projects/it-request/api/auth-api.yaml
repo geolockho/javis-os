@@ -1,0 +1,58 @@
+# # build image auth
+# migration-db-auth:
+#   stage: db-migration
+#   image: mcr.microsoft.com/dotnet/sdk:7.0
+#   before_script:
+#     - dotnet tool install --global dotnet-ef --version 7.0.0
+#     - export PATH="$PATH:/root/.dotnet/tools"
+#     - curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc
+#     - curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | tee /etc/apt/sources.list.d/mssql-release.list
+#     - export ACCEPT_EULA=y
+#     - apt-get update && apt-get install mssql-tools18 unixodbc-dev -y
+#     - export PATH="$PATH:/opt/mssql-tools18/bin"
+#   script:
+#     - export FILENAME="user-service_$(date +\%Y\%m\%d\%H\%M\%S).bak"
+#     - sqlcmd $IDENTITY_DB -C -Q "BACKUP DATABASE [it-request.env-dev.user-service] TO  DISK = 'C:\\backup\\it-request.env-dev.user-service\\${FILENAME}'"
+#     - cd Services/ITRequest.Identity/ITRequest.Identity.Api && dotnet ef database update -- --environment Testing
+#   rules:
+#     - if: $CI_MERGE_REQUEST_TITLE == "migration database" && $CI_COMMIT_REF_NAME == "testing"
+#     - changes:
+#       - Services/ITRequest.Identity/ITRequest.Identity.Infrastructure/Migrations/**/*
+#     # refs:
+#     #   - testing
+
+
+build-test-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/auth
+    DOCKERFILE: ./Environments/Testing/Auth.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Identity/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - testing
+
+build-staging-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/auth
+    DOCKERFILE: ./Environments/Staging/Auth.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Identity/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - staging
+build-prod-auth:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/it-request/api/auth
+    DOCKERFILE: ./Environments/Production/Auth.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/ITRequest.Identity/**/*
+      - Services/Shared/ITRequest.Shared/**/*
+    refs:
+      - main

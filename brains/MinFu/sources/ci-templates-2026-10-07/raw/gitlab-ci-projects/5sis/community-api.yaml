@@ -1,0 +1,36 @@
+# build image community
+build-test-community:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/community
+    DOCKERFILE: ./Environments/Testing/Community.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Community/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - testing
+
+build-staging-community:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/community
+    DOCKERFILE: ./Environments/Staging/Community.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Community/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - staging
+
+build-prod-community:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/5sis/api/community
+    DOCKERFILE: ./Environments/Production/Community.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/FiveSIS.Community/**/*
+      - Services/Shared/FiveSIS.Shared/**/*
+    refs:
+      - main

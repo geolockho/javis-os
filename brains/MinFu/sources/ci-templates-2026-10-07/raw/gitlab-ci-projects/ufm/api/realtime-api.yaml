@@ -1,0 +1,26 @@
+# build image realtime
+build-test-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Testing/Realtime.Testing.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Realtime/**/*
+      - Services/Shared/**/*
+    refs:
+      - testing
+
+build-staging-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Staging/Realtime.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  only:
+    changes:
+      - Services/Fsel.Realtime/**/*
+      - Services/Shared/**/*
+    refs:
+      - ufm-prod
+
+      

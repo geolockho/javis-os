@@ -1,0 +1,20 @@
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  #DOCKER_HOST: tcp://docker:2375
+  GIT_STRATEGY: clone
+
+before_script:
+  - export CURRENT_TIME=$(date +"%d%m%y")
+  - export TAG=$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$CURRENT_TIME
+  - echo $TAG
+
+# image: mirror.gcr.io/library/docker:27
+# services: 
+#   - name: mirror.gcr.io/library/docker:27-dind
+#     alias: docker
+
+stages:
+  - build-image
+
+

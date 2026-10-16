@@ -1,0 +1,47 @@
+# build image realtime
+build-test-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Testing/Realtime.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/Realtime.Testing.Dockerfile
+        - Services/Fsel.Realtime/**/*
+        - Services/Shared/**/*
+
+build-staging-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Staging/Realtime.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Realtime/**/*
+        - Services/Shared/**/*
+
+build-pre-prod-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Testing/Realtime.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/Realtime.Testing.Dockerfile
+        - Services/Fsel.Realtime/**/*
+        - Services/Shared/**/*
+
+build-prod-realtime:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/realtime
+    DOCKERFILE: ./Environments/Production/Realtime.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'

@@ -1,0 +1,47 @@
+# build image interaction
+build-test-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Testing/Interaction.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/Interaction.Testing.Dockerfile
+        - Services/Fsel.Interaction/**/*
+        - Services/Shared/**/*
+
+build-staging-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Staging/Interaction.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Interaction/**/*
+        - Services/Shared/**/*
+
+build-pre-prod-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Testing/Interaction.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/Interaction.Testing.Dockerfile
+        - Services/Fsel.Interaction/**/*
+        - Services/Shared/**/*
+
+build-prod-interaction:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/interaction
+    DOCKERFILE: ./Environments/Production/Interaction.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'

@@ -1,0 +1,47 @@
+# build image lmsapi
+build-test-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Testing/Lms.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "testing"'
+      changes:
+        - Environments/Testing/Lms.Testing.Dockerfile
+        - Services/Fsel.Course/**/*
+        - Services/Shared/**/*
+
+build-staging-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Staging/Lms.Staging.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      changes:
+        - Services/Fsel.Course/**/*
+        - Services/Shared/**/*
+
+build-pre-prod-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Testing/Lms.Testing.Dockerfile
+  extends:
+    - .nexus-nuget
+    - .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "pre-production"'
+      changes:
+        - Environments/Testing/Lms.Testing.Dockerfile
+        - Services/Fsel.Course/**/*
+        - Services/Shared/**/*
+
+build-prod-lmsapi:
+  variables:
+    IMAGE_NAME: registry.fsel.edu.vn/fsel/api/fsel_src/lmsapi
+    DOCKERFILE: ./Environments/Production/Lms.Production.Dockerfile
+  extends: .build-image-gitlab-registry
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^prod-[0-9]+\.[0-9]+\.[0-9]+$/'
