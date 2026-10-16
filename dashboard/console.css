@@ -685,7 +685,9 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   .hud-top #themeToggle, .hud-top #studioOpenBtn,
   .hud-top #settingsBtn, .hud-top #ttsToggle, .hud-top #resetBtn { display: none; }
   .hud-center-title { display: none; }                /* mobile: ẩn tên workspace + ngày; chip model làm giữa header */
-  .hud-top #mbOpen { display: inline-flex; margin-left: auto; margin-right: auto; }  /* chip model căn giữa, đẩy ＋ sang phải */
+  /* 0.182.0 (owner: putting the chip in the composer on a phone "là sai lầm"): back to the top bar, centred, as before 0.180.0.
+     It keeps the short model name and the pin icon from 0.180.0, so it stays narrow. */
+  .hud-top #mbOpen { display: inline-flex; margin-left: auto; margin-right: auto; max-width: 56vw; }  /* chip model căn giữa, đẩy ＋ sang phải */
   .hud-top .notification-trigger {
     flex: 0 0 34px; width: 34px; min-width: 34px; height: 34px; padding: 0;
   }
@@ -1826,6 +1828,16 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
 @keyframes aa-think { 0%,100% { transform:translateY(0) rotate(-5deg); } 50% { transform:translateY(-3px) rotate(5deg); } }
 @keyframes aa-talk { 0%,100% { transform:scaleY(.7); } 50% { transform:scaleY(1.1); } }
 .aa-preview { display:flex; justify-content:center; padding:12px 0; min-height:112px; }
+/* Ảnh tự tải lên (0.176.0): tròn, phủ kín ô, cùng cỡ với hình Javis ở mọi chỗ vẽ. Hàng nút tải ảnh nằm ngay dưới ô xem thử. */
+.agent-avatar.has-img { border-radius:50%; overflow:hidden; background:var(--surface-2); }
+.agent-avatar.has-img img { display:block; width:100%; height:100%; object-fit:cover; }
+.aa-upload { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:0 0 6px; }
+.aa-upload .ws-btn { display:inline-flex; align-items:center; gap:6px; }
+.aa-upload .ws-btn svg { width:15px; height:15px; }
+.aa-upload-msg { text-align:center; font-size:13px; color:var(--text2); min-height:0; margin-bottom:6px; }
+.aa-upload-msg:empty { display:none; }
+.aa-upload-msg.loi { color:var(--red, #e5484d); }
+@media (pointer: coarse) { .aa-upload .ws-btn { min-height:44px; } }
 .aa-options { text-align:center; margin-bottom:18px; }
 .aa-options summary { cursor:pointer; font-size:12px; color:var(--text2); padding:6px; }
 .aa-options[open] { background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:8px; }
@@ -2494,6 +2506,13 @@ body.on-teams .cview-head { display: none; }
 .tm-face[hidden] { display: none; }
 .tm-gava { position: relative; display: inline-block; flex: none; width: var(--gava, 44px); height: var(--gava, 44px); }
 .tm-gava[hidden] { display: none; }
+.tm-gava-img { border-radius: 50%; overflow: hidden; background: var(--surface-2); }
+.tm-gava-img > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Ô Ảnh nhóm trong cài đặt nhóm (0.176.0): ảnh bên trái, nút tải ảnh bên phải; hẹp quá thì nút xuống dòng. */
+.tm-ava-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tm-ava-acts { flex: 1 1 160px; min-width: 0; }
+.tm-ava-acts .aa-upload { justify-content: flex-start; margin: 0; }
+.tm-ava-acts .aa-upload-msg { text-align: left; margin: 6px 0 0; }
 .tm-gava > .tm-face, .tm-gava > .tm-ava, .tm-gava-more { position: absolute; width: var(--face); height: var(--face);
   box-shadow: 0 0 0 2px var(--bg); }
 .tm-gava-1 > :nth-child(1) { inset: 0; }
@@ -2606,7 +2625,7 @@ body.on-teams .cview-head { display: none; }
 .tm-filterbar[hidden] { display: none; }
 
 /* Tin: bong bóng. Của chủ bên phải (không tên, không ảnh); của trợ lý bên trái kèm ảnh và tên; tin hệ thống ở giữa. */
-.tm-msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.tm-msgs { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tm-msgs[hidden] { display: none; }
 /* Mỗi tin chiếm trọn hàng (để phần trăm bên dưới tính theo bề ngang khung, không theo nội dung), bong bóng dồn về đúng
    phía. Bề ngang tối đa chừa chỗ cho ảnh và nút bên cạnh để ba thứ nằm một hàng; hàng có wrap cho bảng mở ra bên dưới. */
@@ -2662,15 +2681,17 @@ body.on-teams .cview-head { display: none; }
 .tm-rx.has .tm-rx-btn, .tm-rx.is-last .tm-rx-btn, .tm-msg-agent:hover .tm-rx-btn, .tm-rx-btn:focus-visible { opacity: 1; }
 .tm-rx-btn:hover { color: var(--accent); transform: scale(1.08); }
 .tm-rx-emoji { font-size: 16px; line-height: 1; }
-.tm-rx-bar { display: none; position: absolute; right: 0; bottom: calc(100% + 4px); gap: 2px; padding: 4px 6px;
-  border-radius: 999px; background: var(--bg); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
-  white-space: nowrap; }
-/* A transparent strip under the pill keeps the hover alive while the pointer travels from the button up to the emoji. */
-.tm-rx-bar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
+/* 0.179.0: same steadier hover as the main chat (style.css .jr-rx-bar): fades out only after 0.5 s, wide invisible margin. */
+.tm-rx-bar { display: flex; visibility: hidden; opacity: 0; transform: translateY(4px) scale(.97); position: absolute; right: 0;
+  bottom: calc(100% + 4px); gap: 2px; padding: 4px 6px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); white-space: nowrap;
+  transition: opacity .16s ease .5s, transform .16s ease .5s, visibility 0s linear .66s; }
+/* Margin stops at the gap above the button, no bridge over it (0.182.0, same fix as .jr-rx-bar in style.css). */
+.tm-rx-bar::before { content: ""; position: absolute; inset: -18px -22px -4px; z-index: -1; }
 @media (hover: hover) {
-  .tm-rx:hover .tm-rx-bar { display: flex; animation: tm-pop .14s ease; }
+  .tm-rx:hover .tm-rx-bar { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
 }
-.tm-rx:focus-within .tm-rx-bar { display: flex; }
+.tm-rx:has(:focus-visible) .tm-rx-bar { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
 @keyframes tm-pop { from { opacity: 0; transform: translateY(4px) scale(.96); } to { opacity: 1; transform: none; } }
 .tm-rx-pick { border: none; background: none; padding: 2px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
   font-size: 26px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
@@ -2692,9 +2713,8 @@ body.on-teams .cview-head { display: none; }
 .tm-sheet { flex: 1 1 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; padding: 8px;
   border: 1px solid var(--border); border-radius: 14px; background: var(--bg); box-shadow: 0 6px 20px rgba(0, 0, 0, .12); }
 .tm-sheet[hidden] { display: none; }
-.tm-sheet .tm-rx-bar { display: flex; position: static; justify-content: space-between; box-shadow: none; border: none;
-  padding: 0; }
-.tm-sheet .tm-rx-bar::after { display: none; }
+.tm-sheet .tm-rx-bar { display: flex; visibility: visible; opacity: 1; transform: none; position: static;
+  justify-content: space-between; box-shadow: none; border: none; padding: 0; }
 .tm-sheet .tm-rx-pick { width: 44px; height: 44px; font-size: 30px; }
 .tm-sheet-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .tm-sheet-act { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 10px;
@@ -3179,11 +3199,8 @@ span.tmp-lead { cursor: default; }
 @media (min-width: 1061px) and (max-width: 1240px) {
   .wspage > .ws-right { width: var(--ws-right-w, 272px); }
 }
-@media (min-width: 1061px) {
-  /* Cột phải đang ẩn: chữ trong khung chat giãn theo khoang giữa thay vì dừng ở 72 ký tự để lại khoảng trống bên phải. */
-  .wspage.right-open .ws-slot .msg-javis .bubble { max-width: min(120ch, 100%); }
-  .wspage.right-open .ws-slot .msg-javis > .jr-chat { max-width: min(120ch, 100%); }
-}
+/* 0.181.0 (owner, 16/10/2026: "câu trả lời bên trợ lý quá sát lề phải, xem bên trò chuyện để học theo"): the 120ch widening
+   for a hidden right column is gone; answers keep the main chat's 72ch measure, so they never run up to the outline bar. */
 .ws-resize { display: none; }
 @media (min-width: 901px) {
   .ws-resize-left { display: block; position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; z-index: 4;
@@ -3307,6 +3324,24 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .tm-side .tm-mname { font-size: 14.5px; }
 .tm-side .tm-field, .tm-side .tm-rs, .tm-side .tm-unl { font-size: 13.5px; }
 .tm-side .tmp-badge { font-size: 12.5px; padding: 1px 8px; }
+
+/* 0.181.0 (owner, 16/10/2026: "khung có nhiều thứ thì chữ 16px lại to quá, nhất là cài đặt trợ lý và cài đặt nhóm"): the
+   assistant's Settings column (.ws-right) gets the same 13.5px body / 14.5px heading scale as the team panel above, and both
+   panels now also cover the Auto block, the goal card and the proactive pulse, which still read 16px. 16px stays everywhere
+   else (chat, pages), and selects stay 16px on touch screens so iOS does not zoom in when one is tapped. */
+.ws-right .rsa-panel, .ws-right .rsa-state, .tm-side .rsa-panel, .tm-side .rsa-state,
+.ws-right .pulse-panel, .ws-right .pulse-line, .ws-right .pulse-badge, .ws-right .pulse-list, .ws-right .pulse-acts .ws-btn,
+.ws-right .pulse-max select, .ws-right .agj, .ws-right .agj-sub, .ws-right .agj-why, .ws-right .agj-score,
+.ws-right .agj-excerpt, .ws-right .agj-labeled, .ws-right .agj-note, .ws-right .agj-verdict, .ws-right .agj-kind,
+.ws-right .agj-when, .ws-right .agj-btn, .ws-right .lessons-part, .ws-right .lessons-meta, .ws-right .lessons-part .ws-btn,
+.ws-right .lessons-budget select, .ws-right .tm-judge-hint, .ws-right .tm-proposal-state,
+.ws-right .rs-card, .tm-side .rs-card, .tm-side .tm-judge-hint, .tm-side .tm-proposal-state { font-size: 13.5px; }
+.ws-right .rsa-title, .ws-right .pulse-title, .ws-right .pulse-sub, .ws-right .pulse-ctx-head, .ws-right .lessons-scope-name,
+.tm-side .rsa-title, .tm-side .pulse-title, .tm-side .pulse-sub, .tm-side .pulse-ctx-head, .tm-side .lessons-scope-name,
+.ws-right .rs-title, .tm-side .rs-title { font-size: 14.5px; }
+@media (pointer: coarse) {
+  .ws-right select, .tm-side select { font-size: 16px; }
+}
 
 /* Ảnh và file khách gửi trong Hộp thư bot (0.171.0, ht-media.js). Ảnh hiện thẳng, bấm mở cỡ thật ở thẻ mới;
    link ảnh của Zalo hết hạn thì thay bằng một dòng nói rõ, vẫn bấm mở link gốc được. */

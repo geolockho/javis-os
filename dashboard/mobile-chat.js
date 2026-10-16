@@ -30,6 +30,7 @@
           if (navToggle && navToggle.parentElement === headerRoot) headerRoot.insertBefore(notificationTrigger, navToggle.nextSibling);
           else headerRoot.insertBefore(notificationTrigger, headerRoot.firstChild);
         }
+        // 0.182.0: back in the header on a phone (0.180.0 had moved it into the composer; the owner found that worse).
         if (mbOpen && mbOpen.parentElement !== headerRoot) {
           if (headerCenter && headerCenter.parentElement === headerRoot) headerRoot.insertBefore(mbOpen, headerCenter.nextSibling);
           else headerRoot.appendChild(mbOpen);

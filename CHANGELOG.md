@@ -6,6 +6,60 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.184.0] - 2026-10-16
+### Sửa lỗi
+- **Ấn giữ tin nhắn trên điện thoại không còn dính lệnh chọn chữ của máy (iPhone và Android):** trước đây giữ lâu một chút là máy tự bôi xanh chữ và hiện thanh Sao chép của nó, đè lên khung của Javis. Giờ chỉ còn khung Javis (thả cảm xúc, Trả lời, Sao chép...).
+- **Vẫn sao chép được như cũ:** nút Sao chép trong khung chép nguyên tin nhắn. Ô nhập chữ vẫn chọn và dán bình thường.
+
+## [0.183.0] - 2026-10-16
+### Sửa lỗi
+- **Zalo không còn lặng lẽ bỏ sót tin khách:** trước đây mỗi lần Javis khởi động lại hay cập nhật, kho tin Zalo bị xoá sạch, tin khách nhắn đúng lúc đó có thể biến mất khỏi cả ba cách đọc. Giờ kho tin được lưu lại (30 ngày) và không mất khi khởi động lại.
+- **Biết khi nào có thể đang thiếu tin:** mỗi lần đọc tin Zalo, Javis biết trong khoảng đó có lúc mất kết nối hay không. Nếu có, Javis nói rõ là chưa chắc, giữ bước đang chờ (duyệt, phát hành) và báo bạn, thay vì kết luận khách chưa trả lời.
+- **Tin tới lúc mất kết nối vẫn vào Hộp thư:** tin mà Zalo gửi bù khi kết nối lại giờ cũng hiện trong Hộp thư hội thoại, không chỉ nằm trong lịch sử.
+
+## [0.182.0] - 2026-10-16
+### Sửa lỗi
+- **Khung chat không còn kéo trái kéo phải được:** trên điện thoại, nút cảm xúc ở góc bong bóng thò ra ngoài mép làm cả khung trượt ngang. Giờ nút nằm gọn trong bong bóng và khung chat chỉ cuộn lên xuống.
+- **Chạm vào nút Thích ăn ngay:** bản trước có một vùng vô hình đè lên nửa trên của nút, nên chạm trên điện thoại hay bấm vào mép trên trên máy tính đều không được tính.
+- **Nhấn giữ nút cảm xúc ở góc phải dưới cũng hiện hàng emoji** như khi nhấn giữ vào tin, trượt ngón tay để chọn.
+
+### Cải thiện
+- **Điện thoại: nút chọn model về lại thanh trên cùng** như trước, vẫn gọn chỉ tên model và có biểu tượng ghim. Bấm vào mở bảng chọn nhà cung cấp như cũ.
+
+## [0.181.1] - 2026-10-16
+### Cải thiện
+- **Tài liệu cài trên VPS dễ theo hơn:** README, Quick start và hướng dẫn cài server được làm gọn lại, các bản dịch cập nhật theo.
+
+## [0.181.0] - 2026-10-16
+### Cải thiện
+- **Lọc trợ lý đang bật Auto:** menu tag ở trang Trợ lý có thêm mục **Đang bật Auto** kèm số lượng. Chọn nó là chỉ còn các trợ lý đang chạy Auto, tắt cái nào thì cái đó rời khỏi danh sách, rà để tắt rất nhanh.
+- **Chữ ở khung cài đặt trợ lý và cài đặt nhóm nhỏ lại cho gọn:** các khối Auto, mục tiêu, nhịp chủ động cùng cỡ với phần còn lại của khung. Khung chat và các trang khác vẫn giữ chữ 16px.
+
+### Sửa lỗi
+- **Câu trả lời ở trang Trợ lý không còn sát lề phải:** khung câu trả lời rộng vừa đọc như bên Trò chuyện, không chạy tới sát dải mục lục. Hết luôn thanh cuộn ngang làm khung chat bị xô lệch.
+
+## [0.180.0] - 2026-10-16
+### Cải thiện
+- **Nút chọn model gọn như app Claude:** chỉ hiện tên model (ví dụ "Opus 4.8", "GPT-5 mini"), không kèm tên nhà cung cấp. Bấm vào vẫn mở bảng chọn nhà cung cấp và model như cũ, rê chuột vào nút thì thấy tên nhà cung cấp. Phiên nào đang ghim model riêng thì nút có biểu tượng ghim nhỏ, ghim vẫn chạy như cũ.
+- **Điện thoại: nút model nằm ngay dưới khung soạn**, cạnh nút mức suy nghĩ, không còn nằm trên thanh đầu trang. Chọn model ngay chỗ đang gõ.
+- **Bấm Sao chép không bị trượt nữa (máy tính):** lúc Javis đang trả lời, khung chat tạm dừng tự cuộn khi chuột đang ở hàng nút của một tin hoặc đang di trên tin. Rời chuột ra là nó cuộn tiếp xuống cuối.
+
+## [0.179.0] - 2026-10-16
+### Cải thiện
+- **Nhấn giữ tin trên điện thoại đã chạy (kiểu Zalo):** giữ tin chừng nửa giây, màn hình tối lại, tin đó sáng lên, hàng 6 biểu tượng hiện ngay trên ngón tay và thẻ Trả lời, Sao chép, Sửa, Gửi lại hiện ở dưới. Áp dụng cả khung Trò chuyện lẫn trang Nhóm.
+- **Trượt ngón tay để chọn cảm xúc (kiểu Facebook):** không nhấc tay, trượt qua hàng biểu tượng, cái nào dưới ngón tay sẽ phóng to và hiện tên, nhấc tay là chọn. Nhấc tay chỗ khác thì thẻ vẫn mở để bấm.
+- **Bấm Sao chép trong thẻ thì hiện "Đã sao chép"** và chép nguyên cả tin, không cần bôi đen.
+- **Trên máy tính, hàng biểu tượng không còn tắt vội:** vùng rê chuột rộng hơn và chờ nửa giây mới ẩn, kéo chuột ngang qua các biểu tượng thoải mái.
+
+## [0.178.0] - 2026-10-16
+### Thêm mới
+- **Tải ảnh của bạn làm ảnh đại diện trợ lý:** trong phần sửa trợ lý, dưới ô xem trước có nút **Tải ảnh lên**. Ảnh tự cắt vuông và thu nhỏ trước khi gửi, rồi hiện ở mọi chỗ có trợ lý: danh sách, khung chat, nhóm. Bấm **Dùng hình Javis** là về hình cũ.
+- **Ảnh riêng cho nhóm làm việc:** mục Ảnh nhóm trong cài đặt nhóm cũng có nút Tải ảnh lên. Mặc định nhóm vẫn dùng ảnh ghép từ gương mặt thành viên như trước.
+- Nhận ảnh PNG, JPG, WEBP, GIF, tối đa 2MB.
+
+### Sửa lỗi
+- **Bôi đen câu mình nhắn không còn bị mục lục che:** thanh mục lục bên phải khung chat trước đè lên cuối các tin của bạn, rê chuột tới cuối câu là danh sách bung ra. Giờ thanh nằm hẳn ở lề, cách chữ một khoảng, và chỉ mở khi bạn dừng chuột trên thanh một chút.
+
 ## [0.177.0] - 2026-10-16
 ### Cải thiện
 - **Thả cảm xúc kiểu Zalo ở khung Trò chuyện:** nút 👍 nằm ngay góc phải dưới bong bóng câu trả lời, bấm một cái là Thích, bấm lại là bỏ. Rê chuột vào nút hiện 6 biểu tượng, điện thoại thì nhấn giữ câu trả lời.
