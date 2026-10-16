@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "connections": [
+    {
+      "id": "bfcccb6fa672",
+      "connector_id": "custom",
+      "label": "may-ca-nhan",
+      "slug": "may-ca-nhan-2",
+      "transport": "stdio",
+      "enabled": true,
+      "perm": "full",
+      "deny_tools": [],
+      "is_default": true
+    },
+    {
+      "id": "51e40b46fbae",
+      "connector_id": "zalo",
+      "label": "Minh Phú",
+      "slug": "minh-phu",
+      "transport": "stdio",
+      "enabled": true,
+      "perm": "full",
+      "deny_tools": [],
+      "is_default": true
+    },
+    {
+      "id": "c055f9609315",
+      "connector_id": "slack",
+      "label": "Slack",
+      "slug": "slack",
+      "transport": "http",
+      "enabled": true,
+      "perm": "full",
+      "deny_tools": [],
+      "is_default": true
+    }
+  ]
+}

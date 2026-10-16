@@ -109,6 +109,20 @@ if [ "${JAVIS_AUTO_INSTALL_CLIS:-1}" != "0" ] && mkdir -p "$CLI_STATE" 2>/dev/nu
     ) </dev/null >/dev/null 2>&1 & )
 fi
 
+# Seed non-secret user preferences and connection metadata into the persistent state volume.
+# Runtime state already on the VPS always wins. deploy-seed is generated from an explicit
+# allowlist and deliberately contains no credentials, tokens, or connection endpoints.
+REPO_STATE_SEED="/app/deploy-seed"
+if [ -d "$REPO_STATE_SEED" ]; then
+    for f in settings.json mcp_servers.json; do
+        [ -f "$REPO_STATE_SEED/$f" ] || continue
+        if [ ! -e "/data/state/$f" ]; then
+            cp -p "$REPO_STATE_SEED/$f" "/data/state/$f" 2>/dev/null || \
+                echo "[state seed] Could not copy $f into /data/state" >&2
+        fi
+    done
+fi
+
 # Seed all brains from the repo into the named volume /brains. Copy only missing
 # files so brain data already on the VPS always takes precedence.
 REPO_BRAINS_SEED="/app/brains"

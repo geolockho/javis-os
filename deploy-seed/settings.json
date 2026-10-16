@@ -1,0 +1,126 @@
+{
+  "workspace_name": "Javis OS",
+  "locale": {
+    "ui_lang": "vi",
+    "reply_lang": "auto",
+    "tz": "Asia/Ho_Chi_Minh",
+    "currency": "VND"
+  },
+  "mcp": {
+    "strict": false,
+    "hub": true,
+    "lazy_tools": "auto",
+    "lazy_threshold": 40,
+    "lazy_top_k": 8,
+    "lazy_char_budget": 6000,
+    "ambient_hint": true
+  },
+  "voice": {
+    "tts_provider": "edge",
+    "openai_tts_voice": "alloy",
+    "openai_tts_model": "gpt-4o-mini-tts",
+    "elevenlabs_voice": "21m00Tcm4TlvDq8ikWAM",
+    "elevenlabs_model": "eleven_multilingual_v2",
+    "mode": "fast",
+    "brain_provider": "",
+    "brain_model": "",
+    "stt_provider": "browser",
+    "stt_model": "",
+    "live_provider": "gemini",
+    "live_model": "",
+    "live_voice": ""
+  },
+  "model": {
+    "main": {
+      "provider": "anthropic-api",
+      "model": "claude-sonnet-5-5"
+    },
+    "auxiliary": {
+      "provider": "anthropic-cli",
+      "model": "claude-haiku-5-5"
+    },
+    "telegram": {
+      "provider": "",
+      "model": ""
+    },
+    "reasoning": "medium",
+    "engine": "anthropic-api",
+    "claude_model": "claude-sonnet-5-5",
+    "openrouter_model": "openai/gpt-4o-mini",
+    "catalog": {
+      "claude": [
+        "haiku",
+        "sonnet",
+        "opus",
+        "fable",
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "claude-opus-5-5",
+        "claude-fable-5-1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
+        "claude-haiku-4-5-20251001"
+      ],
+      "anthropic-api": [
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "claude-opus-5-5",
+        "claude-fable-5-1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
+        "claude-haiku-4-5-20251001"
+      ],
+      "openai": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o3-mini"
+      ],
+      "gemini": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash"
+      ],
+      "groq": [
+        "llama-3.3-70b-versatile",
+        "qwen3-32b",
+        "openai/gpt-oss-120b"
+      ],
+      "deepseek": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ],
+      "openai-oauth": [
+        "gpt-6.1-sol",
+        "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna"
+      ],
+      "antigravity-cli": [],
+      "grok-cli": [],
+      "openrouter": [
+        "openai/gpt-4o-mini",
+        "anthropic/claude-3.5-sonnet",
+        "google/gemini-2.0-flash-001",
+        "deepseek/deepseek-chat"
+      ],
+      "ollama-local": [
+        "qwen3:4b-instruct"
+      ]
+    }
+  }
+}
