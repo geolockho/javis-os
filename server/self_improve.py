@@ -842,11 +842,48 @@ class LoopFeature:
             loop = self.get_loop(brain, slug)
             if not loop:
                 return {"ok": False, "error": localefmt.chu(f"Không tìm thấy loop '{slug}'", f"Loop '{slug}' not found")}
-            self._running = (str(Path(self.deps.brain_root(brain)).resolve()), slug)
             try:
+                self._running = (str(Path(self.deps.brain_root(brain)).resolve()), slug)
                 return await self._run_cycle_inner(brain, slug, loop, reason)
+            except Exception as e:
+                try:
+                    return self._record_unhandled_failure(brain, slug, loop, reason, e)
+                except Exception as record_error:
+                    print(f"[loop] {slug} lỗi không ghi được state/log: {type(record_error).__name__}: {record_error}",
+                          file=sys.stderr)
+                    return {"ok": False, "error": f"{type(e).__name__}: {e}"}
             finally:
                 self._running = None
+
+    def _record_unhandled_failure(self, brain: str, slug: str, loop: dict,
+                                  reason: str, error: Exception) -> dict:
+        """Persist failures that happen before the normal cycle finalizer can run.
+
+        Without this guard, a background task can die with an unobserved exception and leave
+        last_run unchanged. The scheduler then picks the same overdue loop again on every tick.
+        """
+        now, today = time.time(), _today()
+        summary = f"Lỗi: {type(error).__name__}: {error}"[:1000]
+        st = self.read_state(brain).get(slug, {})
+        runs = (int(st.get("runs_today", 0)) if st.get("day") == today else 0) + 1
+        streak = int(st.get("fail_streak", 0)) + 1
+        patch = {
+            "last_run": now, "last_summary": summary, "last_status": "lỗi",
+            "runs_today": runs, "day": today, "fail_streak": streak,
+        }
+        if streak >= 3 and not st.get("auto_paused_reason"):
+            patch["auto_paused_reason"] = (f"Tự tạm dừng {_now_vn().strftime('%d/%m %H:%M')}: "
+                                           "3 lần lỗi/kiểm chứng không đạt liên tiếp")
+        self._update_state(brain, slug, **patch)
+        if slug == LEGACY_SLUG:
+            self._sync_legacy_state(patch)
+        title = f"{slug} · loop ({loop['goal']}/{loop['mode']}) - {reason}"
+        body = summary
+        if patch.get("auto_paused_reason"):
+            body += f"\n\n⚠ **{patch['auto_paused_reason']}**"
+        self._log_append(brain, {"title": title, "body": body})
+        print(f"[loop] {slug} chạy nền lỗi: {summary}", file=sys.stderr)
+        return {"ok": False, "summary": summary, "auto_paused": bool(patch.get("auto_paused_reason"))}
 
     async def _run_cycle_inner(self, brain: str, slug: str, loop: dict, reason: str) -> dict:
         vault_root = self.deps.brain_root(brain)
@@ -957,7 +994,22 @@ class LoopFeature:
         if gcli is None:
             return _finish("Lỗi: không tạo được file MCP rỗng để cô lập (profile code từ chối chạy)", "", True)
         if not gcli.is_available():
-            return {"ok": False, "error": localefmt.chu("Claude CLI chưa cài", "Claude CLI is not installed")}
+            # Giữ lại bằng chứng của đúng engine đang chạy. `/health` chỉ kiểm tra binary,
+            # còn engine SDK yêu cầu đồng thời SDK import được; ghi rõ cả hai để tránh báo
+            # nhầm "CLI chưa cài" khi lỗi thật nằm ở SDK hoặc module được nạp khác nguồn.
+            try:
+                import claude_sdk_engine as _sdk_diag
+                from claude_cli import find_claude_cli as _find_cli_diag
+                _cli_path = _find_cli_diag()
+                _sdk_ok = _sdk_diag.sdk_available()
+                _engine = f"{type(gcli).__module__}.{type(gcli).__qualname__}"
+                _module = getattr(_sdk_diag, "__file__", "?")
+                _detail = (f"engine={_engine}; sdk_available={_sdk_ok}; "
+                           f"cli_path={_cli_path!r}; sdk_module={_module}")
+            except Exception as _diag_exc:
+                _detail = f"diagnostic failed: {type(_diag_exc).__name__}: {_diag_exc}"
+            print(f"[loop] Claude preflight failed: {_detail}", file=sys.stderr)
+            return _finish("Lỗi: Claude engine unavailable (" + _detail + ")", "", True)
         # Trần thời gian như mọi việc nền khác (Kanban, nhắc hẹn): không có thì một vòng treo
         # là treo tới khi tắt máy chủ.
         try:
@@ -1039,7 +1091,8 @@ class LoopFeature:
             "runs_today": int(st.get("runs_today", 0)) if st.get("day") == today else 0,
             "fail_streak": int(st.get("fail_streak", 0)),
             "auto_paused_reason": st.get("auto_paused_reason", ""),
-            "next_run": (last_run + lp["interval_min"] * 60) if (lp["enabled"] and not st.get("auto_paused_reason")) else 0,
+            "next_run": (last_run + lp["interval_min"] * 60 if last_run else time.time())
+                        if (lp["enabled"] and not st.get("auto_paused_reason")) else 0,
             "running": running,
         }
 

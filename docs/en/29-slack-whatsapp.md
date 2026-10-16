@@ -68,7 +68,9 @@ settings:
 2. Open Slack, find the app under **Apps**, send it any message. You appear on the card with a 4-digit code; check the code and click **Allow**. The list starts empty on purpose: nobody can reach your brain until you allow them.
 3. From then on: DM the bot, or mention `@Javis` in a channel it was invited to (`/invite @Javis`); it answers in the thread.
 
-Bot commands start with `!` instead of `/` on Slack, because Slack keeps `/` for its own commands: `!stop`, `!new`.
+Bot commands start with `!` instead of `/` on Slack, because Slack keeps `/` for its own commands. Type `!help` for the list: `!status`, `!skills`, `!notes`, `!agents`, `!workflows`, `!model`, `!brain`, `!retry`, `!usage`, `!tasks`, `!memory`, `!plan`, `!reset`, and `!stop`. Type `!brain` to see the brain attached to this Slack session and the available brains; `!brain <name>` switches this session. Type `!model` to see model examples; use `!model <model-id>` to change the main model, or `!model <provider-id> <model-id>` when a model exists at multiple providers. Slack uses text commands instead of Telegram's selection buttons.
+
+Slack conversations are saved in conversation history so you can reopen them on the dashboard; this does **not** create a note in `Sources/`. To save a message into Sources, explicitly use `!notes <content>` (you can attach an image or file). Use `!brain <name>` first if you want to save it in another brain.
 
 ### 2b. Customer bot
 

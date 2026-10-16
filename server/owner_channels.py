@@ -153,7 +153,15 @@ class OwnerChannel:
             return False
         Lop = self._transport()
         # No allow-list for the transport: `precheck` handles strangers and hands them a code.
-        self.bot = Lop(self._credentials(c), "", self.answer, self.deps.get("command"),
+        async def command(cmd, arg, chat=None, meta=None):
+            # The answer path prefixes the channel id before it reaches the shared session
+            # store. Commands must use that same key or /brain and /reset act on a different,
+            # empty session and the next Slack message falls back to Brain Default again.
+            key = f"{self.prefix}{chat}" if chat else "default"
+            handler = self.deps.get("command")
+            return await handler(cmd, arg, key, meta) if handler else None
+
+        self.bot = Lop(self._credentials(c), "", self.answer, command,
                        download_dir=self.inbox_dir, precheck_fn=self.precheck,
                        stt_fn=self.deps.get("stt"))
         self.bot.start()

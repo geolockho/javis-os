@@ -68,7 +68,9 @@ settings:
 2. Mở Slack, tìm app trong mục **Apps**, nhắn một câu bất kỳ. Bạn sẽ hiện trên thẻ kèm mã 4 số; đối chiếu mã rồi bấm **Cho phép**. Danh sách để trống là cố ý: chưa ai chạm được vào brain của bạn cho tới khi bạn cho phép.
 3. Từ đó: nhắn riêng cho bot, hoặc gọi `@Javis` trong kênh đã mời bot vào (`/invite @Javis`); bot trả lời trong thread.
 
-Lệnh bot trên Slack bắt đầu bằng `!` thay cho `/`, vì Slack giữ `/` cho lệnh của chính nó: `!stop`, `!new`.
+Lệnh bot trên Slack bắt đầu bằng `!` thay cho `/`, vì Slack giữ `/` cho lệnh của chính nó. Gõ `!help` để xem danh sách; các lệnh gồm `!status`, `!skills`, `!notes`, `!agents`, `!workflows`, `!model`, `!brain`, `!retry`, `!usage`, `!tasks`, `!memory`, `!plan`, `!reset` và `!stop`. Gõ `!brain` để xem brain đang gắn với phiên Slack và danh sách brain; `!brain <tên>` chuyển riêng phiên đó. Gõ `!model` để xem một số model; dùng `!model <model-id>` để đổi model chính, hoặc `!model <provider-id> <model-id>` nếu model có ở nhiều provider. Slack hiện dùng chữ thay cho các nút chọn Telegram.
+
+Hội thoại Slack được lưu vào lịch sử hội thoại để mở lại trên dashboard; việc đó **không tự tạo note trong `Sources/`**. Muốn lưu một tin vào Sources, hãy chủ động dùng `!notes <nội dung>` (có thể gửi kèm ảnh/file). Chọn brain trước bằng `!brain <tên>` nếu muốn lưu vào brain khác.
 
 ### 2b. Bot khách hàng
 

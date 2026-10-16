@@ -79,6 +79,12 @@ Danh sách này không chỉ có các cuộc bạn mở trên web. Những gì b
 
 Vì trên Telegram gần như không ai bấm bắt đầu cuộc mới, Javis tự cắt sang cuộc mới khi bạn nghỉ quá 12 tiếng hoặc khi cuộc hiện tại đã dài khoảng 100 lượt. Việc cắt này chỉ để bản lưu dễ đọc, không làm Javis quên mạch trong lúc bạn đang trò chuyện trên Telegram. Các cuộc Telegram cũ hơn 30 ngày được tự cất vào kho lưu nên không hiện ở danh sách mặc định, nhưng vẫn tìm được bằng ô tìm kiếm. Chi tiết ở [Kênh Telegram](11-telegram.md).
 
+## Cuộc trò chuyện đến từ Slack
+
+Tin nhắn với Javis qua kênh điều khiển **Slack** cũng được lưu trong lịch sử hội thoại, gắn với brain đang chọn cho phiên Slack. Mặc định phiên mới theo brain mặc định; dùng `!brain` để xem/chọn brain, hoặc `!brain <tên>` để chuyển riêng phiên đó. Gõ `!help` trong Slack để xem các lệnh có sẵn.
+
+Lưu lịch sử hội thoại **không đồng nghĩa** với việc tự tạo ghi chú trong `Sources/`. Muốn cất một tin vào brain, hãy gọi `!notes <nội dung>` một cách rõ ràng. Xem [Slack và WhatsApp](29-slack-whatsapp.md).
+
 ## Mở ở đâu trong Javis
 
 Sidebar lịch sử nằm ở trang **Trò chuyện**. Có ba đường vào, đều dẫn tới đúng chỗ đó:

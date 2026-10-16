@@ -1,0 +1,25 @@
+variables:
+  DOCKER_TLS_CERTDIR: ''
+  DOCKER_DRIVER: overlay2
+  #DOCKER_HOST: tcp://docker:2375
+  GIT_STRATEGY: clone
+
+before_script:
+  - export CURRENT_TIME=$(date +"%d%m%y")
+  - export TAG=$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$CURRENT_TIME
+  - export IMAGE_VALUES=$CI_COMMIT_SHORT_SHA-$CURRENT_TIME
+  - echo $TAG
+
+stages:
+- build-image
+
+build-dev:
+  stage: build-image
+  tags:
+    - docker-runner
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:$TAG .
+    - docker push $CI_REGISTRY_IMAGE:dev-$TAG
+  only:
+    - main
