@@ -723,6 +723,15 @@ class SessionStore:
                           (session_id, int(message_id)))
         return self._team_msg(rows[0]) if rows else None
 
+    def team_unread(self, session_id: str, since_ts: float, cap: int = 99) -> Dict[str, int]:
+        """Tin chưa đọc của phiên nhóm (0.197.0): tin của trợ lý và hệ thống sau `since_ts` (mốc chủ đọc lần cuối), tối đa
+        `cap`. `at`: bao nhiêu tin trong đó gọi tên chủ (meta.asks_owner), để danh sách nhóm hiện dấu @."""
+        rows = self._read("SELECT COUNT(*), COALESCE(SUM(CASE WHEN meta_json LIKE '%\"asks_owner\": true%' THEN 1 "
+                          "ELSE 0 END), 0) FROM (SELECT meta_json FROM messages WHERE session_id = ? AND ts > ? "
+                          "AND author_kind != 'owner' ORDER BY ts DESC LIMIT ?)",
+                          (session_id, float(since_ts or 0), max(1, int(cap))))
+        return {"n": int(rows[0][0] or 0), "at": int(rows[0][1] or 0)} if rows else {"n": 0, "at": 0}
+
     def team_message_count(self, session_id: str) -> int:
         """Số tin của một phiên nhóm (khối tóm tắt phần cũ, T4)."""
         rows = self._read("SELECT COUNT(*) FROM messages WHERE session_id = ?", (session_id,))
@@ -1294,6 +1303,24 @@ class SessionStore:
             params += bparams
         sql += " GROUP BY channel"
         return {r["channel"]: float(r["m"] or 0) for r in self._read(sql, tuple(params))}
+
+    def agent_activity(self, brain: Any, since: Dict[str, float], cap: int = 99) -> Dict[str, Dict[str, float]]:
+        """0.205.0, private partner chats: {slug: {"n": partner messages after since[slug] (at most `cap`), "last_at": the
+        newest message of any side}} over every `agent:<slug>` chat of this brain. `last_at` reads the messages, not
+        sessions.updated_at, which also moves on a rename or an archive."""
+        cond, bparams = loc_brain(brain)
+        extra = (" AND " + cond) if cond else ""
+        out: Dict[str, Dict[str, float]] = {}
+        for slug, ts in since.items():
+            ch = "agent:" + str(slug)
+            rows = self._read(
+                "SELECT (SELECT COUNT(*) FROM (SELECT 1 FROM messages m JOIN sessions s ON s.id = m.session_id "
+                f"WHERE s.channel = ?{extra} AND m.role = 'assistant' AND m.ts > ? LIMIT ?)), "
+                f"(SELECT MAX(m.ts) FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.channel = ?{extra})",
+                tuple([ch] + list(bparams) + [float(ts or 0), max(1, int(cap)), ch] + list(bparams)))
+            n, last = (rows[0][0], rows[0][1]) if rows else (0, 0)
+            out[str(slug)] = {"n": int(n or 0), "last_at": float(last or 0)}
+        return out
 
     # ── ghim / icon / project của một hội thoại ──
 

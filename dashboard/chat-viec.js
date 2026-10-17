@@ -75,7 +75,9 @@
   // Việc chạy nền (0.64.66) không có trang nào liệt kê: thẻ không có nút mở trang.
   function trangCua(kind) {
     if (kind === "job") return "";
-    return (kind === "loop" || kind === "reminder") ? "selfimprove" : "kanban";
+    // 0.199.0: webhooks and incidents live on the Recurring work page too (its Webhooks and Health sections).
+    if (kind === "webhook") return "webhooks";   // 0.204.0: its own page
+    return (kind === "loop" || kind === "reminder" || kind === "incident") ? "selfimprove" : "kanban";
   }
 
   function moTrang(trang) {

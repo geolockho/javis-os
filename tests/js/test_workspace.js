@@ -208,10 +208,16 @@ check("phan tram", W.phanTram(W.tienDoMoi(4)) === 0 && W.phanTram(st) === 100);
     khoaTag: W.khoaTag, dongChonTag: W.dongChonTag, TAG_NONE: W.TAG_NONE, TAG_AUTO: W.TAG_AUTO, laLocGia: W.laLocGia, autoBat: W.autoBat,
     TAB_PHAI: ["cai", "lichsu", "viec"],
     luuChon() {}, moPhien() {}, heptLai: () => false, chatReady() {}, active: true, opening: 0,
+    // The avatar strip's name card (0.191.0) lives in the edge-drag block, outside the cut: same as above.
+    anTheMini() {}, hienTheMini() {},
+    // 0.205.0: the unread pill and the muted mark are drawn by helpers outside the cut too.
+    chuaDoc: () => 0, tinHtml: () => "",
     esc: (s) => String(s == null ? "" : s), t: (k) => k, ic: () => "<svg></svg>", avatar: () => "<i></i>",
     localStorage: { getItem: (k) => (k in kho ? kho[k] : null), setItem(k, v) { kho[k] = String(v); } },
     document: { getElementById: () => null },
-    window: { JavisVaultPanel: { borrow(h) { goi.push("borrow"); ctx._into = h; return true; },
+    // 0.195.0: the tag bar and picker markup are shared with the Teams page (tag-picker.js).
+    window: { JavisTagPicker: require(path.join(root, "dashboard", "tag-picker.js")),
+              JavisVaultPanel: { borrow(h) { goi.push("borrow"); ctx._into = h; return true; },
                                  giveBack() { goi.push("giveBack"); } },
               // Tab Công việc (0.142.0): ghi lại lần gắn để đo đúng trợ lý.
               JavisAgentJobs: { mount(h, o) { goi.push("jobs:" + o.slug); ctx._jobsInto = h; return { destroy() {} }; } },

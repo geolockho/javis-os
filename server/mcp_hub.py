@@ -34,6 +34,7 @@ import mcp_client
 import mcp_store
 import skill_router
 import skill_usage
+import team_gate
 import turn_context
 from config import STATE_DIR
 
@@ -100,7 +101,7 @@ def allow_patterns():
 # `javis_run_tool`. `discover_all(for_bot=True)` drops them before the lazy tier; bot paths pass that flag (API
 # engines directly, Claude Code through the X-Javis-Bot header written by `claude_config_path(bot=True)`).
 # `javis_team` (0.173.0) creates, edits and deletes team chats and writes assistant files: owner-only for the same reason.
-OWNER_ONLY_TOOLS = frozenset({"javis_reply_policy", "javis_reply_policy_tune", "javis_team"})
+OWNER_ONLY_TOOLS = frozenset({"javis_reply_policy", "javis_reply_policy_tune", "javis_team", "javis_memory"})
 
 
 # ============================================================
@@ -219,14 +220,28 @@ def _guard(ent, fn, mode):
     async def _call(args):
         cls = mcp_catalog.classify(connector, tool, args)
         ok, why = mcp_catalog.allowed(connector, conn.get("perm"), mode, tool, args)
-        if ok and not _rate_ok(conn["id"], connector):
-            ok, why = False, (f"Kết nối '{conn.get('label')}' vượt giới hạn tần suất "
-                              f"(chống spam/khoá tài khoản). Chờ 1 phút rồi thử lại.")
+        gated_ask = False
+        if mode == team_gate.HUB_MODE and cls != "read":
+            # 0.207.0: a gated Team step. Anything that is not a read is an outside action (review: a custom
+            # connector's `send_email` is classed `write`, which `auto` would allow). The connection itself must allow
+            # it at full; then only the owner's approval of this exact call for this step lets it through
+            # (team_gate.py). No live gate means refused.
+            full_ok, full_why = mcp_catalog.allowed(connector, conn.get("perm"), "full", tool, args)
+            ok, why, gated_ask = (False, full_why, False) if not full_ok else (False, "", True)
+        if (ok or gated_ask) and not _rate_ok(conn["id"], connector):
+            ok, gated_ask = False, False
+            why = (f"Kết nối '{conn.get('label')}' vượt giới hạn tần suất "
+                   f"(chống spam/khoá tài khoản). Chờ 1 phút rồi thử lại.")
+        if gated_ask:
+            # Checked after the rate limit, so a refused call never burns the owner's approval.
+            ok, why = await asyncio.to_thread(team_gate.hub_check, fn, args,
+                                              f"{conn.get('label') or conn.get('connector_id') or ''}: {tool}")
+            why = why[len("ERROR: "):] if why.startswith("ERROR: ") else why
         if not ok:
             _audit_append({"ts": datetime.now().isoformat(timespec="seconds"), "conn_id": conn["id"],
                            "connector": conn.get("connector_id"), "label": conn.get("label"),
                            "tool": tool, "mode": mode, "cls": cls, "ok": False, "ms": 0,
-                           "err": why[:200], "args_keys": sorted((args or {}).keys())})
+                           "err": why[:200], "args_keys": sorted((args or {}).keys()), **team_gate.audit_fields()})
             return "ERROR: " + why
         t0 = time.time()
         result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
@@ -235,7 +250,7 @@ def _guard(ent, fn, mode):
                        "tool": tool, "mode": mode, "cls": cls,
                        "ok": not str(result).startswith("ERROR:"), "ms": int((time.time() - t0) * 1000),
                        "err": str(result)[:200] if str(result).startswith("ERROR:") else "",
-                       "args_keys": sorted((args or {}).keys())})
+                       "args_keys": sorted((args or {}).keys()), **team_gate.audit_fields()})
         # Lỗi từ dịch vụ trả về NGUYÊN VĂN tiếng Anh thì model phải tự đoán, và nó đoán sai:
         # vụ 2026-07-30 Google trả "The caller does not have permission", model kết luận là hub
         # của Javis chặn quyền rồi đi sửa nhầm tầng. GẮN THÊM chẩn đoán (không thay thế - giữ
@@ -640,6 +655,35 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
                         f"trong số đó.")
             return (f"ERROR: '{(args or {}).get('path')}' nằm ngoài bộ não đang làm việc nên "
                     f"tool này không ghi được. Dùng đường dẫn tương đối trong brain.")
+        # 0.188.0 (Javis Core spec 13, 14): the learning switch and the forgotten list are the person's, never the
+        # model's; and with learning off nothing new is written under memory/.
+        try:
+            import memory_control
+            mem = (Path(vault_root) / "memory").resolve()
+            rp = p.resolve()
+            if rp.parent == mem and rp.name in (memory_control.LEARNING, memory_control.FORGOTTEN):
+                return "ERROR: công tắc ghi nhớ và danh sách đã quên do người dùng quản lý, tool không ghi được."
+            if (rp == mem or mem in rp.parents) and not memory_control.learning_enabled(mem):
+                return ("ERROR: người dùng đã TẮT việc lưu ghi nhớ mới cho brain này nên không ghi vào memory/. "
+                        "Nói với người dùng rằng ghi nhớ đang tắt (bật lại ở Javis Core > Trí nhớ).")
+        except Exception:
+            pass
+        if mode == team_gate.HUB_MODE:
+            # 0.207.0 review: a gated Team step writes its deliverables, never files that run or configure code
+            # (plugins/, .claude/, Javis/ loops and reminders...). Those go through the owner's approval like any action.
+            rel = None
+            for base in [vault_root] + list(workspace_root if isinstance(workspace_root, (list, tuple)) else
+                                            ([workspace_root] if workspace_root else [])):
+                try:
+                    rel = p.resolve().relative_to(Path(base).resolve())
+                    break
+                except (ValueError, TypeError, OSError):
+                    continue
+            if rel is None or team_gate.protected_rel(rel):
+                ok, why = await asyncio.to_thread(team_gate.hub_check, "javis_write_file", dict(args or {}),
+                                                  f"ghi {(args or {}).get('path')}")
+                if not ok:
+                    return why
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(str((args or {}).get("content") or ""), encoding="utf-8")
         return f"Đã ghi {p.name} ({len(str((args or {}).get('content') or ''))} ký tự)"
@@ -1098,7 +1142,9 @@ async def discover_all(mode="full", vault_root=None, include_plugins=True, inclu
             continue
         conn = raw["conn"]
         connector = mcp_catalog.get(conn.get("connector_id"))
-        eff = mcp_catalog.effective_perm(conn.get("perm"), mode)
+        # A gated Team step (0.207.0) lists like full: an outside action must be callable so the gate can stop it and
+        # turn it into an approval request, and run it once approved. The call itself is still capped (`_guard`).
+        eff = mcp_catalog.effective_perm(conn.get("perm"), "full" if mode == team_gate.HUB_MODE else mode)
         # Tool ĐA HÀNH ĐỘNG (schema có tham số arg_rules.param, vd action của Pancake) → coi là
         # "read" lúc LIST để còn liệt kê được; chặn thật lúc call (đã có args). Tool thường →
         # phân loại tĩnh theo tool_meta/heuristic.
@@ -1680,7 +1726,7 @@ def codex_vault_override(vault_root):
 
 
 CODEX_MODE_KEY = "mcp_servers.javis.http_headers.X-Javis-Mode"
-_CODEX_MODES = ("suggest", "auto", "full")
+_CODEX_MODES = ("suggest", "auto", "full", "gated")
 
 
 def dat_codex_mode(extra_config, mode):
@@ -1735,6 +1781,17 @@ def dat_codex_hub_bat_buoc(extra_config):
     """Gắn `required = true` cho entry hub vào `-c` của MỘT CodexCLI, THAY bản cũ nếu có."""
     extra_config[:] = [x for x in extra_config if not str(x).startswith(CODEX_REQUIRED_KEY + "=")]
     extra_config.append(f"{CODEX_REQUIRED_KEY}=true")
+    return extra_config
+
+
+def dat_codex_team_gated(extra_config):
+    """0.207.0: one Codex process of a GATED Team step (team_gate.py): hub level `gated` (the gate decides outside
+    actions), no ChatGPT apps (they bypass the hub) and no shell network in its workspace sandbox, whatever the user's
+    own Codex config says. Chat and workflow Codex processes never get this."""
+    dat_codex_mode(extra_config, "gated")
+    dat_codex_tat_app(extra_config)
+    extra_config[:] = [x for x in extra_config if not str(x).startswith("sandbox_workspace_write.network_access=")]
+    extra_config.append("sandbox_workspace_write.network_access=false")
     return extra_config
 
 

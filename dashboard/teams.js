@@ -46,11 +46,14 @@
   var BLOCK_KEY = { failed: "teams.block.failed", interrupted: "teams.block.interrupted", no_leader: "teams.block.no_leader",
     assignee_removed: "teams.block.assignee_removed", no_progress: "teams.block.no_progress", cap_reached: "teams.block.cap_reached",
     agent_busy_long: "teams.block.agent_busy_long", waiting_user: "teams.block.waiting_user", cancelled: "teams.block.cancelled",
+    rejected: "teams.block.rejected", approval_expired: "teams.block.approval_expired",
+    acceptance_review: "teams.block.acceptance_review", acceptance_failed: "teams.block.acceptance_failed",
+    acceptance_checking: "teams.block.acceptance_checking",
     server_ceiling: "teams.block.server_ceiling" };
   var CAP_KEY = { task_turns: "teams.cap.task_turns", task_steps: "teams.cap.task_steps", daily_turns: "teams.cap.daily_turns",
     mentions: "teams.cap.mentions", help_depth: "teams.cap.help_depth", busy_wait_s: "teams.cap.busy_wait_s",
     judge_daily: "teams.cap.judge_daily", volunteer_k: "teams.cap.volunteer_k", judge_off_batch: "teams.cap.judge_off_batch" };
-  var TAB_KEY = { jobs: "teams.tab_jobs", team: "teams.tab_team" };
+  var TAB_KEY = { info: "teams.tab_info", jobs: "teams.tab_jobs", team: "teams.tab_team" };
   var LATE = ["late_cancelled", "late", "old_revision", "member_left", "leader_changed", "lease_lost"];
   // Trần chủ nhóm chỉnh được (team_store.OWNER_CAPS). Bốn trần đầu có "Không giới hạn" (lưu null, GOAL T1 mục 9).
   var CAP_FIELDS = ["task_turns", "task_steps", "help_depth", "daily_turns", "mentions", "busy_wait_s", "judge_daily",
@@ -115,12 +118,26 @@
     return JR.cornerHtml(m.id, m.reaction, { prefix: "tm", last: last, icon: ic("thumbs-up") });
   }
 
-  // Reply, copy and pin next to a bubble, shown on hover (mouse). Touch screens use swipe left (reply) and long press.
+  // Time, reply (quote), copy and pin in one row UNDER the bubble, like the main chat (0.194.1, owner 17/10/2026: beside the
+  // bubble it looked cluttered). Shown on hover (mouse); touch screens use swipe left (reply) and long press.
+  function actsApi() {
+    if (typeof window !== "undefined" && window.JavisActs) return window.JavisActs;
+    try { return require("./chat-acts.js"); } catch (e) { return null; }
+  }
+
+  function timeHtml(m) {
+    var A = actsApi();
+    // Team messages carry epoch seconds; the main chat's formatter takes what `new Date` takes.
+    var ms = Number(m.ts) > 0 ? (Number(m.ts) < 1e12 ? Number(m.ts) * 1000 : Number(m.ts)) : 0;
+    var t = A && ms ? A.fmtTime(ms) : "";
+    return t ? '<span class="tm-time" title="' + esc(A.fmtTimeFull(ms)) + '">' + esc(t) + "</span>" : "";
+  }
+
   function hoverActsHtml(m) {
     var id = esc(m.id);
-    return '<div class="tm-hacts">' +
+    return '<div class="tm-hacts">' + timeHtml(m) +
       '<button type="button" class="tm-hact" data-reply="' + id + '" aria-label="' + esc(tw("teams.msg_reply")) + '" title="' +
-      esc(tw("teams.msg_reply")) + '">' + ic("reply") + "</button>" +
+      esc(tw("teams.msg_reply")) + '">' + ic("quote") + "</button>" +
       '<button type="button" class="tm-hact" data-copy="' + id + '" aria-label="' + esc(tw("teams.copy")) + '" title="' +
       esc(tw("teams.copy")) + '">' + ic("copy") + "</button>" +
       ((m.meta || {}).decision ? "" : '<button type="button" class="tm-hact" data-decision="' + id + '" data-on="1" aria-label="' +
@@ -151,7 +168,54 @@
 
   function quoteHtml(q) {
     var mm = /^([^:\n]{1,60}):\s+([\s\S]*)$/.exec(q);
-    return '<div class="tm-quote">' + (mm ? "<b>" + esc(mm[1]) + "</b>" + esc(mm[2]) : esc(q)).replace(/\n/g, "<br>") + "</div>";
+    // 0.192.0: the quote carries the same quote mark as the main chat's quote chip.
+    return '<div class="tm-quote"><span class="tm-quote-ico" aria-hidden="true">' + ic("quote") + "</span><span class=\"tm-quote-body\">" +
+      (mm ? "<b>" + esc(mm[1]) + "</b>" + esc(mm[2]) : esc(q)).replace(/\n/g, "<br>") + "</span></div>";
+  }
+
+  // 0.192.0 (owner, 16/10/2026: "agent phản hồi ai thì phải tag vào hoặc quote lại"): an assistant's message that answers
+  // another one shows that message on top, like a reply in a group chat. Tapping it goes to the message.
+  function replyRefHtml(m, ctx) {
+    var to = m.reply_to != null ? Number(m.reply_to) : 0;
+    var t = to && ctx && ctx.byId ? ctx.byId[to] : null;
+    if (!t) return "";
+    var mine = t.author_kind === "owner";
+    var a = mine ? null : (memberOf(ctx.members, t.author_ref) || (ctx.authors || {})[t.author_ref] || null);
+    var who = mine ? tw("teams.owner") : t.author_kind === "agent" ? (a ? (a.name || a.slug) : t.author_ref) : tw("teams.system");
+    return '<button type="button" class="tm-quote tm-quote-ref" data-jump="' + esc(t.id) + '" data-ts="' + esc(t.ts) + '" title="' +
+      esc(tw("teams.quote_open")) + '"><span class="tm-quote-ico" aria-hidden="true">' + ic("quote") + "</span>" +
+      '<span class="tm-quote-body"><b>' + esc(who) + "</b>" + esc(plainPreview(t.content, 140)) + "</span></button>";
+  }
+
+  // 0.192.0: "@Chủ nhóm" and "@Name" written by an assistant are drawn as mentions; calling the owner flags the message.
+  // The words an assistant may use to call the owner ("@Chủ nhóm", "@Owner", the owner label): teams.owner_tags.
+  function ownerTags() {
+    return String(tw("teams.owner_tags") || "").split(",").concat([tw("teams.owner")]).map(function (x) {
+      return String(x || "").trim();
+    }).filter(function (x) { return x && x !== "teams.owner_tags" && x !== "teams.owner"; });
+  }
+  function markMentions(html, members) {
+    var names = [];
+    ownerTags().forEach(function (n) { names.push({ n: n, me: true }); });
+    (members || []).forEach(function (m) {
+      [m.name, m.slug].forEach(function (n) { n = String(n || "").trim(); if (n) names.push({ n: n, me: false }); });
+    });
+    names.sort(function (a, b) { return b.n.length - a.n.length; });
+    var me = false;
+    var rx = new RegExp("@(" + names.map(function (x) {
+      return esc(x.n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }).join("|") + ")(?![\\p{L}\\p{M}\\p{N}_])", "giu");
+    // Only text between tags is touched, never an attribute or a link target.
+    var out = String(html).split(/(<[^>]*>)/).map(function (part) {
+      if (!part || part.charAt(0) === "<") return part;
+      return part.replace(rx, function (all, name) {
+        var low = name.toLowerCase();
+        var isMe = names.some(function (x) { return x.me && esc(x.n).toLowerCase() === low; });
+        if (isMe) me = true;
+        return '<span class="tm-at' + (isMe ? " tm-at-me" : "") + '">' + all + "</span>";
+      });
+    }).join("");
+    return { html: out, me: me };
   }
 
   function bodyHtml(m, mine) {
@@ -159,7 +223,11 @@
     if (mine) {
       var Q = quoteApi();
       var t = Q ? Q.tach(text) : { quote: "", rest: text };
-      return (t.quote ? quoteHtml(t.quote) : "") + '<div class="tm-text">' + esc(t.rest).replace(/\n/g, "<br>") + "</div>";
+      // 0.191.0: files sent with the message show as chips; the paperclip names line stored for the team turns is not repeated.
+      var files = ((m.meta || {}).files || []).filter(function (f) { return f && f.path; });
+      var rest = files.length ? t.rest.replace(/(?:\n\n)?\uD83D\uDCCE [^\n]*$/, "") : t.rest;
+      return (t.quote ? quoteHtml(t.quote) : "") + (rest ? '<div class="tm-text">' + esc(rest).replace(/\n/g, "<br>") + "</div>" : "") +
+        (files.length ? '<div class="tm-files">' + files.map(fileChipHtml).join("") + "</div>" : "");
     }
     var md = typeof window !== "undefined" && window.mdToHtml;
     if (md) {
@@ -169,11 +237,23 @@
     return '<div class="tm-text">' + esc(text).replace(/\n/g, "<br>") + "</div>";
   }
 
+  function rawUrl(path) { return "/files/raw?brain=" + q(brain()) + "&path=" + q(path); }
+  function fileChipHtml(f) {
+    var img = !!f.image || /\.(png|jpe?g|gif|webp)$/i.test(String(f.path || ""));
+    return '<a class="tm-file' + (img ? " is-img" : "") + '" href="' + esc(rawUrl(f.path)) + '" target="_blank" rel="noopener" title="' +
+      esc(f.name || f.path) + '">' + (img ? '<img src="' + esc(rawUrl(f.path)) + '" alt="" loading="lazy">' : ic("file-text")) +
+      "<span>" + esc(f.name || f.path) + "</span></a>";
+  }
+
   // One-line plain preview of a message for the reply bar and the quote: markdown marks and an earlier quote dropped.
   function plainPreview(text, n) {
     var Q = quoteApi();
     var s = String(text == null ? "" : text);
     if (Q) s = Q.tach(s).rest;
+    // 0.192.0: a preview reads as text: pictures dropped, [label](path) and [[note|label]] become their label.
+    s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/!\[\[[^\]]*\]\]/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function (a, t, l) { return l || t; });
     return Q ? Q.xemTruoc(s, n || 160) : s.replace(/\s+/g, " ").trim().slice(0, n || 160);
   }
 
@@ -281,6 +361,26 @@
     return "";
   }
 
+  // 0.197.0 (owner, 17/10/2026: "hiện châm nổi bao nhiêu tin chưa đọc, có @ mình hay không"): the unread count of a team
+  // (assistant and system messages since the owner last read it) and an @ mark when one of them calls the owner. The
+  // team open on screen shows none: the owner is reading it. A muted team keeps its count, drawn grey.
+  function seeing(t, activeId) {
+    return t.team_id === activeId && (typeof document === "undefined" || document.visibilityState !== "hidden");
+  }
+  function unreadOf(t, activeId) {
+    var u = t.unread || {};
+    return seeing(t, activeId) ? { n: 0, at: 0 } : { n: Number(u.n) || 0, at: Number(u.at) || 0 };
+  }
+  function unreadHtml(t, activeId) {
+    var u = unreadOf(t, activeId);
+    // 0.204.0: its own class. It shared "tm-at" with the @mentions inside messages, and this round 20px badge rule
+    // squeezed every mention into a circle, one letter per line.
+    return (u.at ? '<span class="tm-at-badge" title="' + esc(tw("teams.calls_you")) + '" aria-label="' + esc(tw("teams.calls_you")) +
+        '">@</span>' : "") +
+      (u.n ? '<span class="notification-badge tm-unread' + (t.muted ? " is-muted" : "") + '" title="' +
+        esc(tw("teams.unread_n", { n: u.n })) + '">' + (u.n > 99 ? "99+" : String(u.n)) + "</span>" : "");
+  }
+
   // Dòng phụ ở đầu khung chat (0.142.0): "Bạn + N trợ lý · X điều phối". Bạn là người tạo, quản lý (người thật); điều
   // phối là một trợ lý AI. Chỉ đếm trợ lý đang hoạt động.
   function headLine(t) {
@@ -303,9 +403,98 @@
       'aria-label="' + esc(tw("teams.rename")) + '" enterkeyhint="done">';
   }
 
+  // ───────────── tag (0.195.0) ─────────────
+  // Owner, 17/10/2026: "nhiều team đang triển khai cùng 1 dự án thì sẽ có thể add vào 1 tag", then "tag em làm dropdown
+  // giống bên cộng sự ... cái gì mà có rồi thì tái sử dụng". So the filter is the Partners page's bar and dropdown, and
+  // tags are set from the row menu with the Partners page's picker (both from tag-picker.js); tags on a row show in its
+  // tooltip, as on a partner card. Tags live on the team (server cleans them: team_store.clean_tags).
+  var TAG_NONE = "\u0001none";   // filter value "no tag yet", like the Partners page's TAG_NONE
+
+  function tagKey(s) { var v = String(s == null ? "" : s); try { v = v.normalize("NFC"); } catch (e) {} return v.toLowerCase(); }
+
+  // Every tag the listed teams carry, once (case folded), with how many teams carry it, sorted by name.
+  function allTags(teams) {
+    var seen = {}, out = [];
+    (teams || []).forEach(function (t) {
+      (t.tags || []).forEach(function (g) {
+        var k = tagKey(g);
+        if (!Object.prototype.hasOwnProperty.call(seen, k)) { seen[k] = { ten: g, key: k, n: 0 }; out.push(seen[k]); }
+        seen[k].n++;
+      });
+    });
+    return out.sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); });
+  }
+
+  function hasTag(t, key) {
+    return (t.tags || []).some(function (g) { return tagKey(g) === key; });
+  }
+
+  function filterTeams(teams, key) {
+    if (!key) return teams || [];
+    if (key === TAG_NONE) return (teams || []).filter(function (t) { return !(t.tags || []).length; });
+    return (teams || []).filter(function (t) { return hasTag(t, key); });
+  }
+
+  function tagLabel(teams, key) {
+    if (!key) return tw("teams.tags_all");
+    if (key === TAG_NONE) return tw("ws.tag_none");
+    var g = allTags(teams).filter(function (x) { return x.key === key; })[0];
+    return g ? g.ten : key;
+  }
+
+  // The filter bar on top of the list: the Partners page's bar (JavisTagPicker.barHtml).
+  function tagBarHtml(teams, key) {
+    var TP = tagPicker();
+    if (!TP) return "";
+    return TP.barHtml({ label: tagLabel(teams, key), icon: !key ? "layers" : key === TAG_NONE ? "circle" : "tag",
+                        canClear: !!key, pickTitle: tw("teams.tag_pick_title"), clearTitle: tw("ws.tag_clear_title") });
+  }
+
+  // Rows of the filter dropdown (JavisChatSide.menu, the same dropdown the Partners page opens).
+  function tagMenuRows(teams, key, pick) {
+    var tags = allTags(teams);
+    var none = (teams || []).filter(function (t) { return !(t.tags || []).length; }).length;
+    var rows = [
+      { label: tw("teams.tags_all"), icon: "layers", right: String((teams || []).length), on: !key, run: function () { pick(""); } },
+      { label: tw("ws.tag_none"), icon: "circle", right: String(none), on: key === TAG_NONE, run: function () { pick(TAG_NONE); } },
+    ];
+    if (tags.length) rows.push({ sep: true });
+    tags.forEach(function (g) {
+      rows.push({ label: g.ten, icon: "tag", right: String(g.n), on: key === g.key, run: function () { pick(g.key); } });
+    });
+    return rows;
+  }
+
+  // Rows of the "Tag" picker in a team's row menu: every tag in the list plus the team's own, checked when it has it.
+  function tagPickRows(team, teams) {
+    var mine = {}, out = [];
+    (team.tags || []).forEach(function (g) { mine[tagKey(g)] = g; });
+    var seen = {};
+    allTags(teams).forEach(function (g) { seen[g.key] = 1; out.push({ ten: g.ten, key: g.key, on: !!mine[g.key] }); });
+    Object.keys(mine).forEach(function (k) { if (!seen[k]) out.push({ ten: mine[k], key: k, on: true }); });
+    return out.sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); });
+  }
+
+  function tagPicker() {
+    if (typeof window !== "undefined" && window.JavisTagPicker) return window.JavisTagPicker;
+    try { return require("./tag-picker.js"); } catch (e) { return null; }
+  }
+
+  // The team the owner worked in last (0.195.0): the highest `owner_at` (sent a message or opened it, on any device).
+  // Teams never touched since this version fall back to their latest message, then their last update.
+  function lastWorkedTeam(teams) {
+    var best = null, bestAt = -1;
+    (teams || []).forEach(function (t) {
+      var at = Number(t.owner_at) || 0;
+      var rank = at ? 2e12 + at : Number((t.last || {}).ts || t.updated_at || 0);
+      if (rank > bestAt) { bestAt = rank; best = t; }
+    });
+    return best;
+  }
+
   // `menuId`: the team whose menu is open (the "..." button, long press on a phone, right click on a computer): Pin or
   // Unpin, Rename, Delete. `renaming`: the team whose name is being edited in place.
-  function teamListHtml(teams, activeId, now, menuId, renaming) {
+  function teamListHtml(teams, activeId, now, menuId, renaming, tagMode) {
     if (!teams || !teams.length) return guideHtml();
     return teams.map(function (t) {
       var on = t.team_id === activeId;
@@ -318,18 +507,33 @@
       }
       var pin = pinned ? '<span class="tm-pinned" title="' + esc(tw("teams.pinned")) + '" aria-label="' +
         esc(tw("teams.pinned")) + '">' + ic("pin") + "</span>" : "";
+      var mute = t.muted ? '<span class="tm-muted" title="' + esc(tw("teams.muted")) + '" aria-label="' +
+        esc(tw("teams.muted")) + '">' + ic("bell-off") + "</span>" : "";
+      var unread = unreadHtml(t, activeId);
       var open = menuId === t.team_id;
-      var menu = open ? '<div class="tm-row-menu" role="menu" aria-label="' + esc(tw("teams.row_menu")) + '">' +
+      // 0.195.0: "Tag" opens the Partners page's tag picker right in this menu (tagMode), like a partner's row menu.
+      var picker = open && tagMode === t.team_id && tagPicker();
+      var menu = !open ? "" : picker ? '<div class="tm-row-menu tm-tag-menu" role="menu" aria-label="' + esc(tw("ws.tag_menu")) + '">' +
+        // Suggestions come from EVERY team, not only those the filter shows.
+        picker.pickerHtml(tagPickRows(t, (S && S.teams && S.teams.length ? S.teams : teams))) + "</div>" : '<div class="tm-row-menu" role="menu" aria-label="' + esc(tw("teams.row_menu")) + '">' +
         '<button type="button" role="menuitem" data-pin-team="' + id + '" data-on="' + (pinned ? "0" : "1") + '">' + ic("pin") +
         esc(tw(pinned ? "teams.unpin_team" : "teams.pin_team")) + "</button>" +
+        '<button type="button" role="menuitem" data-tag-team="' + id + '">' + ic("tag") + esc(tw("ws.tag_menu")) + "</button>" +
+        // 0.197.0: notifications per team, so the owner follows only the teams they choose.
+        '<button type="button" role="menuitem" data-mute-team="' + id + '" data-on="' + (t.muted ? "0" : "1") + '">' +
+        ic(t.muted ? "bell" : "bell-off") + esc(tw(t.muted ? "teams.unmute_team" : "teams.mute_team")) + "</button>" +
         '<button type="button" role="menuitem" data-rename-team="' + id + '">' + ic("pencil") + esc(tw("teams.rename")) + "</button>" +
+        // 0.200.0: the whole team as one file (server/team_bundle.py).
+        '<button type="button" role="menuitem" data-share-team="' + id + '">' + ic("share-2") + esc(tw("teams.share_team")) + "</button>" +
         '<button type="button" role="menuitem" class="tm-danger" data-delete-team="' + id + '">' + ic("trash-2") +
-        esc(tw("teams.delete_team")) + "</button></div>" : "";
-      return '<div class="tm-team-wrap' + (open ? " is-menu" : "") + '"><button type="button" class="tm-team" data-team="' + id + '"' +
-        (on ? ' aria-current="true"' : "") + ">" +
-        teamAvatarHtml(t, 44) + '<span class="tm-team-main"><span class="tm-team-top"><span class="tm-team-name">' + esc(t.name) +
-        "</span>" + pin + '<span class="tm-team-time">' + esc(timeShort(last.ts || t.updated_at, now)) + "</span></span>" +
-        '<span class="tm-team-bottom"><span class="tm-team-sub">' + esc(previewText(t)) + "</span>" + teamBadge(t) +
+        esc(tw("teams.delete_team")) + "</button></div>";
+      var tagTip = (t.tags || []).length ? ' title="' + esc(t.name + "\n" + tw("teams.tags_title") + ": " + t.tags.join(", ")) + '"' : "";
+      return '<div class="tm-team-wrap' + (open ? " is-menu" : "") + '"><button type="button" class="tm-team' +
+        (unread ? " has-unread" : "") + '" data-team="' + id + '"' + (on ? ' aria-current="true"' : "") + tagTip + ">" +
+        teamAvatarHtml(t, 44) + (unread ? '<span class="tm-mini-unread">' + unread + "</span>" : "") +
+        '<span class="tm-team-main"><span class="tm-team-top"><span class="tm-team-name">' + esc(t.name) +
+        "</span>" + pin + mute + '<span class="tm-team-time">' + esc(timeShort(last.ts || t.updated_at, now)) + "</span></span>" +
+        '<span class="tm-team-bottom"><span class="tm-team-sub">' + esc(previewText(t)) + "</span>" + teamBadge(t) + unread +
         "</span></span></button>" +
         '<button type="button" class="tm-row-more" data-row-menu="' + id + '" aria-haspopup="menu" aria-expanded="' +
         (open ? "true" : "false") + '" aria-label="' + esc(tw("teams.row_menu")) + '" title="' + esc(tw("teams.row_menu")) + '">' +
@@ -418,6 +622,15 @@
     var meta = m.meta || {};
     var open = ctx.picker !== undefined && ctx.picker !== null && Number(ctx.picker) === Number(m.id);
     var hit = ctx.jumped !== undefined && ctx.jumped !== null && Number(ctx.jumped) === Number(m.id);
+    if (m.author_kind !== "owner" && m.author_kind !== "agent" && meta.kind === "approval_request" && meta.approval) {
+      return approvalCardHtml(m);
+    }
+    if (m.author_kind !== "owner" && m.author_kind !== "agent" && meta.kind === "mandate_opportunity" && meta.opportunity) {
+      return opportunityCardHtml(m);
+    }
+    if (m.author_kind !== "owner" && m.author_kind !== "agent" && meta.kind === "acceptance_review" && meta.acceptance) {
+      return acceptanceCardHtml(m);
+    }
     if (m.author_kind !== "owner" && m.author_kind !== "agent") {
       return '<div class="tm-sys' + (hit ? " tm-msg-hit" : "") + '" data-mid="' + esc(m.id) + '">' +
         esc(m.content).replace(/\n/g, "<br>") + "</div>";
@@ -439,6 +652,13 @@
     if (meta.job_result) head.push('<span class="tm-result">' + esc(tw("teams.job_result")) + "</span>");
     var late = !mine && LATE.indexOf(meta.status) >= 0;
     var body = bodyHtml(m, mine);
+    var asksMe = false;
+    if (!mine && m.author_kind === "agent") {
+      var mk = markMentions(body, ctx.members);
+      body = replyRefHtml(m, ctx) + mk.html;
+      asksMe = mk.me || !!meta.asks_owner;
+      if (asksMe) head.push('<span class="tm-asks">' + ic("at-sign") + esc(tw("teams.asks_you")) + "</span>");
+    }
     // "Xong" là bình thường nên không hiện; chỉ báo khi câu trả lời KHÔNG được áp dụng.
     var lateLine = late ? '<div class="tm-late">' + ic("triangle-alert") + esc(tw(STATUS_KEY[meta.status])) + "</div>" : "";
     var notes = (meta.notes || []).map(function (n) { return '<div class="tm-note-line">' + esc(n) + "</div>"; }).join("");
@@ -466,7 +686,7 @@
     var foot = decision + JR.agentChipsHtml(m.agent_reactions, { prefix: "tm" });
     var corner = mine ? "" : reactCornerHtml(m, ctx.lastAgent !== undefined && ctx.lastAgent !== null &&
       Number(ctx.lastAgent) === Number(m.id));
-    var cls = "tm-msg" + (mine ? " tm-msg-owner" : " tm-msg-agent") + (late ? " tm-msg-late" : "") +
+    var cls = "tm-msg" + (mine ? " tm-msg-owner" : " tm-msg-agent") + (late ? " tm-msg-late" : "") + (asksMe ? " tm-msg-asks" : "") +
       (meta.job_result ? " tm-msg-result" : "") + (hit ? " tm-msg-hit" : "") + (open ? " is-sheet" : "");
     var bubble = '<div class="tm-bubble">' + (head.length ? '<div class="tm-head">' + head.join("") + "</div>" : "") +
       body + lateLine + notes + prop + (foot ? '<div class="tm-foot">' + foot + "</div>" : "") + corner + "</div>";
@@ -478,9 +698,10 @@
         esc(tw("teams.agent_settings", { name: who })) + '" title="' + esc(tw("teams.agent_settings", { name: who })) + '">' +
         agentAva(author, 28) + "</button>" : agentAva(author || { name: who }, 28);
     }
-    var side = hoverActsHtml(m);
+    // The bubble and its action row stack in one column, so the row sits right under the bubble on its side.
+    var col = '<div class="tm-col">' + bubble + hoverActsHtml(m) + "</div>";
     return '<div class="' + cls + '" data-mid="' + esc(m.id) + '">' +
-      (mine ? side + bubble : face + bubble + side) + (open ? sheetHtml(m, mine) : "") + "</div>" +
+      (mine ? col : face + col) + (open ? sheetHtml(m, mine) : "") + "</div>" +
       (mine ? replyStatusHtml(m, ctx) : "");
   }
 
@@ -493,7 +714,14 @@
     if (kind === "failed" || kind === "no_progress") return { act: "retry", key: "teams.act.retry" };
     if (kind === "interrupted") return { act: "retry", key: "teams.act.continue" };
     if (kind === "no_leader") return { act: "leader", key: "teams.pick_leader" };
-    if (kind === "agent_busy_long" || kind === "waiting_user") return { act: "resume", key: "teams.resume" };
+    if (kind === "agent_busy_long") return { act: "resume", key: "teams.resume" };
+    // 0.207.0: waiting for an approval: the card in the chat decides, this button only shows it. Rejected or expired:
+    // the owner edits the job to give a new direction (cancel stays next to it).
+    if (kind === "waiting_user") return { act: "view", key: "teams.ap.show" };
+    if (kind === "rejected" || kind === "approval_expired") return { act: "amend", key: "teams.amend" };
+    // 0.209.0: waiting for the owner's acceptance: the card decides; out of fix rounds: edit the job for a new try.
+    if (kind === "acceptance_review") return { act: "view", key: "teams.acc.show" };
+    if (kind === "acceptance_failed") return { act: "amend", key: "teams.amend" };
     return null;
   }
 
@@ -503,6 +731,8 @@
     var label = esc(tw(a.key));
     if (a.act === "extend") return '<button type="button" class="ws-btn tm-primary" data-extend="' + esc(t.id) + '">' + label + "</button>";
     if (a.act === "leader") return '<button type="button" class="ws-btn tm-primary" data-open-team="1">' + label + "</button>";
+    if (a.act === "view") return '<button type="button" class="ws-btn tm-primary" data-view-task="' + esc(t.id) + '">' + label + "</button>";
+    if (a.act === "amend") return '<button type="button" class="ws-btn tm-primary" data-amend="' + esc(t.id) + '">' + label + "</button>";
     return '<button type="button" class="ws-btn tm-primary" data-unblock="' + esc(t.id) + '" data-action="' + a.act + '">' +
       label + "</button>";
   }
@@ -512,6 +742,9 @@
     return '<div class="tm-jcard"><div class="tm-jcard-text"><strong class="tm-qtitle">' + esc(t.title) + "</strong>" +
       '<span class="tm-qwhy">' + esc(t.block_reason || tw(BLOCK_KEY[kind] || BLOCK_KEY.failed)) + "</span></div>" +
       '<span class="tm-actions">' + blockedButtonHtml(t) +
+      // 0.209.0 review: criteria can be set on a stopped job too (acceptance_failed re-checks without redoing the work).
+      (kind === "acceptance_review" || kind === "acceptance_checking" ? "" :
+        '<button type="button" class="ws-btn" data-acc-edit="' + esc(t.id) + '">' + esc(tw("teams.acc.set")) + "</button>") +
       '<button type="button" class="ws-btn" data-cancel="' + esc(t.id) + '">' + esc(tw("teams.cancel")) + "</button></span></div>";
   }
 
@@ -520,7 +753,63 @@
       '<span class="tm-qtitle">' + esc(tw("teams.doing", { title: t.title })) + '</span><span class="tm-actions">' +
       (withView ? '<button type="button" class="ws-btn" data-view-task="' + esc(t.id) + '">' + esc(tw("teams.view_msgs")) + "</button>" : "") +
       '<button type="button" class="ws-btn" data-amend="' + esc(t.id) + '">' + esc(tw("teams.amend")) + "</button>" +
+      (withView ? '<button type="button" class="ws-btn" data-acc-edit="' + esc(t.id) + '">' + esc(tw("teams.acc.set")) + "</button>" : "") +
       '<button type="button" class="ws-btn" data-cancel="' + esc(t.id) + '">' + esc(tw("teams.cancel")) + "</button></span></div>";
+  }
+
+  // 0.209.0: acceptance criteria of a job, one per line (parsed by parseCriteria):
+  //   file: path | contains: path | min chars | phrase, phrase | json: path | key, key | cmd: command | confirm: path
+  function parseCriteria(text) {
+    var out = [], bad = [];
+    String(text || "").split("\n").forEach(function (line) {
+      var l = line.trim();
+      if (!l) return;
+      var i = l.indexOf(":");
+      var k = i > 0 ? l.slice(0, i).trim().toLowerCase() : "";
+      var parts = (i > 0 ? l.slice(i + 1) : "").split("|").map(function (x) { return x.trim(); });
+      var list = function (x) { return String(x || "").split(",").map(function (y) { return y.trim(); }).filter(Boolean); };
+      if (k === "file" && parts[0]) out.push({ kind: "file_exists", path: parts[0] });
+      else if (k === "contains" && parts[0]) out.push({ kind: "file_contains", path: parts[0], min_chars: Number(parts[1]) || 0, must_contain: list(parts[2]) });
+      else if (k === "json" && parts[0]) out.push({ kind: "json_keys", path: parts[0], keys: list(parts[1]) });
+      else if (k === "cmd" && parts[0]) out.push({ kind: "command_ok", command: l.slice(i + 1).trim() });
+      else if (k === "confirm") out.push(parts[0] ? { kind: "owner_confirm", path: parts[0] } : { kind: "owner_confirm" });
+      else bad.push(l);
+    });
+    return { criteria: out, bad: bad };
+  }
+
+  function accEditorHtml(t, view) {
+    if (!view || view.accEdit !== t.id) return "";
+    return '<form class="tm-form tm-acc-form" data-acc-task="' + esc(t.id) + '" onsubmit="return false">' +
+      '<label class="tm-field"><span>' + esc(tw("teams.acc.criteria")) + '</span><textarea name="tm-acc-text" rows="4"></textarea></label>' +
+      '<div class="tm-sub">' + esc(tw("teams.acc.help")) + "</div>" +
+      '<div class="tm-sub">' + esc(tw("teams.acc.replace")) + "</div>" +
+      '<label class="tm-field tm-cap"><span>' + esc(tw("teams.acc.rounds")) + '</span><input type="number" min="0" max="5" name="tm-acc-rounds" value="2"></label>' +
+      '<div class="tm-actions"><button type="button" class="ws-btn tm-primary tm-acc-save">' + esc(tw("teams.save")) +
+      '</button><button type="button" class="ws-btn" data-acc-edit="">' + esc(tw("teams.cancel")) + "</button></div></form>";
+  }
+
+  // The owner's acceptance card: what was checked on the product, Accept or Send back.
+  var ACC_V_KEY = { pass: "teams.acc.v.pass", fail: "teams.acc.v.fail", unknown: "teams.acc.v.unknown" };
+  function acceptanceCardHtml(m) {
+    var a = (m.meta || {}).acceptance || {};
+    var rows = (a.last || []).map(function (x) {
+      var c = (a.criteria || [])[x.idx] || {};
+      var what = c.label || c.path || c.command || c.kind || "";
+      var ev = x.evidence || {};
+      return "<li><b>" + esc(tw(ACC_V_KEY[x.verdict] || ACC_V_KEY.unknown)) + "</b> · " + esc(what) +
+        (ev.detail ? " · " + esc(ev.detail) : "") + (ev.sha256 ? ' <code>' + esc(String(ev.sha256).slice(0, 12)) + "</code>" : "") + "</li>";
+    }).join("");
+    var waiting = a.status === "review";
+    return '<div class="tm-ap tm-acc tm-ap-' + esc(a.status || "") + '" data-mid="' + esc(m.id) + '" role="group"><div class="tm-ap-head">' +
+      ic("check") + "<b>" + esc(tw("teams.acc.title")) + "</b></div>" + '<ul class="tm-ap-calls">' + rows + "</ul>" +
+      ((a.stale || []).length ? '<div class="tm-note-line">' + esc(tw("teams.acc.stale")) + "</div>" : "") +
+      (waiting ? '<div class="tm-actions"><button type="button" class="ws-btn tm-primary" data-acc-decide="accept" data-acc="' +
+        esc(a.task_id) + '" data-acc-rev="' + esc(a.revision) + '" data-acc-round="' + esc(a.rounds) + '">' + esc(tw("teams.acc.accept")) +
+        '</button><button type="button" class="ws-btn" data-acc-decide="reject" data-acc="' + esc(a.task_id) + '" data-acc-rev="' +
+        esc(a.revision) + '" data-acc-round="' + esc(a.rounds) + '">' + esc(tw("teams.acc.reject")) + "</button></div>" :
+        '<div class="tm-ap-state">' + esc(tw(a.status === "accepted" ? "teams.acc.st.accepted" : "teams.acc.st.closed")) + "</div>") +
+      "</div>";
   }
 
   // Dải việc ở đầu khung chat: việc đang làm (một dòng) và việc đang chờ chủ (thẻ có nút giải quyết).
@@ -537,18 +826,22 @@
   }
 
   // Tab Việc trong ngăn: Đang làm, Chờ bạn, Sắp làm (đánh số đúng thứ tự chạy).
-  function queueHtml(q) {
+  function queueHtml(q, view) {
     q = q || {};
+    view = view || {};
     var running = q.running || [], waiting = q.waiting || [], blocked = q.blocked || [];
-    if (!running.length && !waiting.length && !blocked.length) return '<div class="tm-empty">' + esc(tw("teams.queue_empty")) + "</div>";
+    var fin = finishedHtml(q.finished || [], q.archived || [], view);
+    if (!running.length && !waiting.length && !blocked.length) {
+      return (fin ? "" : '<div class="tm-empty">' + esc(tw("teams.queue_empty")) + "</div>") + fin;
+    }
     var h = "";
     if (running.length) {
       h += '<div class="tm-qhead">' + esc(tw("teams.queue_running")) + "</div>";
-      h += running.map(function (t) { return runningRowHtml(t, true); }).join("");
+      h += running.map(function (t) { return runningRowHtml(t, true) + accEditorHtml(t, view); }).join("");
     }
     if (blocked.length) {
       h += '<div class="tm-qhead">' + esc(tw("teams.queue_blocked")) + "</div>";
-      h += blocked.map(blockedCardHtml).join("");
+      h += blocked.map(function (t) { return blockedCardHtml(t) + accEditorHtml(t, view); }).join("");
     }
     if (waiting.length) {
       h += '<div class="tm-qhead">' + esc(tw("teams.queue_waiting")) + "</div>";
@@ -559,10 +852,73 @@
           '<span class="tm-qtitle">' + esc(t.title) + '</span><span class="tm-actions">' +
           '<button type="button" class="ws-btn" data-prio="' + esc(t.id) + '" data-on="' + (star ? "0" : "1") + '">' +
           esc(tw(star ? "teams.unprioritize" : "teams.prioritize")) + "</button>" +
-          '<button type="button" class="ws-btn" data-cancel="' + esc(t.id) + '">' + esc(tw("teams.cancel")) + "</button></span></div>";
+          '<button type="button" class="ws-btn" data-acc-edit="' + esc(t.id) + '">' + esc(tw("teams.acc.set")) + "</button>" +
+          '<button type="button" class="ws-btn" data-cancel="' + esc(t.id) + '">' + esc(tw("teams.cancel")) + "</button></span></div>" +
+          accEditorHtml(t, view);
       }).join("");
     }
+    return h + fin;
+  }
+
+  // 0.193.0 (owner, 16/10/2026): finished jobs stay in the Jobs tab until the owner presses Done; Open shows a short report
+  // (what came out, who did which step); Done moves the job to the Archive below (nothing deleted); only in the Archive
+  // can a job be deleted, one by one or all at once.
+  function finishedHtml(fin, arch, view) {
+    var h = "";
+    if (fin.length) {
+      h += '<div class="tm-qhead tm-qhead-done">' + esc(tw("teams.queue_finished")) + ' <span class="tm-qn">' + fin.length + "</span></div>";
+      h += fin.map(function (j) {
+        var open = view.openFin === j.id;
+        return '<div class="tm-qrow tm-jdone' + (j.cancelled ? " is-cancelled" : "") + '"><span class="tm-qok" aria-hidden="true">' +
+          ic(j.cancelled ? "circle-x" : "circle-check") + '</span><span class="tm-qtitle">' + esc(j.title) + "</span>" +
+          '<span class="tm-actions"><button type="button" class="ws-btn" data-fin-open="' + esc(j.id) + '" aria-expanded="' +
+          (open ? "true" : "false") + '">' + ic(open ? "chevron-up" : "file-text") + esc(tw(open ? "teams.fin_close" : "teams.fin_open")) +
+          '</button><button type="button" class="ws-btn tm-primary" data-job-archive="' + esc(j.id) + '">' + ic("check") +
+          esc(tw("teams.fin_done")) + "</button></span>" + (open ? reportHtml(j, view) : "") + "</div>";
+      }).join("");
+    }
+    if (arch.length) {
+      var aopen = !!view.archOpen;
+      h += '<div class="tm-qhead tm-qhead-arch"><button type="button" class="tm-arch-toggle" aria-expanded="' + (aopen ? "true" : "false") + '">' +
+        ic(aopen ? "chevron-down" : "chevron-right") + esc(tw("teams.archive")) + ' <span class="tm-qn">' + arch.length + "</span></button>" +
+        (aopen ? '<button type="button" class="ws-btn tm-arch-clear" data-job-delete-all="1">' + ic("trash-2") +
+          esc(tw("teams.archive_clear")) + "</button>" : "") + "</div>";
+      if (aopen) {
+        h += arch.map(function (j) {
+          return '<div class="tm-qrow tm-jarch"><span class="tm-qok" aria-hidden="true">' + ic("folder") + '</span><span class="tm-qtitle">' +
+            esc(j.title) + '</span><span class="tm-actions"><button type="button" class="ws-btn" data-fin-open="' + esc(j.id) + '">' +
+            esc(tw(view.openFin === j.id ? "teams.fin_close" : "teams.fin_open")) + '</button><button type="button" class="ws-btn" data-job-unarchive="' +
+            esc(j.id) + '">' + esc(tw("teams.archive_back")) + '</button><button type="button" class="ws-btn" data-job-delete="' + esc(j.id) +
+            '">' + ic("trash-2") + esc(tw("teams.archive_delete")) + "</button></span>" + (view.openFin === j.id ? reportHtml(j, view) : "") + "</div>";
+        }).join("");
+      }
+    }
     return h;
+  }
+
+  function reportHtml(j, view) {
+    var members = view.members || [];
+    var who = {}, order = [];
+    (j.steps || []).forEach(function (st) {
+      if (!st.agent_key) return;
+      if (!who[st.agent_key]) { who[st.agent_key] = []; order.push(st.agent_key); }
+      who[st.agent_key].push(st);
+    });
+    var md = typeof window !== "undefined" && window.mdToHtml;
+    var res = String(j.result || "").trim();
+    var resHtml = res ? (md ? (function () { try { return '<div class="msg-javis tm-mdwrap"><div class="bubble">' + md(res, brain()) + "</div></div>"; }
+      catch (e) { return esc(res); } })() : esc(res).replace(/\n/g, "<br>")) : '<p class="tm-sub">' + esc(tw("teams.fin_no_result")) + "</p>";
+    var when = j.updated_at ? new Date(Number(j.updated_at) * 1000).toLocaleString() : "";
+    return '<div class="tm-report">' +
+      '<div class="tm-report-meta">' + esc(tw(j.cancelled ? "teams.fin_cancelled_at" : "teams.fin_done_at", { when: when })) + "</div>" +
+      (order.length ? '<div class="tm-report-who">' + order.map(function (k) {
+        var m = memberOf(members, k) || { name: k };
+        var kinds = who[k].map(function (st) { return tw(ROLE_KEY[st.kind] || "teams.role.work"); }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+        return '<span class="tm-report-person">' + agentAva(m, 18) + "<b>" + esc(m.name || m.slug || k) + "</b>" + esc(kinds.join(", ")) + "</span>";
+      }).join("") + "</div>" : "") +
+      '<div class="tm-report-body">' + resHtml + "</div>" +
+      (j.task_id ? '<button type="button" class="ws-btn" data-view-task="' + esc(j.task_id) + '">' + esc(tw("teams.view_msgs")) + "</button>" : "") +
+      "</div>";
   }
 
   // ───────────── khung soạn ─────────────
@@ -599,6 +955,7 @@
   // thì gọi ĐÚNG mã đó (hai trợ lý trùng tên vẫn đúng người, không suy lại theo tên); sửa hay xoá token thì lựa chọn đó
   // mất, không gọi ai theo nó nữa. Gõ tay một tên duy nhất vẫn gọi được; gõ tay một tên trùng thì không gọi ai và báo
   // `ambiguous` để chủ chọn trong gợi ý.
+  var ALL_TOKEN = "all";
   function mentionScan(text, members, picked) {
     var norm = function (s) { s = String(s || ""); return (s.normalize ? s.normalize("NFC") : s).toLowerCase(); };
     var low = norm(text);
@@ -650,6 +1007,12 @@
         at = i + 1;
       }
     });
+    // 0.192.0 (owner, 16/10/2026: "có thể tag @all để tag tất cả mọi người"): @all calls every active member.
+    var all = false, ai = 0, aj;
+    while ((aj = low.indexOf("@" + ALL_TOKEN, ai)) >= 0) {
+      if (bounded(aj, ALL_TOKEN.length)) { all = true; break; }
+      ai = aj + 1;
+    }
     var used = {}, out = [], ambiguous = [];
     Object.keys(byPos).map(Number).sort(function (a, b) { return a - b; }).forEach(function (i) {
       var g = byPos[i], key = null;
@@ -666,7 +1029,12 @@
         if (out.indexOf(key) < 0) out.push(key);
       }
     });
-    return { keys: out, ambiguous: ambiguous };
+    if (all) {
+      (members || []).forEach(function (m) {
+        if ((!m.status || m.status === "active") && out.indexOf(m.agent_key) < 0) out.push(m.agent_key);
+      });
+    }
+    return { keys: out, ambiguous: ambiguous, all: all };
   }
 
   // Bỏ một người khỏi tin đang soạn: xoá token "@tên" của họ trong chữ (token đã chọn trước, rồi tới tên gõ tay) và bỏ
@@ -709,8 +1077,15 @@
   }
 
   // Hàng "Gọi:" trên khung soạn: mỗi người sẽ được gọi là một token riêng, bấm x để bỏ gọi.
-  function callsHtml(keys, members) {
+  function callsHtml(keys, members, all) {
     if (!(keys || []).length) return "";
+    if (all) {
+      // @all: one chip for the whole team; its x takes "@all" out of the text.
+      return '<span class="tm-calls-label">' + esc(tw("teams.calls")) + '</span><span class="tm-call">' +
+        '<span class="tm-sug-all" aria-hidden="true">' + ic("users") + '</span><span class="tm-call-name">@' + ALL_TOKEN +
+        " (" + keys.length + ')</span><button type="button" class="tm-call-x" data-unmention="*all" aria-label="' +
+        esc(tw("teams.uncall", { name: "@" + ALL_TOKEN })) + '">' + ic("x") + "</button></span>";
+    }
     return '<span class="tm-calls-label">' + esc(tw("teams.calls")) + "</span>" + keys.map(function (k) {
       var m = memberOf(members, k) || { name: k };
       return '<span class="tm-call">' + agentAva(m, 20) + '<span class="tm-call-name">@' + esc(m.name || m.slug || k) +
@@ -728,6 +1103,7 @@
     var cap = Number(st.cap || 3);
     var ments = st.mentions || [];
     if ((st.ambiguous || []).length) return { ok: false, text: tw("teams.mention_ambiguous", { name: st.ambiguous[0] }) };
+    if (st.all) return { ok: true, text: tw("teams.hint_all", { n: ments.length }) };
     if (ments.length > cap) return { ok: false, text: tw("teams.hint_cap", { cap: cap }) };
     if (!st.asJob) return { ok: true, text: "" };
     if (ments.length) {
@@ -767,7 +1143,9 @@
         esc(rsText(m.resonance_enabled)) + "</span></label>" +
         '<label class="tm-rs"><input type="checkbox" class="tm-managed-toggle" data-key="' + esc(m.agent_key) + '"' +
         (m.managed ? " checked" : "") + "><span>" + esc(tw("teams.managed")) + "</span></label>" +
-        '<span class="tm-actions">' + (m.slug ? '<button type="button" class="ws-btn" data-agent-edit="' + esc(m.slug) + '">' +
+        '<span class="tm-actions">' + (m.slug ? '<button type="button" class="ws-btn" data-agent-chat="' + esc(m.slug) + '">' +
+          ic("message-circle") + esc(tw("teams.chat_private")) + "</button>" +
+          '<button type="button" class="ws-btn" data-agent-edit="' + esc(m.slug) + '">' +
           ic("settings") + esc(tw("teams.agent_settings_short")) + "</button>" : "") + (lead
           ?'<button type="button" class="ws-btn" data-leader="">' + esc(tw("teams.remove_leader")) + "</button>"
           : '<button type="button" class="ws-btn" data-leader="' + esc(m.agent_key) + '">' + esc(tw("teams.make_leader")) + "</button>") +
@@ -1056,6 +1434,188 @@
       '<div class="tm-sub">' + esc(tw("teams.turns_note")) + "</div></div>";
   }
 
+  // 0.208.0: department mandate (team_mandate.py). Kinds, levels and states with literal keys for test_i18n.
+  var MD_KINDS = ["file_changed", "job_failed", "test_failing", "connection_down"];
+  var MD_KIND_KEY = { file_changed: "teams.md.kind.file_changed", job_failed: "teams.md.kind.job_failed",
+    test_failing: "teams.md.kind.test_failing", connection_down: "teams.md.kind.connection_down" };
+  var MD_LEVELS = ["watch", "propose", "approve", "act"];
+  var MD_LEVEL_KEY = { watch: "teams.md.level.watch", propose: "teams.md.level.propose", approve: "teams.md.level.approve",
+    act: "teams.md.level.act" };
+  var MD_STATUS_KEY = { off: "teams.md.st.off", active: "teams.md.st.active", paused: "teams.md.st.paused",
+    revoked: "teams.md.st.revoked" };
+  var MD_SRC_KEY = { ok: "teams.md.src.ok", missing: "teams.md.src.missing", never: "teams.md.src.never" };
+  var OPP_ST_KEY = { proposed: "teams.md.opp.proposed", enqueued: "teams.md.opp.enqueued", asked: "teams.md.opp.asked",
+    rejected: "teams.md.opp.rejected", expired: "teams.md.opp.expired", dismissed: "teams.md.opp.dismissed",
+    watched: "teams.md.opp.watched", open: "teams.md.opp.proposed", accepting: "teams.md.opp.enqueued" };
+
+  function mdLevelOf(m, kind) {
+    var a = (m && m.autonomy) || {};
+    if ((a.act || []).indexOf(kind) >= 0) return "act";
+    if ((a.approve || []).indexOf(kind) >= 0) return "approve";
+    if ((a.propose || []).indexOf(kind) >= 0) return "propose";
+    return "watch";
+  }
+
+  function mandateFormHtml(m) {
+    m = m || {};
+    var b = m.budget || {};
+    var area = function (name, key, val, rows) {
+      return '<label class="tm-field"><span>' + esc(tw(key)) + '</span><textarea name="' + name + '" rows="' + (rows || 2) +
+        '">' + esc(val || "") + "</textarea></label>";
+    };
+    var num = function (name, key, val) {
+      return '<label class="tm-field tm-cap"><span>' + esc(tw(key)) + '</span><input type="number" min="0" name="' + name +
+        '" value="' + esc(val == null ? "" : val) + '"></label>';
+    };
+    var levels = MD_KINDS.map(function (k) {
+      var cur = mdLevelOf(m, k);
+      return '<label class="tm-field tm-cap"><span>' + esc(tw(MD_KIND_KEY[k])) + '</span><select name="tm-md-lvl-' + k + '">' +
+        MD_LEVELS.map(function (l) {
+          return '<option value="' + l + '"' + (l === cur ? " selected" : "") + ">" + esc(tw(MD_LEVEL_KEY[l])) + "</option>";
+        }).join("") + "</select></label>";
+    }).join("");
+    return '<form class="tm-form tm-md-form" onsubmit="return false">' +
+      area("tm-md-outcome", "teams.md.outcome", m.outcome, 2) +
+      area("tm-md-metrics", "teams.md.metrics", (m.metrics || []).join("\n"), 3) +
+      area("tm-md-sources", "teams.md.sources", (m.sources || []).join("\n"), 3) +
+      '<div class="tm-sub">' + esc(tw("teams.md.sources_help")) + "</div>" +
+      area("tm-md-scope", "teams.md.scope", m.scope, 2) +
+      num("tm-md-cadence", "teams.md.cadence", m.cadence_min || 60) +
+      num("tm-md-obs", "teams.md.observe_per_day", b.observe_per_day == null ? 48 : b.observe_per_day) +
+      num("tm-md-jobs", "teams.md.jobs_per_day", b.jobs_per_day == null ? 3 : b.jobs_per_day) +
+      num("tm-md-maxopen", "teams.md.max_open", (m.stop || {}).max_open_jobs) +
+      '<div class="tm-qhead">' + esc(tw("teams.md.autonomy")) + "</div>" + levels +
+      '<div class="tm-actions"><button type="button" class="ws-btn tm-primary tm-md-save">' + esc(tw("teams.save")) +
+      '</button><button type="button" class="ws-btn" data-mandate-edit="0">' + esc(tw("teams.cancel")) + "</button></div></form>";
+  }
+
+  function mandateHtml(team, editing) {
+    var m = team.mandate;
+    var head = '<div class="tm-qhead">' + esc(tw("teams.md.title")) + "</div>";
+    if (editing) return '<section class="tm-sec tm-md">' + head + mandateFormHtml(m) + "</section>";
+    if (!m) {
+      return '<section class="tm-sec tm-md">' + head + '<div class="tm-sub">' + esc(tw("teams.md.none")) + "</div>" +
+        '<div class="tm-actions"><button type="button" class="ws-btn" data-mandate-edit="1">' + esc(tw("teams.md.set")) +
+        "</button></div></section>";
+    }
+    var st = m.status || "off";
+    var srcs = (m.sources_state || []).map(function (x) {
+      return '<li class="tm-md-src tm-md-src-' + esc(x.state) + '"><code>' + esc(x.source) + "</code> · " +
+        esc(tw(MD_SRC_KEY[x.state] || MD_SRC_KEY.never)) + (x.missing ? ": " + esc(x.missing) : "") + "</li>";
+    }).join("");
+    var lv = MD_KINDS.map(function (k) { return esc(tw(MD_KIND_KEY[k])) + ": " + esc(tw(MD_LEVEL_KEY[mdLevelOf(m, k)])); }).join(" · ");
+    var btn = function (status, key) {
+      return '<button type="button" class="ws-btn" data-mandate-status="' + status + '">' + esc(tw(key)) + "</button>";
+    };
+    var acts = st === "revoked" ? "" : (st === "active" ? btn("paused", "teams.md.pause") : btn("active", "teams.md.start")) +
+      btn("revoked", "teams.md.revoke");
+    return '<section class="tm-sec tm-md">' + head +
+      '<div class="tm-md-status tm-md-' + esc(st) + '">' + esc(tw(MD_STATUS_KEY[st] || MD_STATUS_KEY.off)) +
+      " · " + esc(tw("teams.md.version", { v: m.version })) + "</div>" +
+      '<div class="tm-md-outcome">' + esc(m.outcome) + "</div>" +
+      ((m.metrics || []).length ? '<ul class="tm-md-metrics">' + m.metrics.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" : "") +
+      '<div class="tm-sub">' + esc(tw("teams.md.sources")) + '</div><ul class="tm-md-srcs">' + srcs + "</ul>" +
+      '<div class="tm-sub">' + lv + "</div>" +
+      (m.observing === false ? '<div class="tm-note-line">' + esc(tw("teams.md.not_observing")) + "</div>" : "") +
+      '<div class="tm-actions">' + acts + '<button type="button" class="ws-btn" data-mandate-edit="1">' +
+      esc(tw("teams.md.edit")) + "</button></div></section>";
+  }
+
+  // A proposal card from the mandate in the team chat: why, evidence, and the owner's two buttons.
+  function opportunityCardHtml(m) {
+    var o = (m.meta || {}).opportunity || {};
+    var st = o.status || "proposed";
+    var ev = (o.evidence || []).map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("");
+    var foot = (st === "proposed" || st === "open") ?
+      '<div class="tm-actions"><button type="button" class="ws-btn tm-primary" data-opp-decide="accept" data-opp="' +
+        esc(o.opp_id) + '">' + esc(tw("teams.md.accept")) + '</button><button type="button" class="ws-btn" data-opp-decide="reject" data-opp="' +
+        esc(o.opp_id) + '">' + esc(tw("teams.md.reject")) + "</button></div>" :
+      '<div class="tm-ap-state">' + esc(tw(OPP_ST_KEY[st] || OPP_ST_KEY.proposed)) + "</div>";
+    return '<div class="tm-ap tm-opp tm-ap-' + esc(st) + '" data-mid="' + esc(m.id) + '" role="group"><div class="tm-ap-head">' +
+      ic("lightbulb") + "<b>" + esc(tw("teams.md.opp_title")) + "</b></div>" +
+      '<div>' + esc(o.reason || "") + "</div>" +
+      (o.benefit ? '<div class="tm-ap-row"><span class="tm-ap-k">' + esc(tw("teams.md.benefit")) + "</span><span>" + esc(o.benefit) + "</span></div>" : "") +
+      (ev ? '<div class="tm-ap-k">' + esc(tw("teams.ap.evidence")) + '</div><ul class="tm-ap-ev">' + ev + "</ul>" : "") +
+      '<div class="tm-sub"><code>' + esc((o.source || "") + ":" + (o.ref || "") + " @ " + (o.version_key || "")) + "</code></div>" +
+      foot + "</div>";
+  }
+
+  function readMandateForm(form) {
+    var val = function (n) { var el = form.querySelector('[name="' + n + '"]'); return el ? el.value : ""; };
+    var lines = function (n) { return val(n).split("\n").map(function (x) { return x.trim(); }).filter(Boolean); };
+    var autonomy = { act: [], approve: [], propose: [] };
+    MD_KINDS.forEach(function (k) {
+      var l = val("tm-md-lvl-" + k);
+      if (autonomy[l]) autonomy[l].push(k);
+    });
+    var body = { outcome: val("tm-md-outcome").trim(), metrics: lines("tm-md-metrics"), sources: lines("tm-md-sources"),
+      scope: val("tm-md-scope").trim(), cadence_min: Number(val("tm-md-cadence")) || 60,
+      budget: { observe_per_day: Number(val("tm-md-obs")), jobs_per_day: Number(val("tm-md-jobs")) }, autonomy: autonomy };
+    if (val("tm-md-maxopen") !== "") body.stop = { max_open_jobs: Number(val("tm-md-maxopen")) };
+    return body;
+  }
+
+  var WM_KEY = { gated: ["teams.wm.gated", "teams.wm.gated_desc"], full: ["teams.wm.full", "teams.wm.full_desc"] };
+  var AP_ST_KEY = { pending: "teams.ap.st.pending", approved: "teams.ap.st.approved", consumed: "teams.ap.st.consumed",
+    rejected: "teams.ap.st.rejected", changes_requested: "teams.ap.st.changes_requested", expired: "teams.ap.st.expired",
+    superseded: "teams.ap.st.superseded", cancelled: "teams.ap.st.cancelled", revoked: "teams.ap.st.revoked" };
+
+  // 0.207.0: what the team may do outside without asking. Gated (default): outside actions wait for an approval card.
+  function workModeHtml(team) {
+    var full = team.work_mode === "full";
+    return '<section class="tm-sec tm-wm" aria-label="' + esc(tw("teams.wm.title")) + '"><div class="tm-qhead">' +
+      esc(tw("teams.wm.title")) + "</div>" +
+      ["gated", "full"].map(function (m) {
+        return '<label class="tm-radio"><input type="radio" name="tm-wm" value="' + m + '" data-work-mode="' + m + '"' +
+          ((m === "full") === full ? " checked" : "") + "><span><b>" + esc(tw(WM_KEY[m][0])) + "</b><br>" +
+          esc(tw(WM_KEY[m][1])) + "</span></label>";
+      }).join("") + "</section>";
+  }
+
+  // 0.207.0: an approval request card in the team chat. State comes from the server (never guessed): waiting with three
+  // buttons, approved / used / rejected / void with who and why.
+  function approvalCardHtml(m) {
+    var ap = (m.meta || {}).approval || {};
+    var st = ap.status || "pending";
+    var rows = [];
+    if (ap.action) rows.push(["teams.ap.action", ap.action]);
+    if (ap.scope) rows.push(["teams.ap.scope", ap.scope]);
+    if (ap.impact) rows.push(["teams.ap.impact", ap.impact]);
+    var body = rows.map(function (r) {
+      return '<div class="tm-ap-row"><span class="tm-ap-k">' + esc(tw(r[0])) + "</span><span>" +
+        esc(r[1]).replace(/\n/g, "<br>") + "</span></div>";
+    }).join("");
+    var acts = (ap.actions || []).map(function (a) {
+      return '<li><code>' + esc(a.call || a.label) + "</code>" + (a.used ? " · " + esc(tw("teams.ap.used")) : "") + "</li>";
+    }).join("");
+    if (acts) body += '<div class="tm-ap-k">' + esc(tw("teams.ap.calls")) + '</div><ul class="tm-ap-calls">' + acts + "</ul>";
+    var ev = (ap.evidence || []).map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("");
+    if (ev) body += '<div class="tm-ap-k">' + esc(tw("teams.ap.evidence")) + '</div><ul class="tm-ap-ev">' + ev + "</ul>";
+    if (ap.deadline_at) {
+      body += '<div class="tm-ap-row"><span class="tm-ap-k">' + esc(tw("teams.ap.deadline")) + "</span><span>" +
+        esc(new Date(Number(ap.deadline_at) * 1000).toLocaleString()) + "</span></div>";
+    }
+    if (ap.kind === "question") body += '<div class="tm-sub">' + esc(tw("teams.ap.prose")) + "</div>";
+    var foot;
+    if (st === "pending") {
+      var b = function (d, k, cls) {
+        return '<button type="button" class="ws-btn' + (cls || "") + '" data-ap-decide="' + d + '" data-ap="' +
+          esc(ap.approval_id) + '" data-ap-rev="' + esc(ap.team_rev) + '">' + esc(tw(k)) + "</button>";
+      };
+      foot = '<div class="tm-actions">' + b("approve", "teams.ap.approve", " tm-primary") + b("changes", "teams.ap.changes") +
+        b("reject", "teams.ap.reject") + "</div>";
+    } else {
+      foot = '<div class="tm-ap-state tm-ap-' + esc(st) + '">' + esc(tw(AP_ST_KEY[st] || AP_ST_KEY.pending)) +
+        (ap.decision_note ? " · " + esc(ap.decision_note) : "") + (ap.close_reason && st !== "consumed" ? " · " +
+        esc(ap.close_reason) : "") + "</div>" +
+        (st === "approved" ? '<div class="tm-actions"><button type="button" class="ws-btn" data-ap-decide="revoke" data-ap="' +
+          esc(ap.approval_id) + '">' + esc(tw("teams.ap.revoke")) + "</button></div>" : "");
+    }
+    return '<div class="tm-ap tm-ap-' + esc(st) + '" data-mid="' + esc(m.id) + '" role="group" aria-label="' +
+      esc(tw("teams.ap.title")) + '"><div class="tm-ap-head">' + ic("shield") + "<b>" + esc(tw("teams.ap.title")) +
+      "</b> " + esc(ap.title || "") + "</div>" + body + foot + "</div>";
+  }
+
   // Tab Nhóm: thành viên, mức tự quyết, số lần đã dùng hôm nay, tên và trạng thái; mọi con số trong Nâng cao (đóng sẵn).
   function teamTabHtml(team, agents, ui) {
     ui = ui || {};
@@ -1064,6 +1624,7 @@
       esc(tw("teams.head_people", { n: nAct })) + "</div>" +
       membersHtml(team, agents, ui.openMember) + "</section>" +
       '<section class="tm-sec">' + levelsHtml(team) + usageHtml(team) + "</section>" +
+      workModeHtml(team) + mandateHtml(team, ui.mandateEdit) +
       '<section class="tm-sec"><div class="tm-qhead">' + esc(tw("teams.tab_team")) + "</div>" +
       '<label class="tm-rs tm-pin-row"><input type="checkbox" class="tm-pin-toggle"' + (team.pinned_at ? " checked" : "") +
       "><span>" + esc(tw("teams.pin_top")) + "</span></label>" + settingsFormHtml(team) + "</section>" +
@@ -1145,7 +1706,9 @@
       focusPicker: false, focusBack: null, searchOpen: false, searchResults: null, searchQuery: "", jumped: null,
       openMember: null, advOpen: false, turns: [], sideOpener: null, rowMenu: null, focusRowMenu: false, swallowClick: false,
       picked: [], retrying: {}, pickSt: null, pickOpener: null, pickHost: null, roster: [],
-      renaming: "", renamingHead: false, replyTo: null, plusOpen: false, dict: null, dictBase: "", dictState: "idle" };
+      renaming: "", renamingHead: false, replyTo: null, plusOpen: false, dict: null, dictBase: "", dictState: "idle",
+      atts: [], folder: null, info: null, typing: [], pinned: [], pinsOpen: false, tagFilter: readTagFilter(),
+      autoOpened: false };
   }
 
   function teamUrl(path) { return "/teams/" + q(S.activeId) + (path || ""); }
@@ -1179,11 +1742,14 @@
     S.el.innerHTML =
       '<div class="tm-page" data-view="' + S.view + '" data-side="0">' +
       '<aside class="tm-list"><div class="tm-bar tm-list-bar"><strong class="tm-list-title">' + esc(tw("page.teams.label")) + "</strong>" +
-      '<button type="button" class="ws-btn tm-new">' + ic("plus") + esc(tw("teams.create")) + "</button></div>" +
+      '<button type="button" class="ws-btn tm-new">' + ic("plus") + esc(tw("teams.create")) + "</button>" +
+      '<button type="button" class="ws-btn tm-import" title="' + esc(tw("teams.import_title")) + '">' + ic("upload-cloud") +
+      esc(tw("teams.import")) + "</button></div>" +
+      '<div class="cside-proj ws-nhom-bar tm-tagbar" hidden></div>' +
       '<div class="tm-teams"></div><button type="button" class="ws-btn tm-more-teams" hidden>' + esc(tw("teams.next_page")) + "</button></aside>" +
       '<section class="tm-chat"><div class="tm-bar tm-chat-head"></div><div class="tm-search" hidden></div>' +
       '<div class="tm-banners"></div><div class="tm-jobs" hidden></div>' +
-      '<div class="tm-filterbar" hidden></div><div class="tm-msgs" aria-live="polite"></div><div class="tm-composer"></div></section>' +
+      '<div class="tm-filterbar" hidden></div><div class="tm-pinbar" hidden></div><div class="tm-msgs" aria-live="polite"></div><div class="tm-composer"></div></section>' +
       // Vùng thông báo chung NGOÀI khung chat: trên điện thoại khung chat bị ẩn khi đang ở danh sách, thông báo (vd. ghim
       // lỗi) vẫn phải nhìn thấy (review 4f6268bd #2).
       '<aside class="tm-side" hidden></aside><div class="tm-scrim" hidden></div><div class="tm-note" role="status" aria-live="polite" hidden></div></div>';
@@ -1192,7 +1758,20 @@
   function drawList() {
     var box = S.el.querySelector(".tm-teams");
     var rd = renameDraft(box);
-    if (box) box.innerHTML = S.loaded || S.teams.length ? teamListHtml(S.teams, S.activeId, undefined, S.rowMenu, S.renaming) : "";
+    // 0.195.0: the tag filter. A tag no team carries any more (removed elsewhere) drops back to All.
+    if (S.tagFilter && S.tagFilter !== TAG_NONE && !allTags(S.teams).some(function (x) { return x.key === S.tagFilter; })) {
+      setTagFilter("");
+    }
+    var tb = S.el.querySelector(".tm-tagbar");
+    // Shown once a team has a tag (or a filter is on): with no tag anywhere the bar would only say "All teams".
+    if (tb) {
+      tb.innerHTML = allTags(S.teams).length || S.tagFilter ? tagBarHtml(S.teams, S.tagFilter) : "";
+      tb.hidden = !tb.innerHTML;
+    }
+    var shown = filterTeams(S.teams, S.tagFilter);
+    if (box) box.innerHTML = S.loaded || S.teams.length ? (S.tagFilter && !shown.length ? '<p class="tm-empty">' +
+      esc(tw("teams.tags_none")) + "</p>" : teamListHtml(shown, S.activeId, undefined, S.rowMenu, S.renaming, S.tagMenu)) : "";
+    bindTagPicker(box);
     if (S.renaming) focusRename(box, rd);
     if (box && S.rowMenu && S.focusRowMenu) {
       S.focusRowMenu = false;
@@ -1228,7 +1807,9 @@
       var title = S.renamingHead ? '<div class="tm-title">' + renameInputHtml(t) + "</div>"
         : '<button type="button" class="tm-title tm-title-btn" data-rename-head="1" title="' + esc(tw("teams.rename_head")) + '">' +
           "<strong>" + esc(t.name) + '</strong><span class="tm-sub">' + esc(lead) + "</span></button>";
-      head.innerHTML = back + teamAvatarHtml(t, 36) + title +
+      // 0.191.0: the team picture opens the team info panel (members, files, links, working folder), like a chat app.
+      head.innerHTML = back + '<button type="button" class="tm-ava-btn" data-team-info="1" aria-label="' + esc(tw("teams.info_open")) +
+        '" title="' + esc(tw("teams.info_open")) + '">' + teamAvatarHtml(t, 36) + "</button>" + title +
         jobsChipHtml(S.queue, S.side && S.tab === "jobs") +
         '<button type="button" class="ws-btn tm-icon tm-search-btn" aria-label="' + esc(tw("teams.search")) + '" title="' +
         esc(tw("teams.search")) + '"' + (S.searchOpen ? ' aria-expanded="true"' : ' aria-expanded="false"') + ">" + ic("search") +
@@ -1310,7 +1891,9 @@
   }
 
   function ctx(lastAgent) {
-    return { members: S.team ? S.team.members : [], authors: S.team ? S.team.authors : null,
+    var byId = {};
+    (S.msgs || []).forEach(function (m) { byId[Number(m.id)] = m; });
+    return { members: S.team ? S.team.members : [], authors: S.team ? S.team.authors : null, byId: byId,
       leaderKey: S.team && S.team.leader_key, taskTitles: S.taskTitles,
       picker: S.picker, jumped: S.jumped, retrying: S.retrying, lastAgent: lastAgent };
   }
@@ -1349,6 +1932,7 @@
   function drawMsgs(stick) {
     var box = S.el.querySelector(".tm-msgs");
     if (!box) return;
+    drawPins();
     // T3 (6.2): khung tin của nhóm đang mở; pulse-seen.js đọc mã nhóm ở đây để báo tin của trợ lý đã được xem.
     if (S.team) box.setAttribute("data-seen-team", S.team.team_id); else box.removeAttribute("data-seen-team");
     if (!S.team) {
@@ -1370,6 +1954,7 @@
         if (S.skipped["p" + m.id] && m.meta && m.meta.proposal) mm = Object.assign({}, m, { meta: Object.assign({}, m.meta, { proposal: null }) });
         return messageHtml(mm, c);
       }).join("");
+    applyReveal(box);
     // Bảng đang "mở" mà không vẽ ra (tin đã đổi, đã ghim): bỏ trạng thái mở, kẻo tin mới không còn tự cuộn xuống.
     if (S.picker !== null && !box.querySelector('[data-panel="' + S.picker + '"]')) S.picker = null;
     if ((stick || atEnd) && S.picker === null) box.scrollTop = box.scrollHeight;
@@ -1403,7 +1988,8 @@
     var old = box.querySelector(".tm-input");
     var draft = S.pending ? (S.pending.typed || S.pending.text) : old ? old.value : "";
     var off = S.team.status === "archived";
-    box.innerHTML = '<div class="tm-sug" role="listbox" id="tm-sug" aria-label="' + esc(tw("teams.mention_list")) + '" hidden></div>' +
+    box.innerHTML = '<div class="tm-typing" role="status" aria-live="polite" hidden></div>' +
+      '<div class="tm-sug" role="listbox" id="tm-sug" aria-label="' + esc(tw("teams.mention_list")) + '" hidden></div>' +
       composerTopHtml() + '<div class="tm-calls" hidden></div><div class="tm-hint" hidden></div>' + plusMenuHtml(off) +
       '<div class="tm-row"><button type="button" class="tm-plus" aria-haspopup="menu" aria-expanded="' +
       (S.plusOpen ? "true" : "false") + '" aria-label="' + esc(tw("teams.plus")) + '" title="' + esc(tw("teams.plus")) + '"' +
@@ -1418,6 +2004,7 @@
       ic("send") + "</button></div>";
     grow(box.querySelector(".tm-input"));
     drawHint();
+    drawTyping();
     if (S.focusComposer && !off) {
       S.focusComposer = false;
       var inp = box.querySelector(".tm-input");
@@ -1429,11 +2016,12 @@
   function composerTopHtml() {
     var h = "";
     if (S.replyTo) {
-      h += '<div class="tm-replying">' + ic("reply") + '<div class="tm-replying-main"><b>' +
+      h += '<div class="tm-replying"><span class="tm-replying-ico" aria-hidden="true">' + ic("quote") + '</span><div class="tm-replying-main"><b>' +
         esc(tw("teams.replying", { name: S.replyTo.who })) + '</b><span class="tm-replying-text">' + esc(S.replyTo.preview) +
         '</span></div><button type="button" class="tm-bar-x" data-reply-cancel="1" aria-label="' + esc(tw("teams.reply_cancel")) +
         '" title="' + esc(tw("teams.reply_cancel")) + '">' + ic("x") + "</button></div>";
     }
+    h += chipsHtml();
     if (S.asJob) {
       h += '<div class="tm-jobmode">' + ic("list-todo") + '<span class="tm-replying-main">' + esc(tw("teams.as_job_on")) +
         '</span><button type="button" class="tm-bar-x tm-asjob" aria-label="' + esc(tw("teams.as_job_off")) + '" title="' +
@@ -1451,6 +2039,8 @@
         (checked ? '<span class="tm-plus-on">' + ic("check") + "</span>" : "") + "</button>";
     };
     return '<div class="tm-plus-menu" role="menu" aria-label="' + esc(tw("teams.plus")) + '">' +
+      item('role="menuitem" data-plus-attach="1"', "paperclip", tw("teams.attach")) +
+      item('role="menuitem" data-plus-folder="1"', "folder", tw("cp.pin_folder")) +
       item('role="menuitemcheckbox" aria-checked="' + (S.asJob ? "true" : "false") + '" class="tm-asjob" title="' +
         esc(tw("teams.as_job_title")) + '"', "list-todo", tw("teams.as_job"), S.asJob) +
       item('role="menuitem" data-insert-at="1"', "at-sign", tw("teams.mention_insert")) +
@@ -1606,7 +2196,7 @@
     S.picker = null;
     var St = typeof window !== "undefined" && window.JavisStudio;
     if (St && St.editAgent) {
-      St.editAgent({ slug: slug }, { onSaved: function () { loadTeam(); loadMsgs(false); } });
+      St.editAgent({ slug: slug }, { chatButton: true, onSaved: function () { loadTeam(); loadMsgs(false); } });
       return;
     }
     if (window.JavisWorkspace && window.JavisWorkspace.openCommand) window.JavisWorkspace.openCommand("agent", slug);
@@ -1626,17 +2216,166 @@
 
   function currentMentions() { return currentScan().keys; }
 
+  // ───────────── 0.192.0: answers appear as if typed ─────────────
+  // Owner, 16/10/2026: "chữ đang xổ 1 phát ra cả 1 đống, anh muốn hiệu ứng chữ chạy người này gõ xong hết rồi người kia
+  // gõ lần lượt ... hiện dần từng mảng từ trên xuống dưới cho nhanh". A NEW assistant message arriving live is shown one
+  // block (paragraph, list item, code block) at a time, top to bottom, quickly; messages arriving together play one after
+  // another in arrival order, the next one hidden until the previous is done. History, the owner's own messages, a hidden
+  // tab and reduced motion show everything at once. State lives in S.rv so a redraw of the list keeps the progress.
+  var REVEAL_STEP_MS = 110, REVEAL_MAX_STEPS = 40;
+  function revealOff() {
+    try {
+      if (typeof document !== "undefined" && document.hidden) return true;
+      return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (e) { return true; }
+  }
+  function queueReveal(m) {
+    if (!m || m.author_kind !== "agent" || revealOff()) return;
+    S.rv = S.rv || { active: null, shown: 0, queue: [], timer: null };
+    if (S.rv.active === null) { S.rv.active = Number(m.id); S.rv.shown = 0; }
+    else S.rv.queue.push(Number(m.id));
+  }
+  function revealBlocks(msgEl) {
+    var root = msgEl.querySelector(".tm-text .bubble") || msgEl.querySelector(".tm-text");
+    if (!root) return [];
+    var kids = Array.prototype.slice.call(root.children || []);
+    return kids.length ? kids : [root];
+  }
+  function applyReveal(box) {
+    var rv = S.rv;
+    if (!rv || rv.active === null || !box) return;
+    rv.queue.forEach(function (id) {
+      var w = box.querySelector('[data-mid="' + id + '"]');
+      if (w) w.classList.add("tm-rv-wait");
+    });
+    var el = box.querySelector('[data-mid="' + rv.active + '"]');
+    if (!el) { nextReveal(); return; }
+    var blocks = revealBlocks(el);
+    el.classList.add("tm-rv-on");
+    blocks.forEach(function (b, i) { b.classList.toggle("tm-rv-hide", i >= rv.shown); });
+    if (!rv.timer) {
+      rv.timer = setTimeout(function () {
+        rv.timer = null;
+        if (!S || S.rv !== rv) return;
+        // Long answers keep a quick pace: never more than REVEAL_MAX_STEPS steps for one message.
+        rv.shown += Math.max(1, Math.ceil(blocks.length / REVEAL_MAX_STEPS));
+        if (rv.shown >= blocks.length) {
+          el.classList.remove("tm-rv-on");
+          blocks.forEach(function (b) { b.classList.remove("tm-rv-hide"); });
+          nextReveal();
+          return;
+        }
+        var msgs = S.el && S.el.querySelector(".tm-msgs");
+        var atEnd = msgs && msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 120;
+        applyReveal(msgs);
+        if (atEnd) msgs.scrollTop = msgs.scrollHeight;
+      }, REVEAL_STEP_MS);
+    }
+  }
+  function nextReveal() {
+    var rv = S.rv;
+    if (!rv) return;
+    if (rv.timer) { clearTimeout(rv.timer); rv.timer = null; }
+    rv.active = rv.queue.length ? rv.queue.shift() : null;
+    rv.shown = 0;
+    var msgs = S.el && S.el.querySelector(".tm-msgs");
+    if (!msgs) return;
+    var w = rv.active !== null ? msgs.querySelector('[data-mid="' + rv.active + '"]') : null;
+    if (w) w.classList.remove("tm-rv-wait");
+    if (rv.active !== null) applyReveal(msgs);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function stopReveal() {
+    if (S && S.rv && S.rv.timer) clearTimeout(S.rv.timer);
+    if (S) S.rv = null;
+  }
+
+  function markJobs(ids, state) {
+    return call("POST", "/jobs/marks", { brain: brain(), ids: ids, state: state }).then(function (r) {
+      if (r.code !== 200) return fail(r);
+      if (state === "archived" && ids.indexOf(S.openFin) >= 0) S.openFin = null;
+      return loadQueue();
+    });
+  }
+
+  // ───────────── 0.192.0: pinned messages ─────────────
+  // Owner, 16/10/2026: "làm chức năng ghim đoạn chat cho nó có tác dụng". Pinning already fed every member turn (the
+  // decision book, team_runner._context) but nothing on screen showed it. A strip on top of the chat now shows the newest
+  // pin, how many there are and that the whole team follows them; tap a pin to go to it, open the list to see all or unpin.
+  function pinsHtml(pins, open, ctx) {
+    pins = (pins || []).slice().reverse();      // newest first
+    if (!pins.length) return "";
+    var who = function (p) {
+      if (p.author_kind === "owner") return tw("teams.owner");
+      var a = memberOf(ctx.members, p.author_ref) || (ctx.authors || {})[p.author_ref];
+      return a ? (a.name || a.slug) : (p.author_kind === "agent" ? p.author_ref : tw("teams.system"));
+    };
+    var pinRow = function (p, x) {
+      return '<div class="tm-pin-row"><button type="button" class="tm-pin-go" data-jump="' + esc(p.id) + '" data-ts="' + esc(p.ts) +
+        '" title="' + esc(tw("teams.quote_open")) + '"><b>' + esc(who(p)) + "</b>" + esc(plainPreview(p.content, 160)) + "</button>" +
+        (x ? '<button type="button" class="tm-bar-x" data-decision="' + esc(p.id) + '" data-on="0" aria-label="' +
+          esc(tw("teams.decision_unpin")) + '" title="' + esc(tw("teams.decision_unpin")) + '">' + ic("x") + "</button>" : "") + "</div>";
+    };
+    var pinTop = '<div class="tm-pin-head"><span class="tm-pin-ico" aria-hidden="true">' + ic("pin") + "</span>" +
+      '<span class="tm-pin-title">' + esc(tw("teams.pins_title", { n: pins.length })) + "</span>" +
+      '<span class="tm-pin-note">' + esc(tw("teams.pins_note")) + "</span>" +
+      '<button type="button" class="tm-bar-x tm-pin-toggle" aria-expanded="' + (open ? "true" : "false") + '" aria-label="' +
+      esc(tw(open ? "teams.pins_close" : "teams.pins_open")) + '" title="' + esc(tw(open ? "teams.pins_close" : "teams.pins_open")) + '">' +
+      ic(open ? "chevron-up" : "chevron-down") + "</button></div>";
+    return pinTop + (open ? '<div class="tm-pin-list">' + pins.map(function (p) { return pinRow(p, true); }).join("") + "</div>"
+      : pinRow(pins[0], false));
+  }
+  function drawPins() {
+    var el = S && S.el && S.el.querySelector(".tm-pinbar");
+    if (!el) return;
+    var h = S.team && !S.filterTask ? pinsHtml(S.pinned, !!S.pinsOpen, ctx(null)) : "";
+    el.innerHTML = h;
+    el.hidden = !h;
+  }
+
+  // ───────────── 0.192.0: who is writing right now ─────────────
+  // Owner, 16/10/2026: "các agent khác nhau trong nhóm chat khi chat phải hiện trạng thái đang trả lời, nếu không thì sẽ
+  // không biết ai đang trả lời". One strip above the input, like a group chat's "is typing": each member whose turn is at
+  // the engine, with its picture. Fed by the team_typing event and by GET /teams/{id} when the chat opens.
+  var TYPING_MAX = 4;
+  function typingHtml(list, members) {
+    var seen = {}, rows = [];
+    (list || []).forEach(function (t) {
+      if (!t || !t.agent_key || seen[t.agent_key]) return;
+      seen[t.agent_key] = 1;
+      rows.push(t);
+    });
+    if (!rows.length) return "";
+    var shown = rows.slice(0, TYPING_MAX);
+    return shown.map(function (t) {
+      var m = memberOf(members, t.agent_key) || { name: t.agent_key };
+      var name = m.name || m.slug || t.agent_key;
+      var reply = /reply|volunteer/.test(String(t.role || ""));
+      return '<span class="tm-typing-who">' + agentAva(m, 18) + '<span class="tm-typing-text">' +
+        esc(tw(reply ? "teams.typing_reply" : "teams.typing_work", { name: name })) + "</span>" +
+        '<span class="tm-dots" aria-hidden="true"><i></i><i></i><i></i></span></span>';
+    }).join("") + (rows.length > TYPING_MAX
+      ? '<span class="tm-typing-more">' + esc(tw("teams.typing_more", { n: rows.length - TYPING_MAX })) + "</span>" : "");
+  }
+  function drawTyping() {
+    var el = S && S.el && S.el.querySelector(".tm-typing");
+    if (!el) return;
+    var h = S.team ? typingHtml(S.typing, S.team.members) : "";
+    el.innerHTML = h;
+    el.hidden = !h;
+  }
+
   function drawHint() {
     var hintEl = S.el.querySelector(".tm-hint");
     if (!hintEl || !S.team) return;
     var sc = currentScan();
-    var h = composerHint({ mentions: sc.keys, ambiguous: sc.ambiguous, asJob: S.asJob, cap: (S.team.caps || {}).mentions,
+    var h = composerHint({ mentions: sc.keys, all: sc.all, ambiguous: sc.ambiguous, asJob: S.asJob, cap: (S.team.caps || {}).mentions,
       members: S.team.members, leaderKey: S.team.leader_key });
     hintEl.textContent = h.text;
     hintEl.hidden = !h.text;
     var calls = S.el.querySelector(".tm-calls");
     if (calls) {
-      var ch = callsHtml(sc.keys, S.team.members);
+      var ch = callsHtml(sc.keys, S.team.members, sc.all);
       calls.innerHTML = ch;
       calls.hidden = !ch;
     }
@@ -1666,18 +2405,20 @@
     if (side.hidden) { side.innerHTML = ""; return; }
     var keep = side.querySelector(".tm-side-body");
     var top = keep ? keep.scrollTop : 0;
-    var tabs = ["jobs", "team"].map(function (k) {
+    var tabs = ["info", "jobs", "team"].map(function (k) {
       return '<button type="button" class="tm-tab" role="tab" data-tab="' + k + '" aria-selected="' + (S.tab === k ? "true" : "false") +
         '">' + esc(tw(TAB_KEY[k])) + "</button>";
     }).join("");
-    var body = S.tab === "jobs" ? queueHtml(S.queue)
-      : teamTabHtml(S.team, S.agents, { openMember: S.openMember, advOpen: S.advOpen, turns: S.turns });
+    var body = S.tab === "info" ? infoTabHtml(S.team) : S.tab === "jobs" ? queueHtml(S.queue,
+      { openFin: S.openFin, archOpen: S.archOpen, members: S.team ? S.team.members : [], accEdit: S.accEdit })
+      : teamTabHtml(S.team, S.agents, { openMember: S.openMember, advOpen: S.advOpen, turns: S.turns, mandateEdit: S.mandateEdit });
     side.innerHTML = '<div class="tm-bar tm-side-bar"><div class="tm-tabs" role="tablist">' + tabs + "</div>" +
       '<button type="button" class="ws-btn tm-icon tm-close" aria-label="' + esc(tw("teams.close")) + '" title="' +
       esc(tw("teams.close")) + '">' + ic("x") + '</button></div><div class="tm-side-body" role="tabpanel" aria-label="' +
       esc(tw(TAB_KEY[S.tab])) + '">' + body + "</div>";
     var nb = side.querySelector(".tm-side-body");
     if (nb && keep) nb.scrollTop = top;
+    attachSideResize(side);
     if (window.JavisPulse) {
       Array.prototype.forEach.call(side.querySelectorAll(".tm-pulse[data-pulse-slug]"), function (el) {
         var names = {};
@@ -1696,12 +2437,13 @@
   // Mở ngăn: nhớ nút đã mở (chip việc, ba chấm, nút trên băng hay thẻ việc) để lúc đóng trả focus về đúng nút đó.
   function openSide(tab, opener) {
     if (opener && opener.matches) S.sideOpener = opener.matches(".tm-jobs-chip") ? ".tm-jobs-chip"
-      : opener.matches(".tm-gear") ? ".tm-gear" : null;
+      : opener.matches(".tm-gear") ? ".tm-gear" : opener.matches(".tm-ava-btn") ? ".tm-ava-btn" : null;
     S.side = true;
     S.tab = tab;
     drawSide(true);
     drawHead();
     if (tab === "team") loadAgents().then(function () { if (S.side && S.tab === "team") drawSide(); });
+    if (tab === "info") { loadInfo(); loadFolder(); }
     var first = S.el.querySelector(".tm-side .tm-tab[aria-selected=\"true\"]");
     if (first) first.focus();
   }
@@ -1753,7 +2495,14 @@
       if (pendingOpen) {
         var want = pendingOpen, wantTask = pendingTask;
         pendingOpen = null; pendingTask = "";
+        S.autoOpened = true;
         openTeam(want, wantTask);
+      } else if (!append && !S.autoOpened && !S.activeId) {
+        // 0.195.0 (owner, 17/10/2026: "khi vào team thì sẽ vào đoạn chat mà chủ team đang làm việc gần nhất"): opening
+        // the page lands in the team worked in last. Once per visit: going back to the list stays on the list.
+        S.autoOpened = true;
+        var lastT = lastWorkedTeam(S.teams);
+        if (lastT) openTeam(lastT.team_id);
       }
     });
   }
@@ -1809,7 +2558,9 @@
       if (r.code === 404) return closeGone(forTeam);
       if (r.code !== 200) return fail(r);
       S.team = r.j.team;
-      drawHead(); drawHint(); drawSide();
+      if (r.j.typing) S.typing = r.j.typing;
+      S.pinned = r.j.pinned || [];
+      drawHead(); drawHint(); drawSide(); drawTyping(); drawPins();
     });
   }
 
@@ -1851,20 +2602,356 @@
     S.activeId = id; S.view = "chat"; S.asJob = false; S.pending = null; S.filterTask = String(taskId || "");
     S.team = null; S.queue = null; S.msgs = []; S.taskTitles = {}; S.side = false; S.openMember = null; S.turns = [];
     S.picker = null; S.draft = null; S.picked = []; S.retrying = {};
-    S.replyTo = null; S.plusOpen = false; S.renamingHead = false;
+    S.replyTo = null; S.plusOpen = false; S.renamingHead = false; forgetAtts(S.atts); S.atts = []; S.folder = null; S.info = null;
+    S.typing = []; S.pinned = []; S.pinsOpen = false; stopReveal();
+    closeFolderPanel();
     stopMic();
     var input = S.el.querySelector(".tm-input");
     if (input) input.value = "";
     setNote("");
     drawAll(true);
-    Promise.all([loadTeam(), loadQueue(), loadMsgs(false)]).then(function () { if (S.activeId === id) drawAll(true); });
+    Promise.all([loadTeam(), loadQueue(), loadMsgs(false)]).then(function () { if (S.activeId === id) { drawAll(true); loadFolder(); } });
+    markOpened(id);
+  }
+
+  // 0.195.0: the owner works in this team now, so next visit (any device) opens it. Best effort: a failure changes nothing.
+  // 0.197.0: the open team is read while the page is in front; one call per burst of messages.
+  var readTimer = null;
+  function readSoon() {
+    clearTimeout(readTimer);
+    readTimer = setTimeout(function () {
+      if (S && S.activeId && S.el && S.el.isConnected && document.visibilityState !== "hidden") markOpened(S.activeId);
+    }, 800);
+  }
+  function onVisible() {
+    if (document.visibilityState === "visible" && S && S.activeId && S.el && S.el.isConnected) {
+      markOpened(S.activeId);
+      drawList();
+    }
+  }
+
+  function markOpened(id) {
+    var t = S.teams.filter(function (x) { return x.team_id === id; })[0];
+    if (t) { t.owner_at = Date.now() / 1000; t.unread = { n: 0, at: 0 }; }
+    call("POST", "/teams/" + q(id) + "/opened", {}).then(function () {}, function () {});
+  }
+
+  // The chosen tag filter is a per-device convenience (localStorage); a blocked storage only forgets it.
+  var TAG_FILTER_KEY = "javis.teams.tagFilter";
+  function readTagFilter() {
+    try { return (typeof localStorage !== "undefined" && localStorage.getItem(TAG_FILTER_KEY)) || ""; } catch (e) { return ""; }
+  }
+  function setTagFilter(tag) {
+    S.tagFilter = String(tag || "");
+    try { if (typeof localStorage !== "undefined") localStorage.setItem(TAG_FILTER_KEY, S.tagFilter); } catch (e) {}
+  }
+
+  // The "Tag" picker of a team's row menu (0.195.0): tapping a tag adds or removes it, the box adds a new one; the menu
+  // stays open so several tags can be set in one go, exactly like a partner's row menu.
+  function bindTagPicker(box) {
+    var TP = tagPicker();
+    var m = box && S.tagMenu ? box.querySelector(".tm-tag-menu") : null;
+    if (!TP || !m) return;
+    var id = S.tagMenu;
+    TP.bind(m, {
+      back: function () { S.tagMenu = null; S.focusRowMenu = true; drawList(); },
+      add: function (ten) { changeTags(id, [ten], [], TP.FOCUS_INPUT); },
+      toggle: function (ten, on, key) { changeTags(id, on ? [] : [ten], on ? [key] : [], key); },
+    }, S.tagFocus);
+    S.tagFocus = null;
+  }
+
+  function changeTags(id, add, removeKeys, focusKey) {
+    var t = S.teams.filter(function (x) { return x.team_id === id; })[0];
+    if (!t || S.tagBusy) return;
+    var next = (t.tags || []).filter(function (g) { return removeKeys.indexOf(tagKey(g)) < 0; }).concat(add);
+    S.tagBusy = true;
+    call("PATCH", "/teams/" + q(id), { tags: next }).then(function (r) {
+      S.tagBusy = false;
+      if (r.code !== 200 || !r.j || !r.j.team) return act(r);
+      t.tags = r.j.team.tags || [];
+      if (S.team && S.team.team_id === id) S.team.tags = t.tags;
+      S.tagFocus = focusKey;
+      drawList();
+    }, function () { S.tagBusy = false; });
+  }
+
+  // ───────────── 0.191.0: files, working folder and the team info panel ─────────────
+  // A team is a normal conversation underneath: its documents are that conversation's documents
+  // (/sessions/{session_id}/assets) and its working folder is that conversation's pinned folder (/coding/session/...).
+
+  function upload(file) {
+    var fd = new FormData();
+    fd.append("file", file);
+    fd.append("brain", brain());
+    return fetch("/upload", { method: "POST", body: fd, credentials: "same-origin" }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { code: r.status, j: j || {} }; });
+    });
+  }
+
+  function pickFiles(onDone) {
+    var inp = document.createElement("input");
+    inp.type = "file"; inp.multiple = true;
+    inp.addEventListener("change", function () { onDone(Array.prototype.slice.call(inp.files || [])); });
+    inp.click();
+  }
+
+  function attachFiles(files) {
+    files.slice(0, 10).forEach(function (f) {
+      var a = { name: f.name, size: f.size, kind: /^image\//.test(f.type || "") ? "image" : "file", path: "", busy: true, err: "" };
+      // 0.192.0: a picture shows itself on its chip, like the main chat.
+      if (a.kind === "image") { try { a.url = URL.createObjectURL(f); } catch (e) { a.url = ""; } }
+      S.atts.push(a);
+      upload(f).then(function (r) {
+        a.busy = false;
+        if (r.code !== 200 || !r.j.staged) a.err = (r.j && (r.j.error || r.j.detail)) || tw("teams.attach_err");
+        else a.path = r.j.staged;
+        drawComposer();
+      }).catch(function () { a.busy = false; a.err = tw("teams.err_network"); drawComposer(); });
+    });
+    drawComposer();
+  }
+
+  // ───────────── 0.192.0: paste and drop into the team chat ─────────────
+  // Owner, 16/10/2026: "không copy và dán ảnh vào khung chat của team được". The main chat's paste and drop listeners sit on
+  // the whole document and sent a picture pasted here to the hidden main chat. The team page answers first (its own
+  // listeners, propagation stopped) and the page is marked data-localdrop so the main chat's drop leaves it alone.
+  var PASTE_TXT_CHARS = 1500, PASTE_TXT_LINES = 25;   // same thresholds as the main chat (app.js)
+  // Copy the bytes while the event is still running: a phone only lets a page read a pasted or dropped file then.
+  function grabFile(f) {
+    var read;
+    try { read = f.arrayBuffer(); } catch (e) { return Promise.resolve(f); }
+    return Promise.resolve(read).then(function (buf) {
+      return buf && buf.byteLength
+        ? new File([buf], f.name || "anh-dan.png", { type: f.type || "application/octet-stream", lastModified: f.lastModified || Date.now() })
+        : f;
+    }).catch(function () { return f; });
+  }
+  function canAttach() { return !!(S && S.team && S.team.status !== "archived" && S.el.querySelector(".tm-input")); }
+  function attachGrabbed(list) {
+    Promise.all(list.map(grabFile)).then(function (files) { if (canAttach()) attachFiles(files); });
+  }
+  function onPaste(e) {
+    if (!canAttach()) return;
+    var cd = e.clipboardData;
+    var files = [];
+    Array.prototype.forEach.call((cd && cd.items) || [], function (it) {
+      if (it.kind === "file") { var f = it.getAsFile(); if (f) files.push(f); }
+    });
+    if (files.length) {
+      e.preventDefault(); e.stopPropagation();
+      attachGrabbed(files);
+      return;
+    }
+    // A very long text pasted into the team input becomes a .txt document instead of a wall in the box.
+    if (!(e.target && e.target.classList && e.target.classList.contains("tm-input"))) return;
+    var txt = (cd && cd.getData("text/plain")) || "";
+    if (txt.length > PASTE_TXT_CHARS || txt.split("\n").length > PASTE_TXT_LINES) {
+      e.preventDefault(); e.stopPropagation();
+      var d = new Date(), p2 = function (n) { return String(n).padStart(2, "0"); };
+      var name = "van-ban-dan-" + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()) + ".txt";
+      attachFiles([new File([new Blob([txt], { type: "text/plain" })], name, { type: "text/plain" })]);
+    }
+  }
+  var dropDepth = 0;
+  function hasFiles(e) {
+    return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0);
+  }
+  function markDrop(on) {
+    var box = S && S.el && S.el.querySelector(".tm-composer");
+    if (box) box.classList.toggle("is-drop", !!on);
+  }
+  function onDragEnter(e) { if (hasFiles(e) && canAttach()) { dropDepth++; markDrop(true); } }
+  function onDragOver(e) { if (hasFiles(e) && canAttach()) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }
+  function onDragLeave() { if (--dropDepth <= 0) { dropDepth = 0; markDrop(false); } }
+  function onDrop(e) {
+    dropDepth = 0; markDrop(false);
+    if (!hasFiles(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!canAttach()) return;
+    attachGrabbed(Array.prototype.slice.call(e.dataTransfer.files || []));
+  }
+  function forgetAtts(list) {
+    (list || []).forEach(function (a) { if (a && a.url) { try { URL.revokeObjectURL(a.url); } catch (e) {} } });
+  }
+
+  function chipsHtml() {
+    var h = "";
+    if (S.folder) {
+      h += '<span class="tm-chip tm-chip-folder" title="' + esc(S.folder.path || S.folder.name) + '">' + ic("folder") +
+        '<button type="button" class="tm-chip-name" data-folder-open="1">' + esc(S.folder.name) + "</button>" +
+        '<button type="button" class="tm-chip-x" data-folder-unpin="1" aria-label="' + esc(tw("cp.pin_unpin")) + '" title="' +
+        esc(tw("cp.pin_unpin")) + '">' + ic("x") + "</button></span>";
+    }
+    S.atts.forEach(function (a, i) {
+      h += '<span class="tm-chip' + (a.err ? " is-err" : "") + (a.url ? " has-thumb" : "") + '">' +
+        (a.url ? '<img class="tm-chip-thumb" src="' + esc(a.url) + '" alt="">' : ic(a.kind === "image" ? "image" : "paperclip")) +
+        '<span class="tm-chip-name">' + esc(a.name) + "</span>" +
+        (a.busy ? '<span class="tm-chip-st">' + esc(tw("teams.uploading")) + "</span>" : a.err ? '<span class="tm-chip-st">' + esc(a.err) + "</span>" : "") +
+        '<button type="button" class="tm-chip-x" data-att-x="' + i + '" aria-label="' + esc(tw("teams.attach_remove")) + '" title="' +
+        esc(tw("teams.attach_remove")) + '">' + ic("x") + "</button></span>";
+    });
+    return h ? '<div class="tm-attach-chips">' + h + "</div>" : "";
+  }
+
+  function sessionId() { return (S.team && S.team.session_id) || ""; }
+
+  function loadFolder() {
+    var sid = sessionId();
+    if (!sid) return Promise.resolve();
+    return fetch("/coding/session/" + q(sid) + "?brain=" + q(brain()), { credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) {
+        if (sessionId() !== sid) return;
+        S.folder = (d && d.folder) || null;
+        drawComposer();
+        if (S.side && S.tab === "info") drawSide(true);
+      }).catch(function () {});
+  }
+
+  function pinTeamFolder(p) {
+    var sid = sessionId();
+    if (!sid) return Promise.resolve("");
+    var b = new FormData();
+    b.append("path", p); b.append("brain", brain());
+    return fetch("/coding/session/" + q(sid) + "/pin", { method: "POST", body: b, credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) {
+        if (!d || d.ok === false) return (d && d.error) || tw("cp.pin_failed");
+        if (sessionId() === sid) { S.folder = d.folder || null; drawComposer(); if (S.side && S.tab === "info") drawSide(true); }
+        return "";
+      }).catch(function () { return tw("teams.err_network"); });
+  }
+
+  // The folder picker of the main chat (composer-folder.js), in a small pop-up above the team composer.
+  function closeFolderPanel() {
+    var pop = document.querySelector(".tm-folder-pop");
+    if (pop) pop.remove();
+    document.removeEventListener("mousedown", folderOutside, true);
+    document.removeEventListener("keydown", folderEsc, true);
+  }
+  function folderOutside(e) { if (!(e.target.closest && e.target.closest(".tm-folder-pop"))) closeFolderPanel(); }
+  function folderEsc(e) { if (e.key === "Escape") closeFolderPanel(); }
+  function openFolderPanel() {
+    var P = window.JavisPinnedFolder && window.JavisPinnedFolder.panelFor;
+    var comp = S.el.querySelector(".tm-composer");
+    if (!P || !comp || !S.team) return;
+    closeFolderPanel();
+    var r = comp.getBoundingClientRect();
+    var pop = document.createElement("div");
+    pop.className = "cp-menu tm-folder-pop";
+    pop.style.left = Math.max(8, r.left + 8) + "px";
+    pop.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + "px";
+    pop.innerHTML = '<div class="cp-mi cp-back">' + esc(tw("cp.pin_folder")) + '</div><div class="cp-sep"></div><div class="tm-folder-body"></div>';
+    document.body.appendChild(pop);
+    P({ brain: brain, current: function () { return S.folder; }, pin: pinTeamFolder,
+      focus: function () { var i = S.el.querySelector(".tm-input"); if (i) i.focus(); } })(pop.querySelector(".tm-folder-body"),
+      { close: closeFolderPanel });
+    setTimeout(function () {
+      document.addEventListener("mousedown", folderOutside, true);
+      document.addEventListener("keydown", folderEsc, true);
+    }, 0);
+  }
+
+  function loadInfo() {
+    var sid = sessionId();
+    if (!sid) return Promise.resolve();
+    return fetch("/sessions/" + q(sid) + "/assets?brain=" + q(brain()), { credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (d) {
+        if (sessionId() !== sid) return;
+        S.info = { files: (d && d.files) || [], links: (d && d.links) || [], err: d && d.ok === false ? (d.error || "") : "" };
+        if (S.side && S.tab === "info") drawSide(true);
+      }).catch(function () { S.info = { files: [], links: [], err: tw("teams.err_network") }; if (S.side && S.tab === "info") drawSide(true); });
+  }
+
+  function assetPost(path, form) {
+    var sid = sessionId();
+    if (!sid) return Promise.resolve();
+    return fetch("/sessions/" + q(sid) + "/assets" + path, { method: "POST", body: form || new FormData(), credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (d) { if (d && d.ok === false) setNote(d.error || tw("teams.err_generic")); return loadInfo(); })
+      .catch(function () { setNote(tw("teams.err_network")); });
+  }
+
+  function addTeamLink() {
+    var inp = S.el.querySelector(".tm-info-link");
+    var url = inp ? inp.value.trim() : "";
+    if (!url) { if (inp) inp.focus(); return; }
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    var f = new FormData();
+    f.append("url", url); f.append("label", "");
+    assetPost("/links", f);
+  }
+
+  function addTeamFiles(files) {
+    if (!files.length || !S.team) return;
+    setNote(tw("teams.uploading"));
+    Promise.all(files.slice(0, 10).map(function (f) {
+      return upload(f).then(function (r) { return r.code === 200 && r.j.staged ? { path: r.j.staged, name: f.name } : null; })
+        .catch(function () { return null; });
+    })).then(function (got) {
+      var atts = got.filter(Boolean);
+      if (!atts.length) { setNote(tw("teams.attach_err")); return; }
+      return call("POST", teamUrl("/files"), { attachments: atts }).then(function (r) {
+        setNote(r.code === 200 ? "" : ((r.j && r.j.error) || tw("teams.attach_err")));
+        loadInfo();
+      });
+    });
+  }
+
+  // The info panel (0.191.0): who is in the team, the working folder, pictures, files and links shared in it.
+  function infoTabHtml(t) {
+    if (!t) return "";
+    var I = S.info;
+    var members = (t.members || []).filter(function (m) { return m.status !== "left"; });
+    var h = '<div class="tm-info-head">' + teamAvatarHtml(t, 64) + '<div class="tm-info-name"><strong>' + esc(t.name) + "</strong>" +
+      (t.description ? '<span class="tm-sub">' + esc(t.description) + "</span>" : "") + "</div></div>";
+    h += '<section class="tm-info-sec"><h4>' + esc(tw("teams.info_members", { n: members.length + 1 })) + '</h4><ul class="tm-info-members">' +
+      '<li>' + avaHtml(tw("teams.you")) + "<span>" + esc(tw("teams.you")) + "</span></li>" +
+      members.map(function (m) {
+        return "<li>" + agentAva(m, 28) + "<span>" + esc(m.name || m.slug) + "</span>" +
+          (m.agent_key && m.agent_key === t.leader_key ? '<span class="tm-info-badge">' + esc(tw("teams.leader_badge")) + "</span>" : "") +
+          (m.slug ? '<button type="button" class="tm-bar-x tm-info-chat" data-agent-chat="' + esc(m.slug) + '" aria-label="' +
+            esc(tw("teams.chat_private")) + '" title="' + esc(tw("teams.chat_private")) + '">' + ic("message-circle") + "</button>" : "") + "</li>";
+      }).join("") + "</ul></section>";
+    h += '<section class="tm-info-sec"><h4>' + esc(tw("teams.info_folder")) + "</h4>" + (S.folder
+      ? '<div class="tm-info-row">' + ic("folder") + '<span class="tm-info-grow" title="' + esc(S.folder.path) + '">' + esc(S.folder.name) +
+        '</span><button type="button" class="ws-btn" data-folder-open="1">' + esc(tw("teams.change")) + "</button></div>"
+      : '<button type="button" class="ws-btn" data-folder-open="1">' + ic("folder") + " " + esc(tw("cp.pin_folder")) + "</button>") + "</section>";
+    if (!I) return h + '<p class="tm-sub">' + esc(tw("common.loading")) + "</p>";
+    var imgs = I.files.filter(function (f) { return f.image; });
+    var docs = I.files.filter(function (f) { return !f.image; });
+    if (imgs.length) {
+      h += '<section class="tm-info-sec"><h4>' + esc(tw("teams.info_images", { n: imgs.length })) + '</h4><div class="tm-info-imgs">' +
+        imgs.slice(0, 12).map(function (f) {
+          return '<a href="' + esc(rawUrl(f.brain_path || f.path)) + '" target="_blank" rel="noopener" title="' + esc(f.name) + '"><img src="' +
+            esc(rawUrl(f.brain_path || f.path)) + '" alt="" loading="lazy"></a>';
+        }).join("") + "</div></section>";
+    }
+    h += '<section class="tm-info-sec"><div class="tm-info-sechead"><h4>' + esc(tw("teams.info_files", { n: docs.length })) + "</h4>" +
+      '<button type="button" class="ws-btn" data-info-add-file="1">' + ic("plus") + " " + esc(tw("teams.info_add_file")) + "</button></div>" +
+      (docs.length ? '<ul class="tm-info-list">' + docs.map(function (f) {
+        return '<li><a href="' + esc(rawUrl(f.brain_path || f.path)) + '" target="_blank" rel="noopener">' + ic("file-text") + "<span>" +
+          esc(f.label || f.name) + "</span></a>" + (f.manual && f.id ? '<button type="button" class="tm-chip-x" data-info-del-file="' + esc(f.id) +
+          '" aria-label="' + esc(tw("teams.info_remove")) + '" title="' + esc(tw("teams.info_remove")) + '">' + ic("x") + "</button>" : "") + "</li>";
+      }).join("") + "</ul>" : '<p class="tm-sub">' + esc(tw("teams.info_no_files")) + "</p>") + "</section>";
+    h += '<section class="tm-info-sec"><h4>' + esc(tw("teams.info_links", { n: I.links.length })) + "</h4>" +
+      '<div class="tm-info-addlink"><input type="url" class="tm-info-link" placeholder="' + esc(tw("teams.info_link_ph")) + '">' +
+      '<button type="button" class="ws-btn" data-info-add-link="1">' + esc(tw("teams.info_add")) + "</button></div>" +
+      (I.links.length ? '<ul class="tm-info-list">' + I.links.map(function (l) {
+        return '<li><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + ic("link") + "<span>" + esc(l.label || l.url) + "</span></a>" +
+          (l.manual && l.id ? '<button type="button" class="tm-chip-x" data-info-del-link="' + esc(l.id) + '" aria-label="' +
+            esc(tw("teams.info_remove")) + '" title="' + esc(tw("teams.info_remove")) + '">' + ic("x") + "</button>" : "") + "</li>";
+      }).join("") + "</ul>" : '<p class="tm-sub">' + esc(tw("teams.info_no_links")) + "</p>") + "</section>";
+    if (I.err) h += '<p class="tm-sub">' + esc(I.err) + "</p>";
+    return h;
   }
 
   function send() {
     var input = S.el.querySelector(".tm-input");
     if (!input || !S.team) return;
     var typed = input.value.trim();
-    if (!typed) return;
+    if (S.atts.some(function (a) { return a.busy; })) { setNote(tw("teams.attach_wait")); return; }
+    var atts = S.atts.filter(function (a) { return a.path && !a.err; });
+    if (!typed && !atts.length) return;
     stopMic();
     var scan = mentionScan(typed, S.team.members, S.picked);
     if (scan.ambiguous.length) { drawHint(); return; }
@@ -1877,13 +2964,16 @@
     // Gửi lại sau rớt mạng: cùng chữ thì giữ ĐÚNG mã cũ để server trả tin cũ, không thêm lượt.
     if (!S.pending || S.pending.text !== text) S.pending = { text: text, typed: typed, id: newClientId() };
     var body = { text: text, mentions: mentions, as_job: S.asJob, client_msg_id: S.pending.id };
+    if (scan.all) body.mention_all = true;
+    if (atts.length) body.attachments = atts.map(function (a) { return { path: a.path, name: a.name, kind: a.kind }; });
     var btn = S.el.querySelector(".tm-send");
     if (btn) btn.disabled = true;
     var forTeam = S.activeId;
     call("POST", teamUrl("/messages"), body).then(function (r) {
       if (S.activeId !== forTeam) return;
       if (r.code !== 200) { fail(r); drawHint(); return; }
-      S.pending = null; S.asJob = false; S.picked = []; S.replyTo = null; S.plusOpen = false; input.value = "";
+      S.pending = null; S.asJob = false; S.picked = []; S.replyTo = null; S.plusOpen = false; input.value = ""; forgetAtts(S.atts); S.atts = [];
+      if (atts.length && S.side && S.tab === "info") loadInfo();
       setNote(r.j.notes && r.j.notes.length ? r.j.notes.filter(function (n) { return !/^[a-z_]+$/.test(n); }).join(" · ") : "");
       if ((r.j.notes || []).indexOf("daily_cap") >= 0) setNote(tw("teams.daily_cap"));
       drawComposer();
@@ -1923,16 +3013,20 @@
       var n = foldName(a.name || a.slug).trim();
       seen[n] = (seen[n] || 0) + 1;
     });
+    var activeN = (S.team.members || []).filter(function (a) { return !a.status || a.status === "active"; }).length;
+    var withAll = activeN > 1 && ALL_TOKEN.indexOf(foldName(query).trim()) === 0;
+    if (withAll) list = [{ agent_key: "*all", name: "@" + ALL_TOKEN, title: tw("teams.mention_all", { n: activeN }), all: true }].concat(list);
     S.sugKeys = list.map(function (a) { return a.agent_key; });
     if (S.sugIdx == null || S.sugIdx >= list.length) S.sugIdx = 0;
     box.hidden = !list.length;
     input.setAttribute("aria-expanded", list.length ? "true" : "false");
     box.innerHTML = list.map(function (a, i) {
       // Trùng tên: thêm mã ngắn (slug) để chọn đúng người. Vai của trợ lý (dòng "role" ở Cộng sự) nằm dưới tên.
-      var dup = seen[foldName(a.name || a.slug).trim()] > 1;
+      var dup = !a.all && seen[foldName(a.name || a.slug).trim()] > 1;
       var on = i === S.sugIdx;
       return '<button type="button" class="tm-sug-item' + (on ? " is-active" : "") + '" role="option" id="tm-sug-' + i +
-        '" aria-selected="' + (on ? "true" : "false") + '" data-mention="' + esc(a.agent_key) + '">' + agentAva(a, 28) +
+        '" aria-selected="' + (on ? "true" : "false") + '" data-mention="' + esc(a.agent_key) + '">' +
+        (a.all ? '<span class="tm-sug-all" aria-hidden="true">' + ic("users") + "</span>" : agentAva(a, 28)) +
         '<span class="tm-sug-text"><span class="tm-sug-name">' + esc(a.name || a.slug) +
         (dup ? ' <span class="tm-sug-slug">' + esc(a.slug) + "</span>" : "") + "</span>" +
         (a.title ? '<span class="tm-sug-role">' + esc(a.title) + "</span>" : "") + "</span></button>";
@@ -1976,6 +3070,16 @@
 
   function pickMention(key) {
     var input = S.el.querySelector(".tm-input");
+    if (input && key === "*all") {
+      // @all is read from the text itself (mentionScan), so it needs no picked entry.
+      var at = input.selectionStart || input.value.length;
+      var upto = input.value.slice(0, at).replace(/@([^\s@]*)$/, "@" + ALL_TOKEN + " ");
+      input.value = upto + input.value.slice(at);
+      try { input.setSelectionRange(upto.length, upto.length); } catch (e) {}
+      input.focus();
+      grow(input);
+      key = "";
+    }
     if (input && key) {
       var label = nameOf(S.team.members, key);
       var pos = input.selectionStart || input.value.length;
@@ -2001,6 +3105,11 @@
   function unMention(key) {
     var input = S.el.querySelector(".tm-input");
     if (!input || !S.team) return;
+    if (key === "*all") {
+      input.value = input.value.replace(new RegExp("(^|\\s)@" + ALL_TOKEN + "(?![\\p{L}\\p{M}\\p{N}_])\\s?", "giu"), "$1");
+      S.pending = null; grow(input); input.focus(); drawHint();
+      return;
+    }
     var r = removeMention(input.value, S.team.members, S.picked, key);
     input.value = r.text;
     S.picked = r.picked;
@@ -2043,6 +3152,7 @@
   // hay sau khi chọn.
   function openRowMenu(id) {
     S.rowMenu = id;
+    S.tagMenu = null;
     S.focusRowMenu = true;
     drawList();
   }
@@ -2050,6 +3160,7 @@
   function closeRowMenu(focusRow) {
     var id = S.rowMenu;
     S.rowMenu = null;
+    S.tagMenu = null;
     drawList();
     if (focusRow && id) {
       var row = S.el.querySelector('.tm-team[data-team="' + id + '"]');
@@ -2078,6 +3189,56 @@
       post: function (want) { return call("POST", "/teams/" + q(id) + "/pin", { on: want }); },
       notify: setNote,
       reload: function () { loadTeams(false); if (id === S.activeId) loadTeam(); } });
+  }
+
+  // 0.197.0: turning a team's notifications off or on saves the same way as pinning it (button locked while saving, a
+  // visible error with Retry).
+  // 0.200.0: download the team file. Chat history, keys, model choices and Auto switches never go in.
+  function shareTeam(id) {
+    var a = document.createElement("a");
+    a.href = "/teams/" + q(id) + "/export?brain=" + q(brain());
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setNote(tw("teams.share_note"));
+  }
+
+  // 0.200.0: add a team file. A preview first (who comes in, how many skills), then one confirm.
+  function importTeam() {
+    var inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".zip,application/zip";
+    inp.onchange = function () {
+      var f = inp.files && inp.files[0];
+      if (!f) return;
+      var send = function (preview) {
+        var fd = new FormData();
+        fd.append("file", f);
+        fd.append("brain", brain());
+        fd.append("preview", preview ? "1" : "0");
+        return fetch("/teams/import", { method: "POST", credentials: "same-origin", body: fd })
+          .then(function (r) { return r.json().catch(function () { return {}; }); });
+      };
+      send(true).then(function (pv) {
+        if (!pv || !pv.ok) { setNote(pv && pv.error || tw("teams.import_bad")); return; }
+        var ask = tw("teams.import_confirm", { name: pv.name, n: (pv.members || []).length, s: (pv.skills || []).length });
+        if (typeof confirm === "function" && !confirm(ask)) return;
+        send(false).then(function (r) {
+          if (!r || !r.ok) { setNote(r && r.error || tw("teams.import_bad")); return; }
+          setNote(tw("teams.imported", { name: r.team && r.team.name || pv.name, kept: (r.kept || []).length }));
+          loadTeams(false);
+        });
+      });
+    };
+    inp.click();
+  }
+
+  function muteTeam(id, on, btn) {
+    return pinTeamWith(id, on, btn, {
+      post: function (want) { return call("POST", "/teams/" + q(id) + "/mute", { on: want }); },
+      notify: setNote,
+      reload: function () { loadTeams(false); } });
   }
 
   // ───────────── hộp chọn thành viên kiểu Zalo (0.142.0, team-picker.js) ─────────────
@@ -2168,7 +3329,8 @@
     var host = S.pickHost;
     var back = host && (fromChip ? host.querySelector(".tmp-search-input")
       : host.querySelector('.tmp-check[data-pick-slug="' + (window.CSS && CSS.escape ? CSS.escape(slug) : slug) + '"]'));
-    if (back) { try { back.focus(); } catch (e) {} }
+    // preventScroll: dòng vừa bấm đang nằm trong tầm nhìn, đừng để focus kéo cuộn hộp chọn.
+    if (back) { try { back.focus({ preventScroll: true }); } catch (e) {} }
   }
 
   function pickFail(msg) {
@@ -2237,9 +3399,28 @@
       return openRowMenu(d.rowMenu);
     }
     if (d.renameTeam) { S.rowMenu = null; S.renaming = d.renameTeam; drawList(); return; }
+    if (d.tagTeam) { S.tagMenu = d.tagTeam; S.tagFocus = null; drawList(); return; }
+    if (t.classList && t.classList.contains("cs-proj-cur") && t.closest(".tm-tagbar")) {
+      var cs = typeof window !== "undefined" && window.JavisChatSide;
+      if (cs && cs.menu) cs.menu(t, tagMenuRows(S.teams, S.tagFilter, function (k) { setTagFilter(k); drawList(); }));
+      return;
+    }
+    if (t.classList && t.classList.contains("cs-proj-x") && t.closest(".tm-tagbar")) { setTagFilter(""); drawList(); return; }
     if (d.deleteTeam) { if (S.rowMenu) closeRowMenu(); return deleteTeam(d.deleteTeam); }
     if (d.renameHead) { S.renamingHead = true; drawHead(); return; }
+    if (d.finOpen) { S.openFin = S.openFin === d.finOpen ? null : d.finOpen; drawSide(); return; }
+    if (t.classList.contains("tm-arch-toggle")) { S.archOpen = !S.archOpen; drawSide(); return; }
+    if (d.jobArchive) return markJobs([d.jobArchive], "archived");
+    if (d.jobUnarchive) return markJobs([d.jobUnarchive], "");
+    if (d.jobDelete) return markJobs([d.jobDelete], "deleted");
+    if (d.jobDeleteAll) {
+      var all = ((S.queue || {}).archived || []).map(function (j) { return j.id; });
+      if (!all.length || !window.confirm(tw("teams.archive_clear_confirm", { n: all.length }))) return;
+      return markJobs(all, "deleted");
+    }
     if (d.agentEdit) return openAgentSettings(d.agentEdit);
+    // 0.193.0: message a member privately, straight from the team (the Partners page chat with that assistant).
+    if (d.agentChat) { if (window.JavisWorkspace && window.JavisWorkspace.openCommand) window.JavisWorkspace.openCommand("agent", d.agentChat); return; }
     if (d.rxToggle) {
       var rm = msgById(Number(d.rxToggle));
       return sendReaction(Number(d.rxToggle), JR.cornerToggle(rm && rm.reaction));
@@ -2257,6 +3438,15 @@
       return;
     }
     if (t.classList.contains("tm-plus")) return setPlus(!S.plusOpen);
+    if (d.teamInfo) return S.side && S.tab === "info" ? closeSide() : openSide("info", t);
+    if (d.plusAttach) { setPlus(false); return pickFiles(attachFiles); }
+    if (d.plusFolder || d.folderOpen) { setPlus(false); return openFolderPanel(); }
+    if (d.folderUnpin) return pinTeamFolder("");
+    if (d.attX !== undefined) { forgetAtts(S.atts.splice(+d.attX, 1)); drawComposer(); return; }
+    if (d.infoAddFile) return pickFiles(addTeamFiles);
+    if (d.infoDelFile) return assetPost("/files/" + q(d.infoDelFile) + "/delete");
+    if (d.infoDelLink) return assetPost("/links/" + q(d.infoDelLink) + "/delete");
+    if (d.infoAddLink) return addTeamLink();
     if (t.classList.contains("tm-mic")) return toggleMic();
     if (d.insertAt) {
       setPlus(false);
@@ -2286,6 +3476,14 @@
       if (S.rowMenu) closeRowMenu();
       return pinTeam(d.pinTeam, d.on === "1", S.el.contains(t) ? t : null);
     }
+    if (d.muteTeam) {
+      if (S.rowMenu) closeRowMenu();
+      return muteTeam(d.muteTeam, d.on === "1", null);
+    }
+    if (d.shareTeam) {
+      if (S.rowMenu) closeRowMenu();
+      return shareTeam(d.shareTeam);
+    }
     if (d.team) return openTeam(d.team);
     if (t.classList.contains("tm-scrim")) return closeSide();
     if (t.classList.contains("tm-note-close")) { setNote(""); return; }
@@ -2303,6 +3501,7 @@
       return;
     }
     if (t.classList.contains("tm-new")) return openPicker("create", t);
+    if (t.classList.contains("tm-import")) return importTeam();
     if (t.classList.contains("tm-add-open")) return openPicker("add", t);
     if (d.pickTag !== undefined) { S.pickSt.tag = d.pickTag; drawPicker("filter"); return; }
     if (d.pickToggle) { pickToggle(d.pickToggle); return; }
@@ -2358,7 +3557,16 @@
       return;
     }
     if (t.classList.contains("tm-search-go")) return runSearch();
-    if (d.jump) return jumpTo(d.jump, d.ts);
+    if (d.jump) {
+      var here = S.el.querySelector('.tm-msgs [data-mid="' + Number(d.jump) + '"]');
+      if (here && here.scrollIntoView) {
+        here.scrollIntoView({ block: "center", behavior: "smooth" });
+        here.classList.add("tm-msg-flash");
+        setTimeout(function () { here.classList.remove("tm-msg-flash"); }, 1600);
+        return;
+      }
+      return jumpTo(d.jump, d.ts);
+    }
     if (t.classList.contains("tm-jump-back")) { S.jumped = null; loadMsgs(false); return; }
     if (t.classList.contains("tm-filter-clear")) { S.filterTask = ""; drawFilterbar(); loadMsgs(false); return; }
     if (d.reactClose) { S.focusBack = S.picker; S.picker = null; drawMsgs(false); return; }
@@ -2396,9 +3604,10 @@
       return call("POST", teamUrl("/messages/" + q(d.decision) + "/decision"), { on: d.on === "1" }).then(function (r) {
         if (r.code !== 200) return fail(r);
         S.picker = null; S.draft = null;
-        loadMsgs(false);
+        loadMsgs(false); loadTeam();
       });
     }
+    if (t.classList.contains("tm-pin-toggle")) { S.pinsOpen = !S.pinsOpen; drawPins(); return; }
     if (d.prio) {
       return call("POST", teamUrl("/queue/" + q(d.prio) + "/priority"),
         { on: d.on === "1", expected_queue_version: (S.queue && S.queue.version) || 0 }).then(function (r) { act(r); });
@@ -2407,6 +3616,76 @@
       var ct = S.taskTitles[d.cancel] || d.cancel;
       if (typeof confirm === "function" && !confirm(tw("teams.cancel_confirm", { title: ct }))) return;
       return call("POST", teamUrl("/tasks/" + q(d.cancel) + "/cancel")).then(function (r) { act(r); });
+    }
+    if (d.apDecide) {
+      var dec = d.apDecide, note = "";
+      if (dec === "reject" || dec === "changes") {
+        note = typeof prompt === "function" ? prompt(tw(dec === "reject" ? "teams.ap.reject_prompt" : "teams.ap.changes_prompt")) : "";
+        if (!note || !note.trim()) return;
+      } else if (dec === "revoke" && typeof confirm === "function" && !confirm(tw("teams.ap.revoke_confirm"))) {
+        return;
+      }
+      // One key per decision of this card in this tab: pressing again after a lost connection replays the same answer
+      // (no second action, no error), another tab has its own key and is told the request is already decided.
+      S.apKeys = S.apKeys || {};
+      var kk = d.ap + "|" + dec;
+      var dkey = S.apKeys[kk] || (S.apKeys[kk] = "ap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10));
+      t.disabled = true;
+      return call("POST", teamUrl("/approvals/" + q(d.ap) + "/decide"), { decision: dec, note: (note || "").trim(),
+        decision_key: dkey, expected_rev: d.apRev ? Number(d.apRev) : null }).then(function (r) {
+        if (r.code !== 200) { t.disabled = false; fail(r); }
+        loadMsgs(false); loadQueue();
+      }).catch(function () { t.disabled = false; setNote(tw("teams.err_network")); });
+    }
+    if (d.mandateEdit !== undefined) { S.mandateEdit = d.mandateEdit === "1"; drawSide(); return; }
+    if (d.accEdit !== undefined) { S.accEdit = d.accEdit || null; drawSide(); return; }
+    if (t.classList.contains("tm-acc-save")) {
+      var af = t.closest(".tm-acc-form");
+      var parsed = parseCriteria((af.querySelector('[name="tm-acc-text"]') || {}).value);
+      if (parsed.bad.length || !parsed.criteria.length) { setNote(tw("teams.acc.bad", { line: parsed.bad[0] || "" })); return; }
+      return call("PUT", teamUrl("/tasks/" + q(af.getAttribute("data-acc-task")) + "/acceptance"),
+        { criteria: parsed.criteria, fix_rounds: Number((af.querySelector('[name="tm-acc-rounds"]') || {}).value || 2) }).then(function (r) {
+        if (r.code !== 200) return fail(r);
+        S.accEdit = null;
+        setNote(tw("teams.saved"));
+        act(r, drawSide);
+      });
+    }
+    if (d.accDecide) {
+      var anote = "";
+      if (d.accDecide === "reject") {
+        anote = typeof prompt === "function" ? prompt(tw("teams.acc.reject_prompt")) : "";
+        if (!anote || !anote.trim()) return;
+      }
+      t.disabled = true;
+      // The card's own revision and round: a click on an older card is refused by the server (never accepts a newer
+      // product the owner did not see).
+      return call("POST", teamUrl("/tasks/" + q(d.acc) + "/acceptance/decide"), { decision: d.accDecide, note: anote,
+        revision: d.accRev ? Number(d.accRev) : null, round: d.accRound ? Number(d.accRound) : null }).then(function (r) {
+        if (r.code !== 200) { t.disabled = false; fail(r); }
+        loadMsgs(false); loadQueue();
+      }).catch(function () { t.disabled = false; setNote(tw("teams.err_network")); });
+    }
+    if (t.classList.contains("tm-md-save")) {
+      var mform = S.el.querySelector(".tm-md-form");
+      if (!mform) return;
+      return call("PUT", teamUrl("/mandate"), readMandateForm(mform)).then(function (r) {
+        if (r.code !== 200) return fail(r);
+        S.mandateEdit = false;
+        setNote(tw("teams.saved"));
+        act(r, drawSide);
+      });
+    }
+    if (d.mandateStatus) {
+      if (d.mandateStatus === "revoked" && typeof confirm === "function" && !confirm(tw("teams.md.revoke_confirm"))) return;
+      return call("POST", teamUrl("/mandate/status"), { status: d.mandateStatus }).then(function (r) { act(r, drawSide); });
+    }
+    if (d.oppDecide) {
+      t.disabled = true;
+      return call("POST", teamUrl("/mandate/opportunities/" + q(d.opp) + "/decide"), { decision: d.oppDecide }).then(function (r) {
+        if (r.code !== 200) { t.disabled = false; fail(r); }
+        loadMsgs(false); loadQueue();
+      }).catch(function () { t.disabled = false; setNote(tw("teams.err_network")); });
     }
     if (d.amend) {
       var at = S.taskTitles[d.amend] || d.amend;
@@ -2578,6 +3857,13 @@
   }
 
   function onChange(e) {
+    if (e.target.hasAttribute && e.target.hasAttribute("data-work-mode") && S && S.activeId) {
+      // 0.207.0: the team's outside-action switch; the server logs it and posts a line in the chat.
+      return call("POST", teamUrl("/work_mode"), { mode: e.target.getAttribute("data-work-mode") }).then(function (r) {
+        if (r.code === 200) setNote(tw("teams.saved"));
+        act(r, drawSide);
+      });
+    }
     if (e.target.hasAttribute && e.target.hasAttribute("data-aa-file") && e.target.closest && e.target.closest(".tm-ava-set")) {
       uploadTeamAvatar(e.target);
       return;
@@ -2699,6 +3985,10 @@
       if (S.activeId) { loadMsgs(false); loadQueue(); loadTeam(); }
       return;
     }
+    if (d.type === "team_typing") {
+      if (d.team_id === S.activeId) { S.typing = d.typing || []; drawTyping(); }
+      return;
+    }
     if (d.type === "team_state" && d.deleted && d.team_id === S.activeId) closeGone(d.team_id);
     if (d.type === "team_replies" && d.team_id === S.activeId) {
       // Kết cục lượt trả lời đổi (0.142.0): chỉ vẽ lại khung tin, không cần hỏi lại danh sách.
@@ -2710,6 +4000,8 @@
       }
       return;
     }
+    // 0.197.0: a message landing in the team on screen is read; tell the server so the badge stays clear on every device.
+    if (d.type === "team_message" && d.team_id === S.activeId && d.message && d.message.author_kind !== "owner") readSoon();
     if (d.type === "team_message" && d.team_id === S.activeId && d.message) {
       var i = S.msgs.findIndex(function (m) { return Number(m.id) === Number(d.message.id); });
       // Gói không mang phản hồi (tin đổi nhãn, kết quả việc): giữ phản hồi đang có của tin.
@@ -2722,7 +4014,7 @@
       // Khung lọc theo việc (hợp đồng T2 mục 5): chỉ vẽ lại tin ĐANG hiện (reaction đổi ở tab khác), không chèn tin mới
       // vào danh sách của việc; khung thường thì chèn như cũ.
       if (i >= 0) S.msgs[i] = S.filterTask ? Object.assign({}, S.msgs[i], nm) : nm;
-      else if (!S.filterTask && (S.jumped === null || S.jumped === undefined)) S.msgs.push(nm);
+      else if (!S.filterTask && (S.jumped === null || S.jumped === undefined)) { S.msgs.push(nm); queueReveal(nm); }
       if (i >= 0 || !S.filterTask) drawMsgs(false);
     }
     clearTimeout(refreshTimer);
@@ -2735,17 +4027,99 @@
   // Rời trang (console.js gọi qua _pageLeave): đóng ngăn, bỏ hẹn giờ; trang dựng lại từ đầu lần ghé sau.
   function leave() {
     clearTimeout(refreshTimer);
+    if (colResize()) colResize().miniTip.hide();
     if (S && S.pickSt) closePicker();
-    if (S) { S.side = false; S.picker = null; stopMic(); if (S.unpress) { S.unpress(); S.unpress = null; } }
+    if (S) { S.side = false; S.picker = null; stopMic(); stopReveal(); if (S.unpress) { S.unpress(); S.unpress = null; } }
+  }
+
+  // ───────────── column widths (0.196.0) ─────────────
+  // Owner, 17/10/2026: drag a column edge like the Partners page; past a point the list folds into a strip of team
+  // pictures (hover shows the team card) and the side panel folds away. Same helper and card as every other page
+  // (col-resize.js: JavisColResize.attach with snap/collapse, JavisColResize.miniTip).
+  var LIST_MINI_W = 72;   // the Partners page's avatar strip width (workspace.js MINI_W)
+
+  function colResize() { return typeof window !== "undefined" ? window.JavisColResize : null; }
+
+  function listResizeOpts(page) {
+    var CR = colResize();
+    var side = function () { var x = page.querySelector(".tm-side"); return x && !x.hidden ? x.getBoundingClientRect().width : 0; };
+    return { host: page, varName: "--tm-list-w", key: "javis_tm_list_w", min: 220, max: 480, edge: "right",
+      label: "teams.resize_list", keep: 420, total: function () { return page.clientWidth; }, other: side,
+      snap: { below: CR.FOLD_AT(220), to: LIST_MINI_W, onSnap: function (on) {
+        page.classList.toggle("tm-mini", !!on);
+        if (!on) CR.miniTip.hide();
+      } } };
+  }
+
+  function sideResizeOpts(page) {
+    var CR = colResize();
+    var list = function () { var x = page.querySelector(".tm-list"); return x ? x.getBoundingClientRect().width : 0; };
+    return { host: page, varName: "--tm-side-w", key: "javis_tm_side_w", min: 300, max: 640, edge: "left",
+      label: "teams.resize_side", keep: 420, total: function () { return page.clientWidth; }, other: list,
+      collapse: { below: CR.FOLD_AT(300), run: function () { closeSide(); } } };
+  }
+
+  function attachListResize() {
+    var CR = colResize(), page = S.el.querySelector(".tm-page"), list = S.el.querySelector(".tm-list");
+    if (!CR || !page || !list) return;
+    var o = listResizeOpts(page);
+    CR.apply(o);
+    CR.attach(list, o);
+  }
+
+  // The side panel redraws its whole content, so its handle is put back after every draw (attach skips a duplicate).
+  function attachSideResize(side) {
+    var CR = colResize(), page = S.el.querySelector(".tm-page");
+    if (!CR || !page || !side || side.hidden) return;
+    var o = sideResizeOpts(page);
+    CR.apply(o);
+    CR.attach(side, o);
+  }
+
+  // The team card next to a team picture while the list is a strip (the Partners page's card): name, time, last line,
+  // and what waits (badge).
+  function miniCard(row) {
+    var CR = colResize(), page = S.el.querySelector(".tm-page");
+    if (!CR || !page || !page.classList.contains("tm-mini")) return;
+    var ava = row.querySelector(".tm-gava, .tm-ava");
+    var txt = function (sel) { var x = row.querySelector(sel); return x ? x.textContent.trim() : ""; };
+    var badge = row.querySelector(".tm-team-bottom .tm-badge");
+    // The card's state colours are the job-state ones (need red, run blue), so a team that needs you reads the same.
+    var st = badge ? (badge.classList.contains("tm-badge-owner") ? "need" : badge.classList.contains("tm-badge-run") ? "run" : "") : "";
+    // 0.197.0: with no job state to show, the card says how many messages wait unread.
+    var un = row.querySelector(".tm-team-bottom .tm-unread");
+    CR.miniTip.show(row, { ava: ava ? ava.outerHTML : "", name: txt(".tm-team-name"), time: txt(".tm-team-time"),
+      sub: txt(".tm-team-sub"), stText: badge ? badge.textContent.trim() : un ? un.getAttribute("title") : "",
+      st: badge ? st : un ? "need" : "" });
   }
 
   function render(el) {
     S = fresh(el);
     shell();
+    attachListResize();
+    el.addEventListener("mouseover", function (e) {
+      var row = e.target.closest && e.target.closest(".tm-team");
+      if (row && !row.contains(e.relatedTarget)) miniCard(row);
+    });
+    el.addEventListener("mouseout", function (e) {
+      var row = e.target.closest && e.target.closest(".tm-team");
+      if (row && !row.contains(e.relatedTarget) && colResize()) colResize().miniTip.hide();
+    });
+    el.addEventListener("focusin", function (e) { if (e.target.classList && e.target.classList.contains("tm-team")) miniCard(e.target); });
+    el.addEventListener("focusout", function (e) {
+      if (e.target.classList && e.target.classList.contains("tm-team") && colResize()) colResize().miniTip.hide();
+    });
     el.addEventListener("click", onClick);
     el.addEventListener("change", onChange);
     el.addEventListener("input", onInput);
     el.addEventListener("keydown", onKey);
+    // 0.192.0: paste and drop land in this team, not in the hidden main chat (see onPaste).
+    el.setAttribute("data-localdrop", "");
+    el.addEventListener("paste", onPaste);
+    el.addEventListener("dragenter", onDragEnter);
+    el.addEventListener("dragover", onDragOver);
+    el.addEventListener("dragleave", onDragLeave);
+    el.addEventListener("drop", onDrop);
     // Leaving an inline name editor saves it (a redraw that removes the box does not count: the box is gone by then).
     el.addEventListener("focusout", function (e) {
       var x = e.target;
@@ -2858,6 +4232,8 @@
 
   if (typeof window !== "undefined" && window.addEventListener) {
     window.addEventListener("javis:team-event", onTeamEvent);
+    // 0.197.0: back to this tab with a team open: what arrived while away is read now.
+    if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("visibilitychange", onVisible);
     // Auto bật/tắt ở trang Cộng sự hay tab khác (0.142.0): danh sách thành viên của nhóm đang mở đọc lại trạng thái.
     window.addEventListener("javis:resonance-agents-changed", function () {
       if (!S || !S.el || !S.el.isConnected || !S.activeId) return;
@@ -2867,7 +4243,10 @@
   }
 
   var api = { render: render, leave: leave, open: open, teamListHtml: teamListHtml, messageHtml: messageHtml, queueHtml: queueHtml,
-    jobStripHtml: jobStripHtml, blockedAction: blockedAction, jobsChip: jobsChip, jobsChipHtml: jobsChipHtml, timeShort: timeShort,
+    jobStripHtml: jobStripHtml, blockedAction: blockedAction, approvalCardHtml: approvalCardHtml, workModeHtml: workModeHtml,
+    mandateHtml: mandateHtml, opportunityCardHtml: opportunityCardHtml, readMandateForm: readMandateForm,
+    parseCriteria: parseCriteria, acceptanceCardHtml: acceptanceCardHtml,
+    jobsChip: jobsChip, jobsChipHtml: jobsChipHtml, timeShort: timeShort,
     mentionMatches: mentionMatches, mentionsFromText: mentionsFromText, mentionScan: mentionScan, removeMention: removeMention,
     callsHtml: callsHtml, foldName: foldName, emailBefore: emailBefore, composerHint: composerHint, newClientId: newClientId,
     membersHtml: membersHtml, settingsFormHtml: settingsFormHtml, capsFormHtml: capsFormHtml, capsPayload: capsPayload, saveCapsFlow: saveCapsFlow, teamTabHtml: teamTabHtml, limitsHtml: limitsHtml,
@@ -2875,7 +4254,10 @@
     bannersHtml: bannersHtml, reactCornerHtml: reactCornerHtml, reactBarHtml: reactBarHtml, sheetHtml: sheetHtml,
     hoverActsHtml: hoverActsHtml, bodyHtml: bodyHtml, plainPreview: plainPreview, previewText: previewText,
     nextReaction: nextReaction, REACTIONS: REACTIONS, authorityHtml: authorityHtml, readGrant: readGrant,
-    searchResultsHtml: searchResultsHtml, replyStatusHtml: replyStatusHtml, headLine: headLine };
+    searchResultsHtml: searchResultsHtml, replyStatusHtml: replyStatusHtml, headLine: headLine,
+    typingHtml: typingHtml, pinsHtml: pinsHtml, markMentions: markMentions, replyRefHtml: replyRefHtml,
+    allTags: allTags, filterTeams: filterTeams, tagBarHtml: tagBarHtml, tagMenuRows: tagMenuRows, tagPickRows: tagPickRows,
+    lastWorkedTeam: lastWorkedTeam, TAG_NONE: TAG_NONE, unreadHtml: unreadHtml };
   if (typeof window !== "undefined") window.JavisTeams = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })();

@@ -839,7 +839,16 @@ def _make_call(tool: dict, ctx: PluginContext, mode: str):
     name = tool["name"]
 
     async def _call(args):
-        if not _min_mode_ok(min_mode, mode):
+        if str(mode or "").strip().lower() == "gated" and min_mode != "readonly":
+            # 0.207.0: a gated Team step. A plugin that writes or acts (review: `javis_task` and `javis_schedule` are
+            # `safe` yet queue work that runs at full later) needs the owner's approval of this exact call
+            # (team_gate.py). Read-only plugin tools run.
+            import asyncio
+            import team_gate
+            ok, why = await asyncio.to_thread(team_gate.hub_check, name, args or {}, f"plugin: {name}")
+            if not ok:
+                return why
+        elif not _min_mode_ok(min_mode, mode):
             loai = "ghi/hành động" if min_mode == "safe" else "nguy hiểm (chỉ chế độ full)"
             return (f"ERROR: tool '{name}' cần mức quyền cao hơn ({min_mode}) - thao tác {loai} "
                     f"bị chặn ở chế độ hiện tại. Nâng chế độ chạy nếu thật sự cần.")

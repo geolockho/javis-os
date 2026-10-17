@@ -264,7 +264,7 @@ check("gói WS không mang reaction của agent thì giữ cái đang có", team
 // ───────────── 0.176.0: reply, markdown, assistant settings, rename and delete ─────────────
 const qm = TM.messageHtml({ id: 9, author_kind: "owner", content: "> Lan: Câu <cũ>\n\nSai rồi em", meta: {} }, { members: members });
 check("0.176 owner reply shows the quote block (name bold) above the text, both escaped",
-      qm.includes('<div class="tm-quote"><b>Lan</b>Câu &lt;cũ&gt;</div>') && qm.includes('<div class="tm-text">Sai rồi em</div>'), qm);
+      qm.includes('<span class="tm-quote-body"><b>Lan</b>Câu &lt;cũ&gt;</span></div>') && qm.includes('<div class="tm-text">Sai rồi em</div>'), qm);
 check("0.176 sending a reply puts the quote on top and calls the assistant replied to when nobody is @-mentioned",
       /var text = S\.replyTo && Q \? Q\.ghep\(S\.replyTo\.quote, typed\) : typed;/.test(teamsJs)
       && /if \(S\.replyTo && S\.replyTo\.key && !mentions\.length\) mentions = \[S\.replyTo\.key\];/.test(teamsJs));
@@ -344,7 +344,7 @@ check("tin được nhảy tới được tô sáng", TM.messageHtml(am, { membe
 check("nhảy tới tin: tải trang kết thúc ở đúng tin đó, có nút về tin mới nhất",
       /before_ts=" \+ q\(ts\) \+ "&before_id=" \+ q\(Number\(mid\) \+ 1\)/.test(teamsJs) && teamsJs.includes("tm-jump-back"));
 check("đang xem tin cũ: tin mới tới không chèn vào giữa khúc cũ",
-      teamsJs.includes("else if (!S.filterTask && (S.jumped === null || S.jumped === undefined)) S.msgs.push(nm);"));
+      teamsJs.includes("else if (!S.filterTask && (S.jumped === null || S.jumped === undefined)) { S.msgs.push(nm); queueReveal(nm); }"));
 check("CSS: lớp flex mới của tìm có [hidden], vùng chạm 44px trên điện thoại",
       /\.tm-search\[hidden\]/.test(css) && /\.tm-search-row\[hidden\]/.test(css) && /\.tm-jumped\[hidden\]/.test(css)
       && /\.tm-search-btn, \.tm-search-go, \.tm-search-input, \.tm-search-hit, \.tm-jump-back \{ min-height: 44px; \}/.test(css));
@@ -401,7 +401,10 @@ check("T5 gửi tin lấy người được gọi từ chữ, không còn hàng 
 const BA = TM.blockedAction;
 check("T5 nút giải quyết theo lý do chặn", BA("cap_reached").act === "extend" && BA("failed").act === "retry"
       && BA("no_progress").act === "retry" && BA("interrupted").key === "teams.act.continue" && BA("no_leader").act === "leader"
-      && BA("agent_busy_long").act === "resume" && BA("waiting_user").act === "resume" && BA("assignee_removed") === null);
+      && BA("agent_busy_long").act === "resume" && BA("assignee_removed") === null);
+// 0.207.0: waiting for the owner is a real approval now; the strip button only shows the card (the card decides).
+check("0.207.0 chờ duyệt: nút dẫn tới thẻ duyệt, không còn Cho chạy tiếp", BA("waiting_user").act === "view"
+      && BA("rejected").act === "amend" && BA("approval_expired").act === "amend");
 h = TM.jobStripHtml({ running: [{ id: "t_1", title: "Soạn <kế>" }], waiting: [{ id: "t_9", title: "x" }],
   blocked: [{ id: "a", title: "A", block_kind: "cap_reached", block_reason: "Nhóm đã dùng hết số lần trả lời hôm nay" },
     { id: "b", title: "B", block_kind: "no_leader", block_reason: "" }, { id: "c", title: "C", block_kind: "failed" }] });
@@ -469,9 +472,16 @@ h = TM.messageHtml({ id: 21, author_kind: "agent", author_ref: "ag_lan", content
 check("T5 tin trợ lý: bảng cảm xúc kèm Ghim; tin đã ghim thì không lặp nút Ghim", /data-decision="21" data-on="1"/.test(h)
       && !/data-on="1"/.test(TM.messageHtml({ id: 22, author_kind: "agent", author_ref: "ag_lan", content: "x", meta: { decision: true } },
         { members: members, picker: 22 })), h);
-check("T5 nút thao tác nằm cạnh bong bóng, không thêm hàng dưới tin", (function (x) {
-  return x.indexOf("tm-bubble") < x.indexOf("tm-hacts") && !/tm-foot[^>]*>[^<]*<button type="button" class="tm-hact"/.test(x);
-})(TM.messageHtml(am, { members: members })));
+// 0.194.1 (owner, 17/10/2026): the action row sits UNDER the bubble, in the same column, like the main chat's .msg-acts.
+check("0.194.1 nút thao tác nằm ngay dưới bong bóng, cùng một cột, có giờ gửi", (function (x) {
+  return /<div class="tm-col"><div class="tm-bubble">[\s\S]*<\/div><div class="tm-hacts"><span class="tm-time"[^>]*>\d\d:\d\d<\/span>/.test(x)
+    && !/tm-foot[^>]*>[^<]*<button type="button" class="tm-hact"/.test(x) && x.includes('data-reply="7"') && x.includes('data-copy="7"');
+})(TM.messageHtml(Object.assign({}, am, { ts: 1792200000 }), { members: members })));
+check("0.194.1 tin của chủ cũng có hàng thao tác dưới bong bóng, dồn về bên phải", (function (x) {
+  return x.includes('<div class="tm-col"><div class="tm-bubble">') && x.indexOf("tm-bubble") < x.indexOf("tm-hacts");
+})(TM.messageHtml({ id: 8, author_kind: "owner", content: "x", meta: {}, ts: 1792200000 }, { members: members }))
+  && /\.tm-msg-owner \.tm-col \{ align-items: flex-end;/.test(css) && /\.tm-msg-agent \.tm-col \{ align-items: flex-start;/.test(css));
+check("0.194.1 tin không có mốc giờ thì không bịa giờ", !TM.messageHtml(Object.assign({}, am, { ts: 0 }), { members: members }).includes("tm-time"));
 check("T5 nhấn giữ mở bảng cho mọi tin (cả tin của chủ)", teamsJs.includes('e.target.closest(".tm-msg")'));
 
 // Trang chiếm trọn chiều cao, khung soạn một hàng ở đáy.
@@ -653,7 +663,7 @@ check("ghim từ danh sách dùng cùng cách lưu (lỗi thì báo, không kẹ
 check("CSS: nút ... hiện khi rê chuột hay focus, máy chạm ẩn (dùng nhấn giữ); menu có [hidden], mục menu 44px",
       /\.tm-team-wrap:hover \.tm-row-more, \.tm-row-more:focus-visible/.test(css)
       && /@media \(hover: none\) \{ \.tm-row-more \{ display: none; \}/.test(css) && css.includes(".tm-row-menu[hidden]")
-      && css.includes(".tm-team-wrap[hidden]") && /\.tm-row-menu button \{[^}]*min-height: 44px/.test(css));
+      && css.includes(".tm-team-wrap[hidden]") && /\.tm-row-menu:not\(\.tm-tag-menu\) button \{[^}]*min-height: 44px/.test(css));
 check("khoá chữ ghim có ở vi và en", ["teams.pin_team", "teams.unpin_team", "teams.row_menu"].every(function (k) { return vi[k] && en[k]; }));
 
 // Review b93c46bd #1: công tắc ghim lưu lỗi (HTTP khác 200, lỗi mạng) thì về trạng thái đã lưu, bật lại, báo lỗi

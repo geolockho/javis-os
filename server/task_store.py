@@ -1177,8 +1177,13 @@ class TaskStore:
         coordinator_key: str = "",
         chat_id: str = "",
         created_by: str = "owner",
+        blocked_kind: str = "",
+        blocked_reason: str = "",
     ) -> tuple[str, bool]:
         """Thêm một việc nhóm vào cuối hàng. Trả (task_id, created).
+
+        `blocked_kind` (0.208.0): the job is created already stopped (e.g. `waiting_user` for a job the department
+        mandate opens at the approve level), in the same transaction, so no crash or error can leave it runnable.
 
         Khoá idempotency là `source_ref` (tin giao việc): gửi lại cùng tin trả việc cũ. KHÔNG gộp
         theo tiêu đề như Kanban: hai việc khác nhau cùng tên vẫn là hai việc."""
@@ -1211,13 +1216,14 @@ class TaskStore:
                         id, brain_root, title, normalized_title, intent, route, capability,
                         execution_mode, priority, status, created_by, chat_id, idempotency_key,
                         max_attempts, created_at, updated_at, lane, team_id, team_seq, team_prio,
-                        team_rev, assignee_key, coordinator_key, source_ref
-                    ) VALUES (?, ?, ?, ?, ?, 'team', 'auto', 'auto', 2, 'team_queued', ?, ?, ?, 1,
-                              ?, ?, 'team', ?, ?, NULL, 1, ?, ?, ?)""",
+                        team_rev, assignee_key, coordinator_key, source_ref, block_kind, block_reason
+                    ) VALUES (?, ?, ?, ?, ?, 'team', 'auto', 'auto', 2, ?, ?, ?, ?, 1,
+                              ?, ?, 'team', ?, ?, NULL, 1, ?, ?, ?, ?, ?)""",
                     (
-                        tid, root, title, norm_title(title), intent or title, created_by or "owner",
+                        tid, root, title, norm_title(title), intent or title,
+                        "team_blocked" if blocked_kind else "team_queued", created_by or "owner",
                         str(chat_id or ""), key, ts, ts, team_id, seq, assignee_key or "",
-                        coordinator_key or "", source_ref,
+                        coordinator_key or "", source_ref, str(blocked_kind or ""), str(blocked_reason or "")[:2000],
                     ),
                 )
                 self._event(tid, "team_queued", f"team {team_id} #{seq}", metadata={"source_ref": source_ref})
@@ -1400,6 +1406,12 @@ class TaskStore:
         return self._team_move(task_id, ("team_running", "team_queued"), "team_blocked", "team_blocked",
                                block_kind=str(kind or "failed"), block_reason=reason, run_status="blocked")
 
+    def team_reblock(self, task_id: str, kind: str, reason: str = "") -> Optional[str]:
+        """A blocked job stays blocked for another reason (0.207.0: the owner rejected or revoked an approval, the request
+        expired). Same place in the queue; the new kind decides which buttons the owner gets."""
+        return self._team_move(task_id, ("team_blocked",), "team_blocked", "team_reblocked",
+                               block_kind=str(kind or "failed"), block_reason=reason)
+
     def team_unblock(self, task_id: str) -> Optional[str]:
         return self._team_move(task_id, ("team_blocked",), "team_queued", "team_unblocked")
 
@@ -1412,6 +1424,11 @@ class TaskStore:
         """Chốt việc xong. Có `expected_rev` thì chỉ chốt khi yêu cầu chưa bị sửa sang bản khác: kết quả của bản cũ
         không bao giờ thành kết quả của bản mới (review T1 R7)."""
         return self._team_move(task_id, ("team_running",), "done", "team_done", "done",
+                               result=result, run_status="completed", expected_rev=expected_rev)
+
+    def team_finish_reviewed(self, task_id: str, result: str = "", expected_rev: Optional[int] = None) -> Optional[str]:
+        """0.209.0: the owner confirmed the product of a job that waited for acceptance (blocked) -> done, same CAS."""
+        return self._team_move(task_id, ("team_blocked",), "done", "team_done", "done (owner accepted)",
                                result=result, run_status="completed", expected_rev=expected_rev)
 
     def team_cancel(self, task_id: str, reason: str = "owner cancel") -> Optional[str]:

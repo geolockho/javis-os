@@ -1605,7 +1605,9 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
    mặc định của .cside-tab làm chữ tràn ra ngoài viền.
    Khung nội dung tự cuộn chứ không để cả cột cuộn: cây thư mục có thanh cuộn riêng, để nó
    nằm trong luồng chung là hai thanh cuộn lồng nhau. */
-.ws-rtabs .cside-tab { padding: 7px 4px; gap: 5px; min-width: 0; font-size: 12.5px;
+/* 0.191.0 (owner, 16/10/2026: "vệt màu cam đang bị dính quá sát vào chữ"): 10px each side so the active pill has room
+   around its label, and each tab is as wide as its label (flex auto) instead of three equal thirds. */
+.ws-rtabs .cside-tab { flex: 1 1 auto; padding: 7px 10px; gap: 6px; min-width: 0; font-size: 12.5px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-rtabs .cside-tab svg { flex: none; }
 /* Cột phải co xuống 272px ở màn hẹp hơn: chia ba thì mỗi tab còn 76px, không đủ cho cả icon
@@ -2549,9 +2551,9 @@ body.on-teams .cview-head { display: none; }
 .tm-row-menu { position: absolute; top: 100%; right: 8px; z-index: 6; display: flex; flex-direction: column; min-width: 180px;
   padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
 .tm-row-menu[hidden] { display: none; }
-.tm-row-menu button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: none; border-radius: 8px;
-  background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.tm-row-menu button:hover, .tm-row-menu button:focus-visible { background: var(--surface-2); }
+.tm-row-menu:not(.tm-tag-menu) button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: none;
+  border-radius: 8px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.tm-row-menu:not(.tm-tag-menu) button:hover, .tm-row-menu:not(.tm-tag-menu) button:focus-visible { background: var(--surface-2); }
 
 /* Danh sách nhóm kiểu app chat: ảnh, tên, giờ, dòng xem trước, nhãn trạng thái. */
 .tm-team { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; min-height: 60px;
@@ -2699,11 +2701,18 @@ body.on-teams .cview-head { display: none; }
 .tm-rx-pick:hover, .tm-rx-pick:focus-visible { transform: scale(1.28) translateY(-3px); outline: none; }
 .tm-rx-pick[aria-pressed="true"] { background: var(--accent-wash); }
 @media (prefers-reduced-motion: reduce) { .tm-rx-pick, .tm-rx-btn, .tm-bubble { transition: none; } .tm-rx-bar { animation: none; } }
-/* Hover actions beside the bubble: Reply, Copy, Pin. */
-.tm-hacts { display: inline-flex; gap: 2px; align-self: center; opacity: 0; transition: opacity .12s; }
+/* 0.194.1 (owner, 17/10/2026): the bubble and its action row (time, Reply, Copy, Pin) stack in one column, the row right
+   under the bubble on its own side, like the main chat (.msg-acts). Beside the bubble it looked cluttered. */
+.tm-col { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
+.tm-msg-agent .tm-col { align-items: flex-start; max-width: min(680px, calc(100% - 40px)); }
+.tm-msg-owner .tm-col { align-items: flex-end; max-width: min(680px, 85%); }
+.tm-msg .tm-col > .tm-bubble { max-width: 100%; }
+.tm-hacts { display: flex; align-items: center; gap: 2px; height: 26px; margin-top: 2px; opacity: 0; transition: opacity .12s; }
 .tm-msg:hover .tm-hacts, .tm-hacts:focus-within { opacity: 1; }
-.tm-hact { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none;
+.tm-time { color: var(--text3); font-size: 12px; margin: 0 4px 0 2px; white-space: nowrap; }
+.tm-hact { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; border: none;
   border-radius: 8px; background: none; color: var(--text3); cursor: pointer; }
+.tm-hact .ic, .tm-hact svg { width: 15px; height: 15px; }
 .tm-hact:hover, .tm-hact:focus-visible { background: var(--surface-2); color: var(--text); }
 @media (hover: none) { .tm-hacts { display: none; } .tm-msg { -webkit-touch-callout: none; } }
 /* Swipe left to reply: a reply arrow shows on the right once the swipe is far enough. */
@@ -2965,7 +2974,7 @@ body.on-teams .cview-head { display: none; }
 .tmp-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); }
 .tmp-dialog { position: relative; display: flex; flex-direction: column; width: min(560px, 100%); max-height: min(760px, 90vh);
   background: var(--bg2); color: var(--text); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .25);
-  overflow: hidden; font-size: 16px; }
+  overflow: hidden; overflow: clip; font-size: 16px; }
 .tmp-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .tmp-title { flex: 1; margin: 0; font-size: 18px; font-weight: 700; }
 .tmp-close { min-width: 44px; min-height: 44px; border: none; background: none; color: var(--text3); cursor: pointer; border-radius: 10px;
@@ -3018,7 +3027,10 @@ span.tmp-lead { cursor: default; }
   display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
 .tmp-sel-x:hover { background: var(--surface-2); color: var(--text); }
 .tmp-list { display: flex; flex-direction: column; gap: 2px; }
-.tmp-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px; border-radius: 12px; cursor: pointer; }
+/* position: relative giữ ô tick ẩn trong dòng của nó. Thiếu nó, ô tick bám vào .tmp-dialog, nằm ngoài vùng cuộn, và lúc
+   focus lại sau khi chọn thì trình duyệt cuộn CẢ hộp (overflow: hidden vẫn cuộn được bằng code): tiêu đề trôi mất, footer
+   bị kéo lên giữa, đáy hộp trống (0.189.1). overflow: clip ở trên chặn luôn kiểu cuộn đó. */
+.tmp-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px; border-radius: 12px; cursor: pointer; }
 .tmp-row:hover { background: var(--surface-2); }
 .tmp-row.is-on { background: var(--accent-wash-2, var(--surface-2)); }
 .tmp-row .tmp-check { position: absolute; opacity: 0; pointer-events: none; }
@@ -3132,10 +3144,18 @@ span.tmp-lead { cursor: default; }
 .ws-item-wrap.co-tt > .ws-item-more { top: 6px; transform: none; }
 .ws-item-tt { display: flex; align-items: center; gap: 6px; min-height: 22px; margin-top: 4px; padding-right: 64px; min-width: 0; }
 .ws-item-text:has(> .ws-item-tt) { flex: 1 1 auto; }
-.ws-item-wrap > .ws-auto:not(.is-on):not(.is-saving) { display: none; }
-.ws-item-wrap > .ws-auto { position: absolute; right: 8px; bottom: 8px; margin: 0; min-height: 22px; padding: 0 5px 0 8px;
-  gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--accent-ink, var(--accent)); background: var(--accent-wash, rgba(255, 122, 60, .12));
-  border-radius: 999px; }
+/* 0.190.0 (chủ repo 16/10/2026: "thời gian tự nhiên font chữ bị to đùng... mất nút bật tắt auto... thời gian phải cùng
+   hàng với nút bật tắt auto và nhỏ thôi"): giờ chat gần nhất và công tắc Auto chung một cụm nhỏ ở góc dưới phải của thẻ.
+   Công tắc có trên mọi trợ lý (tắt thì xám). Nút ba chấm luôn ở góc trên phải; dòng chữ cuối chừa chỗ cho cụm. */
+.ws-item-wrap.has-end > .ws-item-more { top: 6px; transform: none; }
+.ws-item-wrap.has-end .ws-item-text > :last-child { padding-right: 104px; }
+.ws-item-wrap.has-end.he .ws-item-text > :last-child { padding-right: 44px; }
+.ws-item-end { position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 6px;
+  pointer-events: none; }
+.ws-item-end > .ws-auto, .ws-item-end > .ws-rs-confirm { pointer-events: auto; position: relative; }
+.ws-item-end > .ws-auto { margin: 0; min-height: 20px; padding: 0 4px 0 7px; gap: 4px; font-size: 12px; font-weight: 600;
+  color: var(--text3); background: var(--surface-2, rgba(0, 0, 0, .05)); border-radius: 999px; }
+.ws-item-end > .ws-auto.is-on { color: var(--accent-ink, var(--accent)); background: var(--accent-wash, rgba(255, 122, 60, .12)); }
 .ws-auto .toggle-sm { width: 24px; height: 14px; }
 .ws-auto .toggle-sm span { background: var(--bg3); border-color: var(--border); }
 .ws-auto .toggle-sm span::before { width: 10px; height: 10px; left: 1px; top: 1px; background: var(--text3); }
@@ -3143,12 +3163,11 @@ span.tmp-lead { cursor: default; }
 .ws-auto .toggle-sm input:checked + span::before { transform: translateX(10px); background: #fff; }
 .ws-auto .toggle-sm input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ws-auto.is-saving { opacity: .7; cursor: progress; }
-.ws-item-wrap > .ws-rs-confirm { position: absolute; right: 8px; bottom: 8px; margin: 0; min-height: 22px; font-size: 12.5px; }
+.ws-item-end > .ws-rs-confirm { margin: 0; min-height: 20px; font-size: 12px; }
 /* Màn cảm ứng: nhãn vẫn nhỏ cho mắt, vùng chạm nới ra 44px bằng một lớp trong suốt (không đẩy chữ khác đi). */
 @media (hover: none), (max-width: 600px) {
   .ws-item-tt { font-size: 14px; }
-  .ws-item-wrap > .ws-auto, .ws-item-wrap > .ws-rs-confirm { font-size: 14px; }
-  .ws-item-wrap > .ws-auto::after, .ws-item-wrap > .ws-rs-confirm::after { content: ""; position: absolute; inset: -11px -6px; }
+  .ws-item-end > .ws-auto::after, .ws-item-end > .ws-rs-confirm::after { content: ""; position: absolute; inset: -12px -6px; }
 }
 .rsa-desc { color: var(--text2); }
 
@@ -3221,8 +3240,17 @@ span.tmp-lead { cursor: default; }
 .ws-item-text { flex: 1 1 auto; }
 .ws-item-top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .ws-item-top > strong { flex: 1 1 auto; min-width: 0; }
-.ws-item-time { flex: none; font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; }
-@media (max-width: 900px) { .ws-item-time { font-size: 14px; } }
+/* 0.185.0: Javis Core, the system assistant. A small System badge on its row and on its card; the row keeps the
+   accent edge like a pinned one. */
+.ws-sys { flex: 0 0 auto; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; line-height: 1.5;
+  color: var(--accent); background: var(--accent-wash); border: 1px solid var(--accent); }
+.ws-item-wrap.he > .ws-item { border-left: 3px solid var(--accent); border-radius: 9px; }
+.ws-core-card { padding: 4px 2px 12px; }
+.ws-core-head { display: flex; align-items: center; gap: 10px; }
+.ws-core-head h3 { margin: 0; font-size: 16px; }
+.ws-core-card p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.5; }
+.ws-core-card .ws-core-note { color: var(--text2); font-size: 13.5px; }
+.ws-item-time { flex: none; font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; }
 
 /* 0.148.0: tay kéo đổi bề rộng cột (col-resize.js) ở trang đồ thị (cột Vault, cột hội thoại) và trang Trò chuyện (cột
    Hội thoại/Thư mục). Chỉ màn rộng; màn hẹp các cột là ngăn kéo hay xếp dọc nên không có tay kéo. Cột đang thu về dải
@@ -3359,3 +3387,342 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .ht-file-ten { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .ht-file-meta { color: var(--text3); font-size: 16px; }
 .ht-chu-thich { margin-top: 8px; white-space: pre-wrap; }
+
+/* 0.190.0: the "Đã nhớ · Hoàn tác" line under an answer (chat-nho.js). Small and quiet: a note, not a message. */
+.msg-nho .bubble { background: transparent; border: 0; box-shadow: none; padding: 2px 0; }
+.nho-line { display: flex; flex-direction: column; gap: 4px; }
+.nho-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13.5px; color: var(--text2); }
+.nho-ic svg { width: 14px; height: 14px; color: var(--accent); vertical-align: -2px; }
+.nho-txt { min-width: 0; overflow-wrap: anywhere; }
+.msg-nho .nho-txt strong { color: var(--text); font-weight: 600; }
+.nho-undo { border: 1px solid var(--border); background: transparent; color: var(--text2); border-radius: 999px;
+  padding: 1px 10px; font-size: 12.5px; cursor: pointer; }
+.nho-undo:hover { color: var(--accent); border-color: var(--accent); }
+@media (hover: none), (pointer: coarse) { .nho-row { font-size: 15px; } .nho-undo { min-height: 32px; font-size: 14px; } }
+
+/* 0.191.0: files, working folder and the info panel of a team (teams.js). */
+.tm-attach-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.tm-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 4px 3px 10px; border-radius: 999px;
+  background: var(--surface-2, var(--bg2)); border: 1px solid var(--border); font-size: 14px; color: var(--text); }
+.tm-chip svg { width: 15px; height: 15px; flex: none; color: var(--text2); }
+.tm-chip-folder { background: var(--accent-wash, rgba(255, 122, 60, .12)); border-color: transparent; }
+.tm-chip-folder svg { color: var(--accent); }
+.tm-chip-name { min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: none;
+  padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.tm-chip-st { font-size: 12.5px; color: var(--text3); white-space: nowrap; }
+.tm-chip.is-err { border-color: var(--red, #d64545); }
+.tm-chip.is-err .tm-chip-st { color: var(--red, #d64545); }
+.tm-chip-x { flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 0;
+  border-radius: 50%; background: transparent; color: var(--text3); cursor: pointer; }
+.tm-chip-x:hover { background: var(--bg3); color: var(--text); }
+.tm-chip-x svg { width: 14px; height: 14px; }
+.tm-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tm-file { display: inline-flex; align-items: center; gap: 6px; max-width: 260px; padding: 5px 10px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 14px; text-decoration: none; }
+.tm-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-file svg { width: 15px; height: 15px; flex: none; color: var(--accent); }
+.tm-file.is-img { flex-direction: column; align-items: stretch; padding: 4px; }
+.tm-file.is-img img { width: 160px; max-height: 120px; object-fit: cover; border-radius: 8px; }
+.tm-file.is-img span { font-size: 12.5px; color: var(--text2); padding: 2px 4px; }
+.tm-folder-pop { position: fixed; z-index: 80; }
+.tm-ava-btn { border: 0; padding: 0; background: none; border-radius: 50%; cursor: pointer; flex: none; display: inline-flex; }
+.tm-ava-btn:hover, .tm-ava-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tm-info-head { display: flex; align-items: center; gap: 12px; padding: 4px 2px 12px; }
+.tm-info-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-info-name strong { font-size: 17px; overflow-wrap: anywhere; }
+.tm-info-sec { border-top: 1px solid var(--border); padding: 12px 2px; }
+.tm-info-sec h4 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--text); }
+.tm-info-sechead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.tm-info-sechead h4 { margin: 0; }
+.tm-info-members, .tm-info-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tm-info-members li, .tm-info-list li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; }
+.tm-info-members li > span:not(.tm-ava):not(.tm-info-badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-info-badge { margin-left: auto; font-size: 12.5px; color: var(--accent-ink, var(--accent)); background: var(--accent-wash, rgba(255, 122, 60, .12));
+  border-radius: 999px; padding: 1px 8px; }
+.tm-info-list a { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; color: var(--text); text-decoration: none; }
+.tm-info-list a:hover span { text-decoration: underline; }
+.tm-info-list a span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-info-list svg { width: 16px; height: 16px; flex: none; color: var(--text2); }
+.tm-info-row { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.tm-info-row svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
+.tm-info-grow { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-info-imgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tm-info-imgs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; }
+.tm-info-addlink { display: flex; gap: 6px; margin-bottom: 8px; }
+.tm-info-addlink input { flex: 1 1 auto; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 15px; }
+.tm-info-addlink input:focus { outline: none; border-color: var(--accent); }
+@media (pointer: coarse) { .tm-chip-x { width: 36px; height: 36px; } .tm-info-addlink input { font-size: 16px; } }
+
+
+/* 0.191.0 (owner, 16/10/2026): drag the list edge narrow enough and the column becomes a strip of avatars only
+   (workspace.js snaps it to 72px and sets .ws-mini). Words go, pictures stay; hovering an avatar shows its name card.
+   Wide screens only: below 901px the list is a drawer of fixed width. */
+@media (min-width: 901px) {
+  .wspage.ws-mini > .ws-left { padding: 12px 8px; gap: 10px; }
+  .wspage.ws-mini .ws-filters, .wspage.ws-mini .ws-empty, .wspage.ws-mini .ws-item-text,
+  .wspage.ws-mini .ws-item-end, .wspage.ws-mini .ws-item-more, .wspage.ws-mini .ws-grp-more { display: none; }
+  .wspage.ws-mini .ws-seg { flex-direction: column; gap: 4px; }
+  .wspage.ws-mini .ws-seg button, .wspage.ws-mini .ws-left-foot .ws-btn { font-size: 0; gap: 0; padding: 8px 0;
+    justify-content: center; }
+  .wspage.ws-mini .ws-seg button svg, .wspage.ws-mini .ws-left-foot .ws-btn svg { width: 18px; height: 18px; }
+  .wspage.ws-mini .ws-list { gap: 6px; align-items: center; scrollbar-width: none; }
+  .wspage.ws-mini .ws-item-wrap { width: 100%; }
+  .wspage.ws-mini .ws-item-wrap > .ws-item, .wspage.ws-mini .ws-item { justify-content: center; padding: 6px;
+    border-radius: 12px; }
+  .wspage.ws-mini .ws-item-wrap.ghim > .ws-item { border-left-width: 1px; box-shadow: inset 3px 0 0 var(--accent); }
+  /* Group headings shrink to a thin rule: the order of the strip still shows where a block starts. */
+  .wspage.ws-mini .ws-glabel { width: 100%; font-size: 0; padding: 0; margin: 2px 0; height: 1px;
+    background: var(--glass-brd); }
+  .wspage.ws-mini .ws-glabel.ws-grp { height: auto; background: none; border-top: 1px solid var(--glass-brd);
+    padding-top: 4px; }
+  .wspage.ws-mini .ws-grp-tog { justify-content: center; font-size: 0; }
+  .wspage.ws-mini .ws-grp-tog svg { width: 16px; height: 16px; }
+  /* 0.191.1: the job state is one small dot on the avatar, four colours (data-st from JavisAgentJobs.statusOf). */
+  .wspage.ws-mini .ws-item-wrap[data-st]::after { content: ""; position: absolute; top: 6px; right: 10px; width: 8px;
+    height: 8px; border-radius: 50%; background: var(--st-dot); box-shadow: 0 0 0 2px var(--bg2); pointer-events: none; }
+  .wspage.ws-mini .ws-more { font-size: 0; padding: 6px 0; }
+  .wspage.ws-mini .ws-more::before { content: "\2022\2022\2022"; font-size: 14px; letter-spacing: 2px; }
+}
+/* Solid card (owner, 16/10/2026: the see-through one let the chat behind show through the words). */
+.ws-mini-tip { position: fixed; z-index: 60; max-width: 300px; padding: 10px 12px; border-radius: 12px;
+  background: var(--bg2); border: 1px solid var(--border); box-shadow: var(--shadow-2);
+  color: var(--text); pointer-events: none; }
+.ws-mini-tip[hidden] { display: none; }
+.ws-mini-tip-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ws-mini-tip-ava { flex: none; display: inline-flex; width: 22px; height: 22px; }
+.ws-mini-tip-ava > * { width: 22px !important; height: 22px !important; font-size: 11px; }
+.ws-mini-tip-head strong { flex: 1 1 auto; min-width: 0; font-size: 16px; font-weight: 700; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.ws-mini-tip-time { flex: none; font-size: 12px; color: var(--text3); }
+.ws-mini-tip-sub { margin-top: 4px; font-size: 14px; line-height: 1.4; color: var(--text2, var(--text3));
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* The four job state colours: dot on the avatar strip and the state line of its hover card. */
+[data-st="need"] { --st-dot: var(--red); }
+[data-st="run"] { --st-dot: #3b82f6; }
+[data-st="wait"] { --st-dot: #f59e0b; }
+[data-st="done"] { --st-dot: var(--green); }
+.ws-mini-tip-st { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 14px; font-weight: 600;
+  color: var(--text2); }
+.ws-mini-tip-st::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--st-dot); }
+
+/* 0.192.0: who in the team is writing right now, one strip above the input (teams.js typingHtml). */
+.tm-typing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 4px 8px; font-size: 14px;
+  color: var(--text2); }
+.tm-typing[hidden] { display: none; }
+.tm-typing-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.tm-typing-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; font-weight: 600; }
+.tm-typing-more { color: var(--text3); }
+/* 0.192.0: a file dragged over the team chat lands in its composer; the composer says so. */
+.tm-composer.is-drop { outline: 2px dashed var(--accent); outline-offset: -4px; background: var(--accent-wash); }
+/* A picture attached in the team composer shows itself on its chip. */
+.tm-chip.has-thumb { padding-left: 4px; }
+.tm-chip-thumb { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; flex: none; }
+@media (pointer: coarse) { .tm-typing { font-size: 15px; } }
+/* 0.192.0: the @all suggestion and its chip carry a group icon instead of a member picture. */
+.tm-sug-all { width: 28px; height: 28px; border-radius: 50%; flex: none; display: inline-flex; align-items: center;
+  justify-content: center; background: var(--accent-wash-2); color: var(--accent); }
+.tm-call .tm-sug-all { width: 20px; height: 20px; }
+.tm-sug-all svg { width: 16px; height: 16px; }
+.tm-call .tm-sug-all svg { width: 12px; height: 12px; }
+/* 0.192.0 (owner, 16/10/2026: the team quote had no quote mark like the main chat): quotes in team bubbles carry the main
+   chat's quote mark in a small accent box; an assistant's reply quotes the message it answers and is a button to it. */
+.tm-quote { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-left: 0; border-radius: 10px;
+  background: var(--surface-2, var(--bg3)); -webkit-line-clamp: unset; }
+.tm-quote-ico { flex: none; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center;
+  justify-content: center; background: var(--bg); color: var(--accent); }
+.tm-quote-ico svg { width: 14px; height: 14px; }
+.tm-quote-body { min-width: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  overflow-wrap: anywhere; }
+button.tm-quote-ref { width: 100%; text-align: left; font: inherit; font-size: 14px; color: var(--text2); border: 1px solid transparent;
+  cursor: pointer; margin: 0 0 8px; }
+button.tm-quote-ref:hover, button.tm-quote-ref:focus-visible { border-color: var(--accent-line); outline: none; }
+.tm-replying { border-left: 0; padding: 6px 6px 6px 6px; background: var(--bg3); border: 1px solid var(--border); }
+.tm-replying-ico { flex: none; width: 34px; height: 34px; border-radius: 6px; display: inline-flex; align-items: center;
+  justify-content: center; background: var(--bg); color: var(--accent); }
+.tm-replying-ico svg { width: 16px; height: 16px; }
+/* Mentions written by an assistant; "@Chủ nhóm" flags the message as waiting for the owner. */
+.tm-at { color: var(--accent-ink, var(--accent)); font-weight: 600; }
+.tm-at-me { background: var(--accent-wash-2); border-radius: 6px; padding: 0 4px; }
+.tm-asks { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12px;
+  font-weight: 700; color: var(--accent-ink, var(--accent)); background: var(--accent-wash-2); }
+.tm-asks svg { width: 12px; height: 12px; }
+.tm-msg-asks .tm-bubble { box-shadow: inset 3px 0 0 var(--accent); }
+.tm-msg-flash .tm-bubble { animation: tm-flash 1.6s ease; }
+@keyframes tm-flash { 0%, 40% { background: var(--accent-wash-2); } 100% { background: inherit; } }
+@media (prefers-reduced-motion: reduce) { .tm-msg-flash .tm-bubble { animation: none; outline: 2px solid var(--accent); } }
+/* 0.192.0: pinned strip on top of the team chat. */
+.tm-pinbar { border-bottom: 1px solid var(--border); padding: 6px 12px; background: var(--bg2); display: flex; flex-direction: column;
+  gap: 4px; max-height: 40vh; overflow: auto; }
+.tm-pinbar[hidden] { display: none; }
+.tm-pin-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tm-pin-ico { flex: none; width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center;
+  justify-content: center; background: var(--accent-wash-2); color: var(--accent); }
+.tm-pin-ico svg { width: 13px; height: 13px; }
+.tm-pin-title { font-size: 14px; font-weight: 700; color: var(--text); flex: none; }
+.tm-pin-note { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text3); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.tm-pin-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tm-pin-go { flex: 1 1 auto; min-width: 0; text-align: left; font: inherit; font-size: 14px; color: var(--text2); background: none;
+  border: 0; padding: 4px 0 4px 32px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-pin-go b { color: var(--text); font-weight: 600; margin-right: 6px; }
+.tm-pin-go:hover, .tm-pin-go:focus-visible { color: var(--text); outline: none; text-decoration: underline; }
+@media (pointer: coarse) { .tm-pin-go { font-size: 15px; min-height: 40px; } }
+/* 0.192.0 (owner, 16/10/2026: "phần việc khi giao nó đang bị co chữ và khó nhìn"): in the team side panel a job's title
+   takes the whole line and its buttons go on the line under it, instead of three buttons squeezing the title into a
+   narrow column. */
+.tm-side-body .tm-qrow { align-items: flex-start; gap: 8px; padding: 10px 0; font-size: 15px; }
+.tm-side-body .tm-qrow .tm-qtitle { flex: 1 1 calc(100% - 40px); line-height: 1.45; font-weight: 600; color: var(--text); }
+.tm-side-body .tm-qrow .tm-spin, .tm-side-body .tm-qrow .tm-qpos { margin-top: 2px; }
+.tm-side-body .tm-qrow .tm-actions { flex: 1 1 100%; padding-left: 26px; }
+.tm-side-body .tm-jcard-text .tm-actions { margin-top: 8px; }
+/* 0.192.0 (owner, 16/10/2026: "avatar đang ở dưới cùng hội thoại ko thấy tên người gửi"): an assistant's picture sits at
+   the top of its message, next to its name, so a long answer still says who wrote it at a glance. */
+.tm-msg-agent { align-items: flex-start; }
+.tm-msg-agent > .tm-ava, .tm-msg-agent > .tm-face-btn { margin-top: 2px; }
+.tm-msg-agent .tm-bubble { border-bottom-left-radius: 16px; border-top-left-radius: 6px; }
+.tm-msg-agent .tm-who { font-size: 14px; }
+/* 0.192.0: a new answer appears block by block, one member after another (teams.js applyReveal). */
+.tm-msg.tm-rv-wait { display: none; }
+.tm-rv-hide { display: none !important; }
+.tm-rv-on .tm-text .bubble > *:not(.tm-rv-hide) { animation: tm-rv-in .22s ease both; }
+@keyframes tm-rv-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* 0.193.0: the agent editor head carries "Message privately" when opened from a team. */
+.agent-editor .ag-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.agent-editor .ag-head h3 { margin: 0; }
+.agent-editor .ag-chat-btn { display: inline-flex; align-items: center; gap: 6px; }
+.tm-info-members .tm-info-chat { margin-left: auto; }
+/* 0.193.0: finished jobs, their report and the archive in the team Jobs tab. */
+.tm-qn { display: inline-block; min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--surface-3); color: var(--text2);
+  font-size: 12px; text-align: center; }
+.tm-qhead-done { color: var(--green); }
+.tm-qok { flex: none; display: inline-flex; color: var(--green); margin-top: 2px; }
+.tm-jdone.is-cancelled .tm-qok, .tm-jarch .tm-qok { color: var(--text3); }
+.tm-jdone .tm-qtitle { color: var(--text); }
+.tm-jarch .tm-qtitle { color: var(--text2); font-weight: 500 !important; }
+.tm-qhead-arch { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.tm-arch-toggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; font: inherit;
+  font-weight: 700; color: var(--text2); cursor: pointer; }
+.tm-arch-toggle svg { width: 14px; height: 14px; }
+.tm-arch-clear { color: var(--red); }
+.tm-report { flex: 1 1 100%; margin: 4px 0 0 26px; padding: 10px 12px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.tm-report-meta { font-size: 13px; color: var(--text3); }
+.tm-report-who { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.tm-report-person { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text2); }
+.tm-report-person b { color: var(--text); font-weight: 600; }
+.tm-report-body { max-height: 320px; overflow: auto; }
+/* 0.193.0 (owner, 16/10/2026: "những việc nào làm đến cuối rồi thì sẽ đổi màu"): one colour per job state, the same four as
+   the avatar dot: red needs you, blue working, orange waiting, green finished; a state label on each card. */
+.aj-job.aj-needs_you { border-left-color: var(--red); }
+.aj-job.aj-running { border-left-color: #3b82f6; }
+.aj-job.aj-waiting { border-left-color: #f59e0b; }
+.aj-job.aj-done { border-left-color: var(--green); opacity: 1; background: var(--ok-wash, var(--surface-1)); }
+.aj-job.aj-archived { border-left-color: var(--text3); opacity: .85; }
+.aj-top { display: flex; align-items: flex-start; gap: 8px; }
+.aj-top .aj-title { flex: 1 1 auto; min-width: 0; }
+.aj-state { flex: none; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: #fff; }
+.aj-state-needs_you { background: var(--red); }
+.aj-state-running { background: #3b82f6; }
+.aj-state-waiting { background: #f59e0b; color: #1a1400; }
+.aj-state-done { background: var(--green); }
+.aj-done-btn { color: var(--green); border-color: var(--ok-line, var(--border)); }
+.aj-arch-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.aj-arch-toggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; font: inherit;
+  font-size: 13px; font-weight: 700; color: var(--text2); cursor: pointer; }
+.aj-arch-toggle svg { width: 14px; height: 14px; }
+/* 0.195.0 team tags (owner, 17/10/2026: "làm dropdown giống bên cộng sự ... tái sử dụng"): the filter bar and the row-menu
+   tag picker are the Partners page's own (tag-picker.js, .cs-proj-* and .ws-menu-it / .ws-tag-new). Only placing them
+   here: the bar sits under the list title, the picker inside the team's row menu. */
+.tm-tagbar { padding: 0 12px 8px; }
+.tm-tagbar[hidden] { display: none; }
+.tm-tag-menu { padding: 5px; min-width: 220px; max-height: min(420px, 70vh); overflow-y: auto; }
+.tm-tag-menu { background: var(--bg2); }
+
+/* 0.196.0 (owner, 17/10/2026: "kéo đến 1 cỡ nhất định thì nó ẩn vào thụt luôn vào trong ... riêng phần team ... chỉ hiện
+   logo nhóm giống như bên cộng sự"): every column handle folds its column when let go past the fold point
+   (col-resize.js collapse/snap). While dragged past it, the column dims to say so. */
+.col-resize-folding { opacity: .45; transition: opacity .12s; }
+/* Team page: the list and the side panel get the shared handles on wide screens; the list scrolls inside .tm-teams so
+   the handle stays put. */
+.tm-list { overflow: hidden; }
+.tm-teams { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+@media (min-width: 1061px) {
+  .tm-page, .tm-page[data-side="0"] { grid-template-columns: var(--tm-list-w, 280px) minmax(0, 1fr); }
+  .tm-page[data-side="1"] { grid-template-columns: var(--tm-list-w, 280px) minmax(0, 1fr) var(--tm-side-w, 360px); }
+  .tm-list, .tm-side { position: relative; }
+  .tm-list > .col-resize, .tm-side > .col-resize { display: block; position: absolute; top: 0; bottom: 0; width: 8px; z-index: 6;
+    cursor: col-resize; touch-action: none; }
+  /* The strip of team pictures (like the Partners list .ws-mini): names, previews, tags, the row "..." and paging hide;
+     "New team" keeps only its icon; the hover card (JavisColResize.miniTip) gives the details. */
+  .tm-page.tm-mini .tm-list { padding: 8px 6px; }
+  .tm-page.tm-mini .tm-list-title, .tm-page.tm-mini .tm-tagbar, .tm-page.tm-mini .tm-team-main,
+  .tm-page.tm-mini .tm-row-more, .tm-page.tm-mini .tm-row-menu, .tm-page.tm-mini .tm-more-teams { display: none; }
+  .tm-page.tm-mini .tm-list-bar { justify-content: center; padding: 2px 0 8px; }
+  .tm-page.tm-mini .tm-new { font-size: 0; gap: 0; padding: 8px; }
+  .tm-page.tm-mini .tm-team { justify-content: center; padding: 6px 0; gap: 0; }
+}
+@media (min-width: 1061px) {
+  .tm-page.tm-mini .tm-new svg, .tm-page.tm-mini .tm-new .ic { width: 18px; height: 18px; }
+}
+/* A team picture made of member faces (44px) shrinks to the card's 22px avatar spot. */
+.ws-mini-tip-ava:has(> .tm-gava) { overflow: hidden; }
+.ws-mini-tip-ava > .tm-gava { width: 44px !important; height: 44px !important; flex: none; transform: scale(.5); transform-origin: top left; }
+/* 0.197.0: unread count, the @ mark when a message calls the owner, and the muted bell on a team row (the count pill is
+   the navbar bell's .notification-badge). A muted team keeps its count, in grey. */
+.tm-team { position: relative; }
+.tm-unread { flex: none; height: 20px; min-width: 20px; border-radius: 10px; font-size: 12px; box-shadow: none; }
+.tm-unread.is-muted { background: var(--surface-2); color: var(--text2); }
+/* 0.204.0: was ".tm-at", the same class as the @mentions in messages, which it squeezed into a 20px circle. */
+.tm-at-badge { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+  border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--on-accent); background: var(--accent-solid); }
+.tm-muted { display: inline-flex; flex: none; color: var(--text3); }
+.tm-muted .ic, .tm-muted svg { width: 14px; height: 14px; }
+.tm-team.has-unread .tm-team-name { font-weight: 700; }
+.tm-team.has-unread .tm-team-sub { color: var(--text); font-weight: 600; }
+.tm-mini-unread { display: none; }
+/* 0.205.0: a private partner chat shows its unread count and the bell-off mark in the row's corner cluster, like a
+   team row; an unread row reads in full ink. */
+.ws-item-end .tm-unread { margin-left: 2px; }
+.ws-item-wrap.has-unread .ws-item-top strong, .ws-item-wrap.has-unread .ws-item small { color: var(--text); font-weight: 700; }
+@media (min-width: 1061px) {
+  .tm-page.tm-mini .tm-mini-unread { display: flex; gap: 2px; position: absolute; top: 0; right: 2px; pointer-events: none; }
+}
+
+/* 0.207.0: approval request card in the team chat (teams.js approvalCardHtml) */
+.tm-ap { align-self: stretch; max-width: 640px; margin: 6px auto; padding: 12px 14px; border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent, #d97706); border-radius: 10px; background: var(--surface-2); font-size: 16px;
+  line-height: 1.5; display: flex; flex-direction: column; gap: 6px; }
+.tm-ap-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tm-ap-head svg { width: 18px; height: 18px; }
+.tm-ap-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.tm-ap-k { color: var(--text3); min-width: 88px; }
+.tm-ap-calls, .tm-ap-ev { margin: 0; padding-left: 20px; }
+.tm-ap-calls code { font-size: 14px; word-break: break-all; }
+.tm-ap .tm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tm-ap .tm-actions .ws-btn { min-height: 40px; font-size: 16px; }
+.tm-ap-state { color: var(--text2); }
+.tm-ap-approved, .tm-ap-consumed { border-left-color: var(--ok, #16a34a); }
+.tm-ap-rejected, .tm-ap-expired, .tm-ap-revoked { border-left-color: var(--danger, #dc2626); }
+.tm-ap-superseded, .tm-ap-cancelled, .tm-ap-changes_requested { border-left-color: var(--text3); }
+.tm-wm .tm-radio { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-size: 16px; }
+
+/* 0.208.0: department mandate section (teams.js mandateHtml) and opportunity card (reuses .tm-ap) */
+.tm-md { font-size: 16px; }
+.tm-md-outcome { font-weight: 600; margin: 4px 0; }
+.tm-md-metrics, .tm-md-srcs { margin: 4px 0; padding-left: 20px; }
+.tm-md-src-missing { color: var(--danger, #dc2626); }
+.tm-md-status { color: var(--text2); }
+.tm-md-active { color: var(--ok, #16a34a); }
+.tm-md-form textarea { width: 100%; font-size: 16px; }
+.tm-opp { border-left-color: var(--accent, #2563eb); }
+
+/* 0.209.0: acceptance editor and card */
+.tm-acc-form textarea { width: 100%; font-size: 16px; }
+.tm-acc { border-left-color: var(--ok, #16a34a); }
+/* 0.210.0 narrow-screen check: buttons in the mandate and acceptance sections are phone-sized like the cards */
+.tm-md .ws-btn, .tm-acc-form .ws-btn, .tm-md-form .ws-btn { font-size: 16px; min-height: 40px; }
+.tm-md-form input, .tm-md-form select, .tm-acc-form input { font-size: 16px; }
+.tm-md .tm-sub, .tm-ap .tm-sub, .tm-acc-form .tm-sub, .tm-md .tm-qhead, .tm-wm .tm-qhead {
+  font-size: 16px; white-space: normal; overflow: visible; text-overflow: clip; }
+.tm-ap code, .tm-md code { font-size: 16px; }

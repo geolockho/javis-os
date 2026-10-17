@@ -346,6 +346,13 @@ button, input, select, textarea { font-family: inherit; }
 .noti-text-btn { padding: 6px 8px; border-radius: 7px; font-size: 11.5px; }
 .noti-text-btn:hover { color: var(--text-hi); background: var(--surface-2); }
 .noti-text-btn.primary { color: var(--accent-ink); font-weight: 600; }
+/* 0.204.0: "Read all" was 11.5px text, too small to hit. A full-size button: lit (accent) while something is
+   unread, dimmed and not clickable once everything is read. */
+#notificationReadAll { padding: 8px 14px; min-height: 36px; font-size: 14px; font-weight: 600; border-radius: 9px;
+  border: 1px solid var(--hairline); color: var(--text3); opacity: .55; }
+#notificationReadAll.has-unread { opacity: 1; color: var(--on-accent); background: var(--accent-solid); border-color: transparent; }
+#notificationReadAll.has-unread:hover { filter: brightness(1.08); color: var(--on-accent); background: var(--accent-solid); }
+#notificationReadAll:disabled { cursor: default; background: transparent; }
 .noti-close {
   width: 30px; height: 30px; border-radius: 8px; font-size: 23px; line-height: 1;
 }
@@ -385,6 +392,10 @@ button, input, select, textarea { font-family: inherit; }
   -webkit-line-clamp: 3; line-clamp: 3;
 }
 .noti-cta { display: inline-block; margin-top: 9px; color: var(--accent-ink); font-size: 11.5px; font-weight: 600; }
+.noti-push-hide { display: flex; align-items: center; gap: 8px; flex-basis: 100%; margin-top: 8px; font-size: 13px;
+  color: var(--text2); cursor: pointer; }
+.noti-push-hide[hidden] { display: none; }
+@media (pointer: coarse) { .noti-push-hide { font-size: 15px; } }
 .noti-loading, .noti-empty { padding: 30px 18px; color: var(--text3); text-align: center; font-size: 13px; line-height: 1.6; }
 .noti-load-more {
   display: block; width: calc(100% - 8px); margin: 10px 4px 4px; padding: 10px 12px;
@@ -420,9 +431,11 @@ button, input, select, textarea { font-family: inherit; }
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
 }
+/* 0.204.0: display above beat the hidden attribute, so an empty tab showed a "0" pill. */
+.noti-tab-count[hidden] { display: none; }
 /* Công tắc thông báo đẩy - nằm ngay trên chân panel, thấy được lúc đang đọc thư. */
 .noti-push {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   padding: 10px 12px; border-top: 1px solid var(--hairline); background: var(--surface-1);
 }
 .noti-push-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -2288,6 +2301,14 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
 .cp-search { width: 100%; box-sizing: border-box; margin: 4px 0 6px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
 .cp-search:focus { outline: none; border-color: var(--accent); }
 .cp-empty { padding: 8px 10px; font-size: 13px; color: var(--text3); }
+/* 0.191.0: a folder row with folders inside: the name pins it, ">" goes inside. */
+.cp-row { display: flex; align-items: center; gap: 2px; }
+.cp-row > .cp-mi { flex: 1 1 auto; min-width: 0; }
+.cp-in { flex: none; width: 34px; height: 34px; border: none; border-radius: 8px; background: transparent; color: var(--text2);
+  font-size: 20px; line-height: 1; cursor: pointer; }
+.cp-in:hover, .cp-in:focus-visible { background: var(--bg3); color: var(--accent); outline: none; }
+.cp-pin-here { color: var(--accent-ink, var(--accent)); font-weight: 600; }
+@media (pointer: coarse) { .cp-in { width: 44px; height: 44px; } }
 .eff-pop { padding: 14px 16px; width: min(330px, calc(100vw - 32px)); }
 .eff-head { display: flex; align-items: baseline; gap: 8px; font-size: 15px; }
 .eff-lbl { color: var(--text2); }
@@ -3937,3 +3958,18 @@ div.info-body > * { margin: 0; font-size: inherit; }
 @keyframes mp-pop { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }
 @keyframes mp-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .mp-scrim, .mp-bar, .mp-sheet { animation: none; } .mp-pick { transition: none; } }
+
+/* 0.188.0: the open chat belongs to another brain (app.js veNhanBrain). */
+.jv-brain-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px auto 10px; max-width: 72ch;
+  padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text2);
+  font-size: 14px; }
+.jv-brain-note-btn { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-wash);
+  color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (pointer: coarse) { .jv-brain-note { font-size: 16px; } .jv-brain-note-btn { min-height: 36px; font-size: 15px; } }
+
+/* 0.191.1 (owner, 16/10/2026: the Jobs filter list opened white with pale words): a native dropdown list takes the
+   select's background, and most selects here have a see-through one, so Windows draws the list white under light text.
+   Every option gets a solid theme background and the theme's text colour, in both themes. */
+select option, select optgroup { background-color: var(--bg2); color: var(--text); }
+/* 0.206.0: a message sent while Javis works shows where it is (read by the running turn, or waiting to run next). */
+.msg-user .steer-note { font-size: 12px; color: var(--text3); text-align: right; margin: 3px 4px 0; }

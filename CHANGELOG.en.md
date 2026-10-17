@@ -8,6 +8,225 @@ English entries start at 0.66.0. Every earlier release is described in the Vietn
 
 Format: each release is a `## [x.y.z] - date` block, with changes grouped under `### Added / Fixed / Improved / Security`.
 
+## [0.210.0] - 2026-10-17
+### Improved
+- **Team cards read well on a phone:** buttons and helper text in the Department mandate and Acceptance sections are now 16px, and long lines wrap instead of being cut. Checked at 390px wide in Vietnamese and English.
+- **The mandate trace now ends with the acceptance:** it goes all the way from the mandate, observation, opportunity, decision and approval to the job and its acceptance result.
+
+### Added
+- **Preparation pack for a multi-day Team pilot** (`pilot/team-multiday`, not run yet): a 7-day scenario for 3 teams, limits and stop conditions, emergency stop and rollback, metrics, a read-only trace export, an empty report template.
+
+## [0.209.0] - 2026-10-17
+### Added
+- **Product acceptance for Team jobs:** set criteria right on the job (file exists, enough content, JSON keys, a passing check command, your confirmation). A job is done only when the product really passes.
+- **Bounded fix rounds when it fails:** the member gets a fix step saying what failed; past the rounds the job stops for you. Every check keeps evidence (hash, size, modified time) and its history.
+- **Product acceptance card** for criteria you review: Passes or Send back with a note. A file changed after the check cannot be accepted; editing a product after acceptance shows a warning.
+
+## [0.208.0] - 2026-10-17
+### Added
+- **Department mandate for a Team:** set the outcome, how it is measured, granted sources (folders, failed Kanban jobs, connections, check commands), scope, daily budget and how much it may decide. Older teams stay off.
+- **The team finds opportunities within its scope:** a change in a source becomes a proposal with its source, reason and benefit; it opens the job, opens it waiting for your approval or only proposes, as you choose. A missing source is reported, never made up.
+- **No repeats, with limits:** the same data never opens twice, a skipped opportunity returns only when the data changes, proposals expire after 48 hours. Pause or revoke at any time.
+
+## [0.207.0] - 2026-10-17
+### Fixed
+- **A Team that asks for your approval really stops:** "@Owner please approve?" is no longer taken as the result that closes the job. The job waits for your approval, frees its slot for other jobs, and nothing is done before you decide.
+
+### Added
+- **Approval request card in the Team chat:** what will be done, scope, impact, evidence and the exact calls that will run, with Approve, Ask for changes, Reject and Revoke. Editing or cancelling the job voids old cards; a retry or a second tab never acts twice.
+- **Outside actions are stopped before they run:** with the default "Needs your approval", a Team's sends, posts, payments or machine commands are blocked and become an approval card; once approved only that exact call runs, once, even after a restart.
+- **"The team acts without asking" switch** on the Team tab for a team you trust, which runs as before this release.
+
+## [0.206.0] - 2026-10-17
+### Added
+- **Send more while Javis is working, like Claude Code and Codex:** type and send while a turn runs; the work in progress is not stopped. Before, a message typed at this point was silently ignored.
+- **Claude Code and the API-key brains read the new message at their next step:** a correction applies at once, a new task is taken on too, in parallel where possible.
+- **Codex, Grok and Antigravity run your message right after the current work**, since those engines run in one go. Nothing is lost.
+- **A status line under the message you sent:** will read it at the next step, read, or working on it.
+
+## [0.205.0] - 2026-10-17
+### Improved
+- **A partner with a new message moves to the top of the list:** you writing, the partner replying, or a background job reporting into its chat all push that card up (after Javis Core and the pinned ones).
+- **An unread count on each partner card**, next to the time. Opening the chat clears it, in every open tab.
+- **Mute notifications per partner:** the ⋮ button has **Mute notifications** for 1 hour, 4 hours, until 8:00 AM or until turned back on. Messages still reach the chat and the bell, just without a sound or a push.
+
+## [0.204.0] - 2026-10-17
+### Improved
+- **A tidier Scheduled page:** a brain picker instead of every brain stacked up, a **Repeating job / Reminder** filter and paging at 10 jobs a page. Incidents and Log are their own tabs; Webhooks have their own page in the Work group.
+
+### Fixed
+- **Scheduled calls really ring now:** the call used to ring only when the chat receiving the reminder was the open one, so usually nothing showed. The call card now shows on whichever Javis page is open.
+- **A bigger Read all button in Notifications:** lit while something is unread, dimmed once all is read, and it now reads both tabs instead of only the open one.
+- **@mentions in Team messages look normal again**, no longer squeezed into a small circle with one letter per line.
+
+## [0.203.0] - 2026-10-17
+### Added
+- **Javis calls you at a set time:** reminders get a **Call me** box (or say "call me at 7am and read the report"). At that time an open Javis tab rings and shows an incoming-call card with **Answer** and **Decline**.
+- **Answer starts a voice call:** Javis reads the reminder or report briefly, asks if you need anything else, and you keep talking as with the mic button (ChatGPT Live when it is set up).
+- **Missing it costs nothing:** after 45 seconds it is a missed call and the content stays in the chat; with no Javis tab open, Telegram gets the message like any other reminder.
+
+## [0.202.1] - 2026-10-17
+### Improved
+- **Reminders that read aloud now really "call":** at the set time, if Javis is open, the voice note plays at once like a call, no press needed. When the browser blocks autoplay the player stays there to press; Telegram still receives the audio file as before.
+
+## [0.202.0] - 2026-10-17
+### Added
+- **Voice notes:** ask Javis to "read it to me" and it records a short spoken message as an mp3; the chat shows a player under the answer and Telegram receives it as audio. The words are still there as text below.
+- **Reminders that read aloud:** tick **Read it aloud** and the reminder or report arrives with a voice note, easy to hear while driving or cooking.
+- **Keep the cache warm (optional, off by default):** on the Token usage page, switch it on and Javis keeps a Claude Code chat's one-hour prompt cache alive across a short break, so the next message does not reload the whole conversation. It stops at a usage limit or a cold cache.
+
+## [0.201.0] - 2026-10-17
+### Added
+- **Charts and number tiles in the chat:** a revenue, order or ads report can carry a bar or line chart and a few key figures with their change, drawn right under the answer.
+- **Quick-choice buttons:** Javis can offer up to 4 buttons such as "Approve draft A"; a press sends that text as if you typed it. Telegram and Zalo get a readable text version.
+- **Javis recalls earlier chats:** start a new chat that mentions something from before and Javis looks through your other chats for a few relevant lines as context. Team chats and customer chats are never used.
+
+## [0.200.0] - 2026-10-17
+### Added
+- **Share a whole team as one file:** a team's ⋯ menu has **Share team**, which downloads its partners, skills and shared instructions. No chat history, keys, models or Auto switches; text that looks like a password or API key is removed before writing.
+- **Import a team:** the **Import team** button on the Teams page reads the file and shows who comes in before adding it. Partners you already have under the same name keep your version.
+- **See at once what Javis just created:** a chat turn that creates, edits or removes a schedule, loop, partner, workflow or skill shows a small "Created schedule: ..." line under the answer. New items get an **Undo** button.
+
+## [0.199.0] - 2026-10-17
+### Added
+- **Javis Core handles broken background runs:** when a Kanban job, loop, reminder or webhook fails, Javis Core hears first. A passing failure (a network glitch, a timeout) is run again once; something only you can fix (a sign-in, a key, a setting) gets one or two plain sentences on what to do.
+- **No storm of messages:** a job that keeps failing is one incident, and a retry that fails again sends exactly one "needs you" message.
+- **Background health on the Work page:** see open incidents, close them with Done, and the last 24 hours of failures grouped by cause (14 runs of the same token error show as one line).
+- **Health scan from outside:** `python tools/sentinel.py` reads the data (read only) and works even while Javis is down.
+
+## [0.198.0] - 2026-10-17
+### Added
+- **Webhooks: outside systems start work in Javis.** On the Work page, the **Webhooks** section creates a secret link. When a landing page form, a payment or another app calls it, Javis runs the workflow or job you chose with the event data, then reports like a reminder.
+- **Safe by default:** the secret is shown once, with buttons to send a test, switch off and make a new token. A repeated delivery does not run twice, and each webhook runs at most 30 times an hour.
+- **A task reminder can remember its last run:** tick **Remember the last result** and each run knows what it already reported, so it reports only what is new. Good for watching competitor prices or a metric.
+
+### Improved
+- **Repeating schedules show their next three runs** on the job card, and a schedule made from chat is read back as those three dates for you to confirm. A run that fires late because the machine was off knows it is late.
+
+## [0.197.1] - 2026-10-17
+### Fixed
+- **Safari no longer loses the connection for minutes.** Safari has its own bug with the compression used on the live connection: a large message makes it cut the line, and every reconnect is cut again, while Chrome keeps working. Javis now turns that compression off, so every browser stays as stable as Chrome.
+- **If it still drops, there is a trace:** each disconnect records the browser, the close code and how long it was down, and sends it to the server once back online, shown at `/health/loop`.
+
+## [0.197.0] - 2026-10-17
+### Added
+- **Unread count on each team:** the Teams list shows a red count like Zalo, with the team name in bold while messages wait. Opening the team reads it, on every device.
+- **@ mark when a message calls you:** a team with a message calling "@Owner" gets an @ mark next to the count, visible even when the list is folded to logos.
+- **Only the leader calls you:** a member who needs your decision asks the leader, who gathers it into one question, so you are not called over and over.
+- **Team notifications only when you are called:** ordinary team messages never notify; only the leader calling "@Owner" rings your bell. Press "..." on a team and pick **Mute notifications** to silence it completely, even when you are called.
+
+## [0.196.0] - 2026-10-17
+### Improved
+- **Drag narrow and it tucks away:** on Graph, Chat, Partners and Teams, dragging a column divider past a set width hides that column, just like on the Partners page. The column fades first so you know it is about to hide.
+- **Team list shrinks to logos:** drag the Teams list in far and only each team's logo stays; hover a logo for a detail card (name, time, last message, status), the same card as on the Partners page.
+- **Resize both sides of Teams:** the team list and the right info panel can both be dragged, and the width is remembered for next time.
+
+## [0.195.0] - 2026-10-17
+### Added
+- **Teams opens where you left off:** the Teams page opens the team you worked in most recently (the one you last messaged or opened, on any device), no searching.
+- **Tag teams:** press "..." on a team and pick **Tag**, the same way you tag a partner. Teams on one project share the same tag.
+- **Filter teams by tag:** the filter on top of the team list is the same as on the Partners page: All teams, No tag yet, then each tag with its team count.
+
+## [0.194.1] - 2026-10-17
+### Improved
+- **Team message buttons sit under the bubble:** send time, Reply (quote), Copy and Pin now form one row right under the message, like the main chat, instead of a cluttered strip beside the bubble.
+
+## [0.194.0] - 2026-10-17
+### Added
+- **Teams do real work:** when you assign a job in a Team, a member's **Work** and **Help** turns get the same tools as a private chat: read and write files in the brain and the team's working folder, call connections (MCP), run skills. Members do the job and return real results (files, links) instead of sending you to a private chat. Work turns on the same brain run one at a time, so nobody overwrites another member's file.
+
+### Fixed
+- **Fewer long "Lost connection to the server" stalls:** one dead tab (a phone asleep, dropped Wi-Fi) no longer freezes the running chat for every other tab; the page retries a reconnect that gets stuck, and waits longer for a busy server before calling the connection lost.
+- **The culprit gets caught next time:** the server records the code that froze it and any unexpected restarts, readable at `/health/loop`.
+
+### Improved
+- **Chat stays fast and cheap:** ordinary chat replies in a Team are still text only. When a reply needs files or connections, the member suggests turning it into a job.
+
+## [0.193.0] - 2026-10-16
+### Added
+- **Finished jobs stay until you clear them:** in a partner's Jobs tab and a team's Jobs tab, finished jobs have their own section; **Open** shows a short report (who did what, the result). **Done** moves a job to the **Archive**, nothing is deleted; only the Archive has **Delete** and **Delete all**.
+- **Each partner's own reasoning level:** Medium by default, set in the agent editor or with the reasoning button on that partner's chat. It applies to private chat and team replies.
+- **Message privately from a team:** a **Message privately** button in the agent editor, the member list and the Info tab opens the private chat with that partner.
+
+### Improved
+- **Job cards coloured by state:** red needs you, blue working, orange waiting, green finished, with a label on each card.
+
+## [0.192.0] - 2026-10-16
+### Added
+- **Paste and drop in a team:** paste a picture (Ctrl+V) or drop a file into a team chat and it is attached, with a preview. A very long pasted text becomes a .txt file.
+- **Team members read pictures:** a picture sent in a team is described in words by a connected brain before the team answers.
+- **See who is replying:** a small strip above the input shows "Lan is replying...", "Minh is working..." with their pictures. New answers appear block by block, one member after another.
+- **Clear mentions:** type **@all** to call the whole team. A member's reply quotes the message it answers; a message that needs you is labelled "Needs your answer".
+- **Pins you can see:** pinned messages show in a strip on top of the chat; tap one to go to it. The whole team always follows them.
+
+### Fixed
+- **Easier to read team chat:** a member's picture sits next to their name, quotes carry the same quote mark as the main chat, and job titles in the Jobs tab are no longer squeezed into a narrow column.
+
+## [0.191.1] - 2026-10-16
+### Improved
+- **Four-colour status dot on avatars:** when the partner list shrinks to avatars, a small dot shows each partner's work: red needs you (or just failed), blue working, orange waiting, green finished in the last 24 hours. Hover to read it in words.
+
+### Fixed
+- **The hover card is readable:** it has a solid background, so the chat behind no longer shows through the words.
+- **Source and Status dropdowns are no longer white:** the list that opens uses the theme's colours, readable in both light and dark.
+
+## [0.191.0] - 2026-10-16
+### Added
+- **Teams can share files and pin a working folder:** the **+** button of a team chat now has **Attach a file or picture** and **Pin working folder**. The whole team reads text files (.md, .txt, PDF, Word...); a pinned folder shows up as a folder tree so everyone knows what the project holds.
+- **Team info panel:** tap the team picture at the top left to see the members, the working folder, and the pictures, files and links shared in the team. Add a file, paste a link or remove one right there.
+
+### Improved
+- **Shrink the partner list to avatars:** drag the list edge in far enough and it turns into a strip of avatars; hover one to see its name and role. Drag the edge back out for the full list, or double-click the edge for the default size.
+
+### Fixed
+- **Pinning a subfolder:** in the folder picker, a folder with folders inside has a **>**. Tap it to go inside, tap the name to pin that folder.
+- **Tapping a notice goes to the right place:** the "Ask Javis Core" button is gone. A notice that answers a chat reopens that chat; a system notice opens in Javis Core.
+- **Jobs tab:** with no jobs it says "No jobs yet" instead of "Could not load jobs". The selected tab has room around its label.
+
+## [0.190.0] - 2026-10-16
+### Improved
+- **Settings like the apps you know:** a colleague's settings column keeps only picture, name, description, instructions, documents, skills and model. Lessons, Revoke, Use everywhere and the Javis Core Memory section are gone: to change or forget something, just say so in chat, for example "forget the sales channel note".
+- **See what Javis just remembered:** a chat turn that saves, changes or forgets a memory shows a small "Remembered: ..." line under the answer, with **Undo**. If Javis says it remembered or forgot something while nothing changed, a correction line says so.
+- **Tidier colleague cards:** the chat time is small and sits on the same row as the Auto switch in the bottom corner; the switch is back on every colleague. The Auto block in Settings is down to "Work on its own up to ... times a day" plus anything waiting on you.
+- **Release news stays out of Javis Core:** cards in the bell's News tab no longer have "Ask Javis Core".
+
+## [0.189.1] - 2026-10-16
+### Fixed
+- **The create-team picker no longer breaks when you pick several members:** picking a third one used to push the whole box up, hiding the title, leaving the Create button floating mid-screen and a blank area below. The box now stays put however many people you pick.
+
+### Improved
+- **The Vietnamese interface now uses the word "Team"** for teams, in the sidebar and across this feature, and calls team members colleagues rather than assistants.
+- **The colleagues page uses one name throughout** in Vietnamese: its tab, create button and filters now match the page title instead of saying "assistant" or "agent".
+
+## [0.188.0] - 2026-10-16
+### Fixed
+- **A chat always runs on its own brain:** open a chat of another brain (from the bell or history) and keep writing, and Javis now answers with that brain's memory and files; the chat says which brain it belongs to, with a switch button. Clicking a notice of another brain switches the dashboard to it first.
+- **A quieter Javis Core:** runs that went fine stay in the notification bell; only reports that need you land in the chat. Reports sent to the Telegram of someone else sharing the bot are no longer copied into your Javis Core.
+- **Turning learning off really blocks Claude Code:** when off, Claude Code cannot write anything into that brain's memory folder.
+- **New memories always carry a source:** Javis records the chat and date that produced them. The "Your Telegram" field is now a picker of the allowed IDs.
+
+## [0.187.0] - 2026-10-16
+### Added
+- **Ask Javis Core about a notice:** cards in the bell have an **Ask Javis Core** button. The notice goes into your own Javis Core chat with its source and time so you can follow up; the shared notice itself does not change.
+- **See, edit and forget memories:** the Javis Core card has a **This brain's memory** section listing what Javis remembers and where it came from. Once forgotten, Javis does not learn it again from old chats; a switch turns off saving new memories.
+- **Your profile, shared by every brain:** write once how to address you, language and level of detail; each brain's own memory still wins where they differ.
+### Improved
+- **News read on one device is read on every device**, and push notifications are tied to the login: logging out stops that device receiving them. There is an option to **hide the text** in push notifications.
+
+## [0.186.0] - 2026-10-16
+### Fixed
+- **Reports without a chat of their own now go to the right brain's Javis Core:** background jobs, loops and reminders created on the Work page or without a chat report into the Javis Core of the brain that produced them, whatever brain you have open.
+- **No more guessing on Telegram:** a report with no known recipient used to go to the FIRST Telegram ID on the list (possibly someone else sharing the bot), and a loop pausing itself went to EVERY ID. Now only your own Telegram gets them.
+- **New field "Your Telegram (receives reports)"** in the Telegram settings. With a single ID Javis uses it; with several you choose, Javis does not guess.
+- **No duplicates on retry:** a report sent again after a failure appears once. If the original chat was deleted the report goes to Javis Core; with neither a chat nor a brain it stays in the notification bell only.
+
+## [0.185.0] - 2026-10-16
+### Added
+- **Javis Core, a system assistant built into every brain:** it is always first on the Assistants page with a **System** badge, in old and new brains alike. It is the place to receive reports, ask follow-up questions and hand out work, with everything Javis can do.
+- **It cannot be deleted, renamed, unpinned or edited:** the server refuses it, not just the buttons. Choosing its model works like any chat.
+- **Each brain has one default Javis Core chat:** delete or archive it and Javis makes a new empty one next time, without bringing back what you deleted.
+- **One update for every brain:** the Javis Core definition ships with the app instead of being copied into each brain, so your memory and personal settings stay as they are across updates.
+
 ## [0.184.0] - 2026-10-16
 ### Fixed
 - **Long press on a phone no longer triggers the phone's own text selection (iPhone and Android):** holding a message a little longer used to highlight the text and show the phone's Copy bar on top of the Javis menu. Now only the Javis menu appears (reactions, Reply, Copy...).
