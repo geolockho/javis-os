@@ -46,8 +46,9 @@ services:
       # Chỉ giữ các trường người cài thực sự cần. Cổng/đường dẫn/state/brain đã có
       # mặc định đúng trong Docker image, không cần hiện thành một loạt ô kỹ thuật.
       DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
+      WORKSPACE_NAME: ${WORKSPACE_NAME:-Javis OS}
       JAVIS_ADMIN_USER: ${JAVIS_ADMIN_USER:-admin}
-      JAVIS_ADMIN_PASSWORD: ${JAVIS_ADMIN_PASSWORD:-}
+      JAVIS_ADMIN_PASSWORD: ${JAVIS_ADMIN_PASSWORD:-Fsel@2026}
       # Chung một token với service watchtower bên dưới -> nút "Cập nhật ngay" gọi được nó.
       # ĐÓNG CỨNG chứ không lấy từ biến, có lý do: mỗi `${...}` trong file này đẻ thêm một ô
       # trong form Environment của Docker Manager, mà token này không ai cần đổi - cổng 8080 của

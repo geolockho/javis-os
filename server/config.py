@@ -937,6 +937,11 @@ def read_settings():
     data = _doc_file_settings()
     tu_bak = _DOC_TU_BAK[0]
     _deep_merge(cfg, data)
+    # Docker deployments may pin the workspace name through WORKSPACE_NAME so a fresh
+    # volume and an existing settings.json show the same configured name.
+    workspace_name = os.getenv("WORKSPACE_NAME", "").strip()
+    if workspace_name:
+        cfg["workspace_name"] = workspace_name
     _ui_lang_ban_cu(cfg, data)
     _nan_provider_da_go(cfg)
     _no_rong_pham_vi_bo_nao(cfg)
