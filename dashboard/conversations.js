@@ -34,7 +34,7 @@
       var v = o.value.indexOf("path:") === 0 ? o.value.slice(5) : "brain";
       // `data-brain-name` là TÊN THƯ MỤC sạch (brains-ui.js gắn). Nhãn hiển thị của ô chọn có
       // đuôi đếm note (" · 19"), lấy nguyên là ra "brain Shop Giay · 19" trên thẻ tài khoản.
-      var ten = (o.dataset && o.dataset.brainName) || (o.textContent || "").trim().replace(/\s*·\s*\d+\+?$/, "");
+      var ten = (o.dataset && (o.dataset.brainLabel || o.dataset.brainName)) || (o.textContent || "").trim().replace(/\s*·\s*\d+\+?$/, "");
       if (!ds.some(function (x) { return x.v === v; })) ds.push({ v: v, ten: ten || v });
     });
     return ds;
@@ -88,6 +88,12 @@
     });
   }
   function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+  // (i) button (info-tip.js, 0.214.0): explanations sit behind it; without the helper (Node tests) they draw open.
+  function infoBtn() { var J = typeof window !== "undefined" && window.JavisInfo; return J ? J.btn(window.t("info.more")) : ""; }
+  function infoBody(html) {
+    var J = typeof window !== "undefined" && window.JavisInfo;
+    return J ? J.body(html) : '<div class="info-body">' + html + "</div>";
+  }
   async function api(url, opts) {
     var r = await fetch(url, opts || {});
     var d = null;
@@ -249,6 +255,7 @@
               '<span class="ht-fcount"></span><span class="ht-loc"></span>' +
               '<button type="button" class="ht-fclear" hidden>' + esc(window.t("ht.f_clear")) + '</button>' +
             '</div>' +
+            '<div class="ht-sdt" role="status" hidden></div>' +
             '<div class="ht-list"><div class="ht-empty">' + esc(window.t("common.loading")) + '</div></div>' +
           '</div>' +
           '<div class="ht-thread"><div class="ht-empty ht-thread-empty">' + ic("messages-square") +
@@ -277,6 +284,39 @@
       "&q=" + encodeURIComponent(_q) + (window.JavisConvFilters ? window.JavisConvFilters.query(filterState()) : "");
   }
 
+  // Số di động Việt Nam đầy đủ (0912345678, 84912345678, +84 912 345 678), cùng luật với `conversations.chuan_hoa_sdt`: chỉ khi đó
+  // server mới hỏi Zalo, nên chỉ khi đó mới hiện "Đang hỏi Zalo" (0.216.0).
+  function laSdt(q) {
+    var t = String(q || "").replace(/[\s.\-()]/g, "");
+    return /^\+?(84[35789]\d{8}|0[35789]\d{8})$/.test(t);
+  }
+
+  // Dòng báo dưới ô tìm khi ô là một số điện thoại: số đó là Zalo của ai, chưa có cuộc chat, hay Zalo chưa trả lời được.
+  // Tìm thấy và cuộc chat đang hiện trong danh sách thì không cần báo gì.
+  function veSdt(pl, dangTim) {
+    var el = _host && _host.querySelector(".ht-sdt");
+    if (!el) return;
+    var dong = [];
+    if (dangTim) {
+      dong.push(window.t("ht.sdt_dang_tim", { so: _q }));
+    } else if (pl && pl.results && pl.results.length) {
+      var co = pl.results.filter(function (x) { return x.uid; });
+      co.forEach(function (x) {
+        if (x.shown) return;
+        dong.push(window.t(x.has_chat ? "ht.sdt_bi_loc" : "ht.sdt_chua_chat",
+          { so: pl.phone, ten: x.name || window.t("ht.sdt_nguoi"), tk: x.account_label }));
+      });
+      pl.results.forEach(function (x) {
+        if (x.error) dong.push(window.t("ht.sdt_loi", { tk: x.account_label, loi: x.error }));
+      });
+      if (!co.length && !pl.results.some(function (x) { return x.error; })) {
+        dong.push(window.t("ht.sdt_khong_co", { so: pl.phone }));
+      }
+    }
+    el.hidden = !dong.length;
+    el.innerHTML = dong.map(function (d) { return '<div>' + ic("search") + ' ' + esc(d) + '</div>'; }).join("");
+  }
+
   // `im` = nhịp tự động: không xoá danh sách đang hiện, mạng hỏng một nhịp thì giữ màn hình cũ.
   // Không phải nhịp (mở trang, đổi bộ lọc, gõ tìm) thì về trang đầu; nhịp thì hỏi lại đúng số dòng người dùng đã tải (tối đa MAX_DONG_NHIP).
   async function tai(im) {
@@ -285,8 +325,13 @@
     if (!im) { _soTrang = 1; box.scrollTop = 0; }
     var soDong = im ? Math.min(MAX_DONG_NHIP, TRANG * _soTrang) : TRANG;
     var url = urlDanhSach(soDong, 0);
+    var hoi = _q;
+    if (!im) veSdt(null, laSdt(hoi));
     try {
       var d = await api(url);
+      // Hỏi Zalo một số có thể mất vài giây: người dùng đã gõ tiếp thì kết quả này cũ, không được đè lên kết quả mới hơn.
+      if (hoi !== _q) return;
+      if (!im || d.phone_lookup) veSdt(d.phone_lookup, false);
       var dau = d.items || [];
       var duoi = im ? _items.slice(soDong) : [];       // phần đã tải sâu hơn nhịp hỏi: giữ nguyên
       _items = dau.concat(duoi);
@@ -299,6 +344,8 @@
       if (im && vet === _dauVet) return;
       _dauVet = vet;
     } catch (e) {
+      if (hoi !== _q) return;
+      if (!im) veSdt(null, false);
       if (!im) box.innerHTML = '<div class="ht-empty">' + esc(window.t("ht.loi_tai")) + ' ' + esc(e.message) + '</div>';
       return;
     }
@@ -383,8 +430,10 @@
     if (!_items.length) {
       var coNguon = _tk.some(function (a) { return a.ghi; });
       box.innerHTML = '<div class="ht-empty">' + ic("messages-square") +
-        '<b>' + esc(_q || _kenhLoc || _botLoc || _tkLoc || _statusLoc || _typeLoc ? window.t("ht.khong_khop") : window.t("ht.chua_co")) + '</b>' +
-        (!coNguon ? '<div>' + esc(window.t("ht.chua_co_goi_y")) + '</div>' +
+        '<b>' + esc(_q || _kenhLoc || _botLoc || _tkLoc || _statusLoc || _typeLoc ? window.t("ht.khong_khop") : window.t("ht.chua_co")) +
+          (!coNguon ? infoBtn() : "") + '</b>' +
+        // Where messages come from opens from (i); the button to add an account stays visible (0.214.0).
+        (!coNguon ? infoBody(esc(window.t("ht.chua_co_goi_y"))) +
           '<button class="s-btn ht-mo-kenh" type="button">' + ic("plug") + ' ' + esc(window.t("ht.them_tk")) + '</button>' : "") +
         '</div>';
       var nut = box.querySelector(".ht-mo-kenh");
@@ -847,8 +896,10 @@
     if (!mo) { g.innerHTML = ""; return; }
     if (!ds.length) {
       g.innerHTML = '<div class="ht-empty ht-kenh-het">' + ic("plug") +
-        '<b>' + esc(window.t(_tk.length ? "ht.kenh_ranh_het" : "ht.tk_rong")) + '</b>' +
-        '<div>' + esc(window.t(_tk.length ? "ht.kenh_ranh_het_goi_y" : "ht.tk_rong_goi_y")) + '</div></div>';
+        '<b>' + esc(window.t(_tk.length ? "ht.kenh_ranh_het" : "ht.tk_rong")) + (_tk.length ? "" : infoBtn()) + '</b>' +
+        // The short hint stays visible; the longer how-to for an empty brain opens from (i) (0.214.0).
+        (_tk.length ? '<div>' + esc(window.t("ht.kenh_ranh_het_goi_y")) + '</div>'
+          : infoBody(esc(window.t("ht.tk_rong_goi_y")))) + '</div>';
       return;
     }
     g.innerHTML = "";

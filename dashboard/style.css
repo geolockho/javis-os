@@ -1090,6 +1090,15 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
 .msg-user .msg-acts { justify-content: flex-end; }
 .msg:hover .msg-acts, .msg.acts-on .msg-acts, .msg-acts:focus-within { opacity: 1; }
 .msg-time { color: var(--text3); font-size: 12px; margin-right: 4px; }
+/* 0.216.0: vuốt tin sang trái để trích dẫn (msg-swipe.js). Chỉ máy chạm: cuộn dọc vẫn của trình duyệt, chiều ngang để
+   cho cú vuốt. Dấu trích dẫn hiện dần bên phải, đậm màu khi đã đủ xa để nhấc tay là trích. */
+@media (hover: none) { .msg-javis, .msg-user { touch-action: pan-y; } }
+.msg.is-swiping { position: relative; }
+.msg-swipe-mark { position: absolute; right: 8px; top: 50%; width: 32px; height: 32px; margin-top: -16px; opacity: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg3);
+  color: var(--text3); pointer-events: none; transition: background .12s ease, color .12s ease, transform .12s ease; }
+.msg-swipe-mark svg { width: 18px; height: 18px; }
+.msg.is-armed .msg-swipe-mark { background: var(--accent); color: #fff; transform: scale(1.1); }
 .msg-act { background: none; border: 1px solid transparent; color: var(--text3);
   border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1; padding: 3px 6px; }
 .msg-act:hover { color: var(--text-hi); border-color: var(--border); }
@@ -3716,7 +3725,6 @@ div.cb-quyen > svg { flex: none; margin-top: 2px; }
 .cb-rp-owners { margin: 10px 0 4px; }
 .cb-rp-ownlist { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0; }
 .cb-rp-own { display: inline-flex; align-items: center; gap: 6px; }
-.cb-rp-thumbh { margin: 6px 0 2px; }
 .cb-form label.cb-rp-learn { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0 2px;
   font-weight: 500; cursor: pointer; }
 .cb-rp-form { width: min(820px, 96vw); }
@@ -3854,10 +3862,20 @@ div.cb-quyen > svg { flex: none; margin-top: 2px; }
 .info-i:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (hover: none), (max-width: 600px) { .info-i::after { content: ""; position: absolute; inset: -12px; } }
 .info-body { margin: 6px 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); color: var(--text2);
-  font-size: 13px; line-height: 1.5; font-weight: 400; display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+  font-size: 16px; line-height: 1.55; font-weight: 400; display: block; overflow-wrap: anywhere;
+  text-align: left; text-transform: none; letter-spacing: normal; }
 .info-body[hidden] { display: none; }
 div.info-body > * { margin: 0; font-size: inherit; }
-@media (max-width: 600px) { .info-body { font-size: 14px; } }
+/* Block, not flex (review 0.214.0): a folded sentence often mixes <b>, <code> and <a> with text, and flex turned each of
+   those into its own stacked line. Block children (one line per div, p or list) still get a small gap. */
+.info-body > :is(div, p, ul, ol, pre) + :is(div, p, ul, ol, pre) { margin-top: 6px; }
+/* A long item description on a card (plugin, workflow): two lines visible, the full text in the (i) block (0.214.0). */
+.tk-muc-chua { margin-top: 6px; font-size: 16px; color: var(--text2); }
+.j-clamp2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+/* A pair stands alone (no title to sit next to): the button keeps its own line height and no left margin. */
+.info-pair { display: inline-flex; align-items: center; }
+.info-pair > .info-i { margin-left: 0; }
+.info-i.with-text { width: auto; height: auto; gap: 6px; padding: 2px 4px; border-radius: 6px; font-size: 16px; font-family: inherit; }
 @media (max-width: 600px) { .rsa-more > summary { min-height: 44px; } }
 .rsa-card { font-size: 14px; }
 .rsa-wait { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--hairline); }

@@ -6,6 +6,7 @@ Javis KHÔNG gọi Anthropic API trực tiếp. Mọi reasoning + tool calling �
 `claude` CLI đã cài trên máy → tự kế thừa MCP, skills, auth.
 """
 import brain_seed_i18n   # file hạt giống của brain mới theo ngôn ngữ người dùng
+import brain_label   # tên hiển thị của brain, tách khỏi thư mục (0.219.0)
 import localefmt   # múi giờ theo cấu hình, thay UTC+7 nhúng cứng
 import html as html_mod   # escape lời báo lỗi OAuth trên trang callback (biến cục bộ `html` che tên module)
 import posixpath
@@ -189,6 +190,7 @@ import voice_live    # Voice V2: nghe nói thẳng qua Gemini Live / OpenAI Real
 import voice_ear     # tai nghe lại: model đa ngôn ngữ nghe âm thanh rồi mới chốt chữ (0.65.15)
 import agent_notify  # 0.205.0: unread and mute for private partner chats
 import steer_inbox  # 0.206.0: messages the owner sends while a turn runs
+import codex_steer  # 0.213.0: Codex chat turns on app-server take those messages mid-way
 import codex_realtime  # ChatGPT Live: một Codex app-server sống lâu, realtime trên gói ChatGPT (0.65.17)
 import voice_call     # nút mic là gọi Javis: tự chọn ChatGPT Live / Live API / Cơ bản (0.65.18)
 
@@ -1771,7 +1773,7 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
     # default_models của thẻ này là LƯỚI CUỐI, dùng khi không đọc được danh mục của binary
     # `claude` và máy cũng không có API key. Alias đứng trước (luôn trỏ bản mới nhất của dòng),
     # rồi tới id đầy đủ để `_claude_api_model` dịch được alias sang tên thật.
-    {"id": "anthropic-cli", "label": "Anthropic OAuth (Claude Code)", "kind": "cli", "key_field": None,          "catalog_key": "claude",
+    {"id": "anthropic-cli", "label": "Claude Code", "kind": "cli", "key_field": None,          "catalog_key": "claude",
      "default_models": ["fable", "opus", "sonnet", "haiku",
                         "claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1",
                         "claude-opus-5", "claude-sonnet-5",
@@ -1907,6 +1909,8 @@ def _providers_view(cfg):
             # được. Lộ cli_found để thẻ nói thẳng ngay tại trang Models.
             item["cli_found"] = bool(find_codex_cli())
             item["cai_lenh"] = "npm install -g @openai/codex"
+            item["cli_env"] = "JAVIS_CODEX_BIN"
+            item["docker"] = deploy_info.deploy_mode() == "docker"
         if p["id"] == "grok-cli":
             _k = grok_cli.auth_status()
             item["cli_found"] = bool(grok_cli.find_grok_cli())
@@ -1945,6 +1949,8 @@ def _providers_view(cfg):
             # nhưng bản cài tay thiếu binary `claude` thì chat chết ngay lượt đầu.
             item["cli_found"] = bool(find_claude_cli())
             item["cai_lenh"] = "npm install -g @anthropic-ai/claude-code"
+            item["cli_env"] = "JAVIS_CLAUDE_BIN"
+            item["docker"] = deploy_info.deploy_mode() == "docker"
         out.append(item)
     return out
 
@@ -5878,7 +5884,7 @@ def memory_items(brain: str = Query("brain")):
     """What this brain remembers, with each memory's type, origin, source and dates (0.188.0, spec 13)."""
     md = _brain_memory_dir(brain)
     return {"items": memory_control.list_memories(md), "learning": memory_control.learning_enabled(md),
-            "forgotten": len(memory_control.forgotten(md)), "brain": Path(_brain_root(brain)).name}
+            "forgotten": len(memory_control.forgotten(md)), "brain": brain_label.display(_brain_root(brain))}
 
 
 @app.post("/memory/edit")
@@ -6608,7 +6614,9 @@ def _list_brains_sync() -> dict:
                 is_default = p.resolve() == default_resolved
             except OSError:
                 is_default = False
-            out.append({"name": p.name, "path": str(p), "notes": notes,
+            # `name` stays the FOLDER (the brain's address: delete, /brains/<folder>/..., backups); `label` is what to show
+            # (0.219.0, brain_label): a rename sets the label and never moves the folder.
+            out.append({"name": p.name, "label": brain_label.display(p), "path": str(p), "notes": notes,
                         "notes_capped": notes >= _BRAINS_MD_CAP,
                         "is_default": is_default})
     except Exception as e:
@@ -6638,6 +6646,40 @@ async def new_brain(name: str = Form(...)):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
     git_brain.clear_tombstone(BRAINS_DIR, safe)   # dựng lại não cùng tên -> gỡ giấy báo tử để không bị xoá oan
     return {"ok": True, "name": safe, "path": str(root)}
+
+
+@app.post("/brains/label")
+async def brain_set_label(brain: str = Form(...), label: str = Form("")):
+    """Đổi TÊN HIỂN THỊ của một brain (0.219.0). Thư mục KHÔNG đổi, nên mọi địa chỉ dựng trên nó (lựa chọn đã lưu, bot,
+    nhắc việc, vòng lặp, việc Kanban, phiên chat, sao lưu git, link `/brains/<thư mục>/...` trong note và chat) vẫn đúng.
+    Áp dụng được cả cho Brain mặc định. `brain`: "brain", "path:<thư mục>" hoặc tên thư mục trong BRAINS_DIR. `label`
+    rỗng hoặc trùng tên thư mục = bỏ tên riêng, quay về tên thư mục."""
+    b = (brain or "").strip()
+    if b == "brain" or not b:
+        root = _default_brain_dir()
+    else:
+        raw = b[5:] if b.startswith("path:") else str(Path(BRAINS_DIR) / _safe_brain_name(b))
+        root = Path(raw)
+    try:
+        root = root.resolve()
+        base = Path(BRAINS_DIR).resolve()
+    except OSError:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Brain không tồn tại", "Brain does not exist")}, status_code=404)
+    if root == base or base not in root.parents or not root.is_dir():
+        return JSONResponse({"ok": False, "error": localefmt.chu("Brain không tồn tại hoặc nằm ngoài phạm vi quản lý",
+                                                                 "Brain does not exist or is outside the managed area")},
+                            status_code=404)
+    ten = brain_label.clean(label)
+    trung = brain_label.taken_by(base, ten, except_root=root) if ten else None
+    if trung:
+        return JSONResponse({"ok": False, "error": localefmt.chu(f"Đã có brain tên \"{ten}\" (thư mục {trung})",
+                                                                 f"A brain named \"{ten}\" already exists (folder {trung})")},
+                            status_code=409)
+    try:
+        shown = await asyncio.to_thread(brain_label.write, root, ten)
+    except OSError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    return {"ok": True, "folder": root.name, "label": shown, "path": str(root)}
 
 
 _DELETE_SYNC_TASKS = set()   # giữ ref mạnh cho eager-sync sau khi xóa não (tránh GC nuốt task)
@@ -7599,7 +7641,7 @@ async def files_list(brain: str = Query("brain"), path: str = Query(None), subdi
             items.append(row)
         except (PermissionError, OSError):
             continue
-    return {"root": root.name or str(root), "path": _files_rel(root, d),
+    return {"root": brain_label.display(root) or str(root), "path": _files_rel(root, d),
             "home": _files_rel(root, broot),                       # brain = 'nhà' (nút ⌂)
             "parent": None if d == root else _files_rel(root, d.parent),   # None = đã ở trần → ẩn Lên
             "focus": focus, "missing": missing,
@@ -11777,7 +11819,7 @@ async def viec_all():
             is_def = default_resolved is not None and rp == default_resolved
         except Exception:
             is_def = False
-        out.append(_brain_viec(p.name, path, is_def))
+        out.append(_brain_viec(brain_label.display(p), path, is_def))
 
     # Gộp thêm brain đã ĐĂNG KÝ với scheduler nhưng KHÔNG nằm trong BRAINS_DIR (folder ngoài, hoặc
     # brain legacy trong loop_config). Trước đây chỉ quét list_brains() nên loop tạo qua chat vào
@@ -11795,7 +11837,7 @@ async def viec_all():
         if rp in seen or not os.path.isdir(ep):
             continue
         seen.add(rp)
-        v = _brain_viec(Path(ep).name, ep, False)
+        v = _brain_viec(brain_label.display(ep), ep, False)
         if v["loops"] or v["reminders"]:   # brain ngoài chỉ hiện khi thực sự có việc (tránh rác)
             out.append(v)
 
@@ -14087,7 +14129,7 @@ def _cite_text(src: str, item: dict, brain: str) -> str:
         body = body[len(title):].strip()   # an inbox title is the body's first line: do not say it twice
     nguon = str(item.get("label") or "").strip()   # a human label only, never a raw code like "system"
     try:
-        ten_brain = Path(_brain_root(item.get("brain") or brain)).name
+        ten_brain = brain_label.display(_brain_root(item.get("brain") or brain))
     except Exception:
         ten_brain = ""
     head = localefmt.chu("Thông báo hệ thống" if src == "news" or item.get("kind") == "system" else "Báo cáo",
@@ -15855,7 +15897,10 @@ async def websocket_endpoint(ws: WebSocket):
                         "model": actual_model or "", "session_id": conv_sid,
                         **_ctx_frame(runtime_trace, _ctx_in)}))
             elif prov == "openai-oauth":
-                steer_inbox.INBOX.set_live(conv_sid, False)   # 0.206.0: `codex exec` is one-shot, messages wait for the end
+                if not codex_steer.enabled():
+                    # 0.206.0: `codex exec` is one-shot, messages wait for the end. Since 0.213.0 the chat engine runs
+                    # on app-server and takes them mid-way (codex_steer.py); this switch turns that off.
+                    steer_inbox.INBOX.set_live(conv_sid, False)
                 # ===== ChatGPT subscription qua CODEX CLI - MCP/tool NATIVE (như Hermes, dùng codex của máy) =====
                 actual_model = _codex_safe_model(api_model)   # gpt-5-mini/gpt-4o... → coerce về model Codex hợp lệ
                 sysprompt, _sub_plan = await _subscription_system_prompt("codex", actual_model, kind)
@@ -15878,6 +15923,7 @@ async def websocket_endpoint(ws: WebSocket):
                 # native, như nhánh workflow) + instructions=sysprompt (kèm ROUTER SKILL) → Codex
                 # dùng được skill. Mỗi hội thoại dashboard giữ riêng codex_thread_id để resume.
                 ccli = CodexCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model, tag=turn_tag, instructions=sysprompt)
+                ccli.steer = True   # 0.213.0: the chat engine takes messages mid-way (codex_steer.py)
                 # Hub vẫn trỏ BRAIN kể cả khi cwd là repo: MCP, cron và nhắc hẹn thuộc về bộ
                 # não của người dùng, không thuộc về cây mã nguồn đang mở.
                 _apply_codex_hub(ccli, _brain_root(brain))   # MCP + đúng brain cho cron/nhắc hẹn
@@ -17395,7 +17441,7 @@ async def websocket_endpoint(ws: WebSocket):
                 try:
                     await send_client({"type": "brain_follow", "session_id": _prow.get("id") or "",
                                        "brain_ui": _brain_ui_value(brain),
-                                       "brain_name": Path(_brain_root(brain)).name})
+                                       "brain_name": brain_label.display(_brain_root(brain))})
                 except Exception:
                     pass
             prov, kind, api_key, api_model = _chat_provider_for_session(mcfg, _prow)
@@ -17843,7 +17889,7 @@ def sessions_get(session_id: str, limit: int = Query(0)):
     if sess.get("brain"):
         sess["brain_ui"] = _brain_ui_value(sess["brain"])
         try:
-            sess["brain_name"] = Path(_brain_root(sess["brain"])).name
+            sess["brain_name"] = brain_label.display(_brain_root(sess["brain"]))
         except Exception:
             sess["brain_name"] = ""
     return sess
@@ -20282,6 +20328,10 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
                                     api_model or mcfg.get("claude_model"), channel=channel)
         if conv_sid and ghi_kho:
             store.append_message(conv_sid, "user", text)
+            # 0.213.0: a message the owner sent while this turn runs (bot_gateway._steer) joins the history when the
+            # turn reads it, so it sits between this question and the answer, as it happened.
+            steer_inbox.INBOX.set_sink(steer_inbox.current_sid(), lambda texts, _s=conv_sid: [
+                store.append_message(_s, "user", t) for t in texts])
             if bot and chatbot_runtime._rp_is_group(meta):
                 # Phiên của bot trong nhóm đặt tên theo NHÓM, không theo tin đầu của người nhắn đầu tiên.
                 store.name_group_session(conv_sid, (meta or {}).get("chat_title"))
@@ -21123,6 +21173,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # CHỈ nhận "execute". "reject" của đường tắt dựa trên trần TỰ KHAI, không phải hạn mức
         # nhà cung cấp nói ra - lấy nó chặn lượt chat là vượt quyền (cùng lý do với dashboard).
         if _fp is not None and _fp.action == "execute":
+            steer_inbox.INBOX.set_live(steer_inbox.current_sid(), False)   # 0.213.0: one model call, no step to read at
             await _p("⚡ Đường tắt…")
             _txt, _mdl, _ = await _fast_path_core(
                 _fp, prov, api_key, api_model or mcfg.get("claude_model") or "mặc định",
@@ -21132,6 +21183,9 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
             if _txt.strip():
                 return {"text": channel_context.strip_control_blocks(_txt), "files": []}
 
+    if prov in ("grok-cli", "antigravity-cli") or (prov == "openai-oauth" and not codex_steer.enabled()):
+        # 0.213.0: one-shot engines take nothing mid-turn; what the owner sends meanwhile runs as the next turn.
+        steer_inbox.INBOX.set_live(steer_inbox.current_sid(), False)
     if prov == "grok-cli":
         # Cùng engine với dashboard: Grok Build CLI + tool native + MCP hub, chỉ khác chỗ giữ
         # mạch. Phiên Telegram giữ luôn object engine trong `sess` (như Codex), nên mạch hội
@@ -21258,6 +21312,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
             ccli.model = actual_model
             ccli.instructions = sysprompt
         _apply_codex_hub(ccli, _brain_root(brain))
+        ccli.steer = True   # 0.213.0: a channel turn takes messages mid-way when its gateway opened an inbox (codex_steer.py)
         if not ccli.is_available():
             return "⚠ Chưa cài Codex CLI trong container nên ChatGPT chưa dùng được tool."
         t0 = time.time()
@@ -21735,7 +21790,7 @@ def _model_header():
 
 # ---- Menu chọn brain cho PHIÊN Telegram (inline keyboard, giống menu model) ----
 def _tg_brain_header(chat_key):
-    cur = Path(_brain_root(_tg_brain(chat_key))).name
+    cur = brain_label.display(_brain_root(_tg_brain(chat_key)))
     return ("🧠 Brain của phiên này: " + cur + "\n"
             "Chọn brain khác (chỉ đổi cho phiên CỦA BẠN, người khác và dashboard không đổi):")
 
@@ -21751,7 +21806,7 @@ def _tg_brain_kb(brains, chat_key):
             mark = "✓ " if str(Path(b["path"]).resolve()) == cur else ""
         except Exception:
             mark = ""
-        rows.append([{"text": f"{mark}{b['name']} · {b.get('notes', 0)} note",
+        rows.append([{"text": f"{mark}{b.get('label') or b['name']} · {b.get('notes', 0)} note",
                       "callback_data": f"bs:{i}"}])
     rows.append([{"text": "✕ Đóng", "callback_data": "bx"}])
     return {"inline_keyboard": rows}
@@ -21777,7 +21832,7 @@ async def _tg_callback(data, chat=None):
             return {"alert": "Danh sách brain đã đổi - gõ /brain lại"}
         hit = brains[i]
         _tg_set_brain(chat_key, hit["path"])
-        return {"text": f"🧠 Đã chuyển phiên này sang brain: {hit['name']}\n"
+        return {"text": f"🧠 Đã chuyển phiên này sang brain: {hit.get('label') or hit['name']}\n"
                         "(hội thoại reset để nạp đúng bộ nhớ/skill của brain mới)",
                 "alert": "Đã đổi brain"}
     if data == "noop":
@@ -21868,7 +21923,7 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
     if cmd == "status":
         prov, model, ghim = _tg_model_hieu_luc()
         busy = _tg_chat_busy(chat_key)
-        bname = Path(_brain_root(brain)).name
+        bname = brain_label.display(_brain_root(brain))
         return {"reply": ("📊 Trạng thái Javis\n"
                           f"Provider: {prov}\n"
                           f"Model: {model}"
@@ -21967,13 +22022,16 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
         a = arg.strip()
         if a:
             # match theo tên: khớp đúng trước, khớp một phần sau (không phân biệt hoa thường)
-            hit = (next((b for b in brains if b["name"].lower() == a.lower()), None)
-                   or next((b for b in brains if a.lower() in b["name"].lower()), None))
+            # 0.219.0: khớp cả tên hiển thị (đổi tên) lẫn tên thư mục, để tên cũ người dùng quen vẫn gọi được.
+            def _ten(b):
+                return [x.lower() for x in (b.get("label") or "", b["name"]) if x]
+            hit = (next((b for b in brains if a.lower() in _ten(b)), None)
+                   or next((b for b in brains if any(a.lower() in t for t in _ten(b))), None))
             if not hit:
-                names = ", ".join(b["name"] for b in brains[:15])
+                names = ", ".join(b.get("label") or b["name"] for b in brains[:15])
                 return {"reply": f"⚠ Không thấy brain '{a}'. Có: {names}"}
             _tg_set_brain(chat_key, hit["path"])
-            return {"reply": f"🧠 Đã chuyển phiên này sang brain: {hit['name']}\n"
+            return {"reply": f"🧠 Đã chuyển phiên này sang brain: {hit.get('label') or hit['name']}\n"
                              "(hội thoại reset để nạp đúng bộ nhớ/skill của brain mới)"}
         # Không tham số → menu nút bấm chọn brain
         return {"reply": _tg_brain_header(chat_key), "reply_markup": _tg_brain_kb(brains, chat_key)}
@@ -23025,7 +23083,7 @@ async def slash_status(session_id: str = Query(""), brain: str = Query("brain"))
         "provider": prov, "provider_label": d.get("label") or prov, "kind": kind,
         "model": model or "",
         "pinned": bool((row or {}).get("pinned_provider")),
-        "brain": Path(_brain_root(brain)).name,
+        "brain": brain_label.display(_brain_root(brain)),
         "session_id": session_id or "",
         "msg_count": int((row or {}).get("msg_count") or 0),
         "last_input_tokens": int((row or {}).get("last_input_tokens") or 0),
@@ -23052,7 +23110,7 @@ def _doc_muc_luc_bo_nho(brain: str, toi_da: int = 20000) -> dict:
     except OSError:
         so_fact = 0
     return {"text": text[:toi_da], "cat_bot": len(text) > toi_da, "facts": so_fact,
-            "path": "memory/MEMORY.md", "brain": root.name}
+            "path": "memory/MEMORY.md", "brain": brain_label.display(root)}
 
 
 @app.get("/slash/memory")

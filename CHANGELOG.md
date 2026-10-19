@@ -6,6 +6,52 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.219.0] - 2026-10-19
+### Thêm mới
+- **Đổi tên bộ não được rồi, kể cả Brain Default, mà không gãy liên kết nào.** Bấm nút bút chì cạnh ô chọn bộ não, gõ tên mới. Javis chỉ đổi tên hiển thị, thư mục giữ nguyên. Vì vậy các link wiki, link tới file trong note và chat, bot, nhắc việc, vòng lặp, việc nền và bản sao lưu GitHub vẫn trỏ đúng như cũ.
+- **Tên mới đi theo bộ não:** lưu ngay trong bộ não (`Javis/brain.json`), nên sao lưu GitHub mang sang máy khác. Để trống là về lại tên thư mục.
+- **Tên mới hiện ở mọi chỗ:** ô chọn bộ não, trang Việc, Cài đặt, webhook, Telegram (`/brain`, `/status`) và lệnh `/brain` trong chat. Gõ tên cũ (tên thư mục) vẫn chọn được.
+
+## [0.217.0] - 2026-10-18
+### Sửa lỗi
+- **Trang wiki không còn tự mất sau lượt tự học.** Trên bộ não có thư mục `wiki` viết thường (mọi bộ não tạo mới), lượt tự học coi cả thư mục wiki là "ngoài phạm vi" rồi dọn đi những gì nó vừa đụng. Trang chat vừa tạo mà lượt học chỉ thêm mục Mâu thuẫn bị xoá trắng, còn dòng "mâu thuẫn" trong danh sách câu hỏi mở vẫn ở lại. Trang lượt học tự tạo cũng mất theo. Giờ lượt học nhận đúng thư mục wiki thật của từng bộ não, kể cả kiểu `07 - Wiki`.
+- **Bước dọn của lượt học không bao giờ xoá file chưa lưu vào lịch sử nữa.** File đó có thể do bạn hay chat vừa viết, nên được để nguyên.
+- **Dòng mâu thuẫn trong câu hỏi mở trỏ đúng tên trang thật**, không phải tên gần đúng do model đưa.
+
+## [0.216.0] - 2026-10-18
+### Thêm mới
+- **Hòm thư bot tìm được theo số điện thoại.** Gõ 0912 345 678, 84912345678 hay +84 912 345 678 đều ra cùng một người.
+- **Số chưa có trong máy thì Javis hỏi Zalo giúp:** gõ đủ một số, Javis hỏi các tài khoản Zalo cá nhân đang kết nối xem số đó là ai, rồi hiện cuộc chat với người đó. Từ đó số được nhớ vào khách, lần sau ra ngay.
+- **Người chưa từng nhắn thì Hòm thư báo rõ:** "Số này là Zalo của chị Ngọc, chưa có cuộc chat nào". Số không có Zalo, hoặc người đó tắt cho tìm bằng số, cũng được báo.
+- **Không hỏi Zalo lặp lại:** kết quả được nhớ (tìm thấy thì 30 ngày, không thấy thì 1 ngày). Mỗi giờ hỏi tối đa 20 số, vì Zalo giới hạn số lần tra mỗi ngày.
+- **Vuốt một tin sang trái để trích dẫn (điện thoại):** như Zalo, kéo bong bóng sang trái tới khi hiện dấu trích dẫn màu cam rồi nhấc tay, tin đó vào ngay khung "Đang trích dẫn" trên ô nhập. Dùng được cho cả tin của Javis lẫn tin của bạn, ở khung chat chính và chat với Javis Core hay cộng sự. Vuốt ngắn hoặc cuộn lên xuống thì không làm gì.
+
+### Sửa lỗi
+- **Menu trên điện thoại không còn tự tắt, để lại màn hình tối:** trên iPhone, menu trượt ra rồi biến mất, chỉ còn lớp nền tối. Menu giờ dùng nền đặc thay cho hiệu ứng làm mờ (Safari có lúc vẽ mất khung vừa làm mờ vừa trượt). Lớp tối luôn đi cùng menu, menu đóng là tối cũng mất. Một lần chạm bị tính thành hai cú bấm cũng không đóng ngay menu vừa mở.
+
+## [0.214.0] - 2026-10-18
+### Sửa lỗi
+- **Antigravity không còn đổ lỗi nhầm cho Google khi một lượt chạy quá lâu:** lượt dài quá 15 phút bị chính Antigravity CLI dừng, trước đây Javis báo "Google trục trặc tạm thời, đã thử lại 2 lần" dù không thử lại lần nào. Giờ câu báo nói đúng là lượt quá dài, các bước đã xong vẫn giữ, nhắn "làm tiếp" để làm nốt hoặc giao thành việc nền.
+- **Câu "đã thử lại N lần" chỉ hiện khi Javis thật sự thử lại.** Lượt đã làm được một phần thì Javis không chạy lại, tránh làm một việc hai lần, và câu báo nói đúng như vậy.
+
+### Cải thiện
+- **Các trang gọn hẳn: chữ giải thích gập vào nút (i).** Ngoài mặt chỉ còn tiêu đề, trạng thái, ô nhập và nút; phần vì sao, lưu ý, cách làm từng bước nằm sau nút (i) cạnh tiêu đề, bấm mới mở. Áp dụng khắp Javis: Models, Cài đặt, Kênh, Chatbot, Plugin, Học hỏi, Việc, Team, Cộng sự, Mức dùng.
+- **Mô tả dài trên thẻ (plugin, quy trình) chỉ hiện 2 dòng**, đầy đủ trong (i).
+- **Chữ trong khung giải thích 16px**, đọc dễ trên điện thoại.
+
+## [0.213.0] - 2026-10-18
+### Thêm mới
+- **Nhắn thêm khi Javis đang làm, giờ có cả trên Telegram, Discord, Slack, Lark, Messenger và Zalo:** trước đây bot báo "đang xử lý câu trước, gửi /stop" rồi bỏ tin của bạn. Giờ tin được giữ lại, không mất tin nào.
+- **Codex (gói ChatGPT) giờ đọc tin mới ngay trong lượt**, trên web lẫn các kênh, như nút Enter của ứng dụng Codex: không phải đợi xong việc mới làm tin của bạn nữa. Tắt bằng `JAVIS_CODEX_STEER=0` nếu cần.
+- **Trên kênh nhắn tin, bot đáp một dòng ngắn** cho biết Javis đọc tin ngay ở bước kế tiếp (Claude Code, Codex, các bộ não dùng API key) hay làm ngay sau câu đang trả lời (Grok, Antigravity).
+- **/stop dừng việc đang làm và bỏ luôn các tin đang chờ.** Bot chăm sóc khách giữ nguyên cách cũ: im lặng, gộp tin khách nhắn thêm vào lượt sau.
+
+## [0.211.0] - 2026-10-17
+### Cải thiện
+- **Thẻ Claude Code nói đúng một việc khi máy chưa cài:** một khung hướng dẫn duy nhất (Docker thì cập nhật Javis, cài tay thì một lệnh để chép), chỉ còn nút Kiểm tra lại. Bỏ nút Đăng nhập vốn chỉ báo lỗi, bỏ dòng phiên bản và nút Cập nhật của một chương trình chưa có.
+- **Thông báo không còn bị ép thành cột hẹp:** lỗi và hướng dẫn nằm dưới hàng nút, đủ bề ngang, nút giữ đúng chiều cao. Chi tiết về PATH và Windows gập vào mục "Đã cài mà vẫn báo thiếu?".
+- **Chữ trên các thẻ nhà cung cấp lên 16px**, đọc dễ trên điện thoại. Thẻ đổi tên thành "Claude Code" (Javis không dùng token OAuth của nó), khiên xanh chỉ sáng khi đã có CLI.
+
 ## [0.210.0] - 2026-10-17
 ### Cải thiện
 - **Thẻ của Team đọc dễ trên điện thoại:** nút và chữ phụ ở mục Mục tiêu phòng ban, Nghiệm thu giờ cỡ 16px, dòng dài tự xuống dòng thay vì bị cắt. Đã kiểm ở màn 390px bằng cả tiếng Việt và tiếng Anh.
