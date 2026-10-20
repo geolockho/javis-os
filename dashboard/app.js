@@ -28,8 +28,19 @@ function updateStopBtn() {
   // 0.206.0: while Javis works, typed text can still go out (as an add-on to the running turn), so the send button
   // comes back next to Stop as soon as there is something to send.
   const boSung = coTheGuiBoSung();
-  sendBtn.style.display = active && !boSung ? "none" : "flex";
+  // 0.231.0: two buttons (owner 2026-10-19). An empty box shows the voice chat button; text or an attachment turns
+  // it into send. In a call the button stays the red hang-up and the dictate mic steps aside.
+  const goi = handsFreeActive();
+  const coNoiDung = coNoiDungGui();
+  sendBtn.style.display = (active ? boSung : coNoiDung) ? "flex" : "none";
   sendBtn.title = boSung ? window.t("app.steer_send") : window.t("bar.send");
+  voiceBtn.style.display = goi || (!active && !coNoiDung) ? "" : "none";
+  const dictBtn = document.getElementById("dictBtn");
+  if (dictBtn) dictBtn.style.display = goi ? "none" : "";
+}
+function coNoiDungGui() {
+  try { return !!(chatInput.value.trim() || pendingAttachments.some(a => a.path)); }
+  catch (e) { return false; }
 }
 function coTheGuiBoSung() {
   try { return isProcessing && !handsFreeActive() && !!(chatInput.value.trim() || pendingAttachments.some(a => a.path)); }
@@ -1706,6 +1717,21 @@ function sendMessage(text, opts) {
     window.JavisVoiceLive.sendText(msg);
     return;
   }
+  // 0.236.0: có file thì cũng KHÔNG mở lượt chat thường. Trước đây lượt chat đọc ảnh và đọc ra
+  // loa bằng giọng Edge, trong khi model Live nghe "xem ảnh này" lại giao chính ảnh đó cho
+  // ask_javis: hai lượt bộ não, hai giọng chồng nhau. Nay gửi khung "ask" để server chạy MỘT lượt
+  // và model Live đọc kết quả; socket chưa mở thì mới rơi về đường thường.
+  if (voiceMode === "live" && atts.length && _slash.type === "passthrough"
+      && window.JavisVoiceLive && window.JavisVoiceLive.isOn() && window.JavisVoiceLive.ask) {
+    const liveMsg = boiNguCanh(tinDocFile(atts, msg), true);
+    if (window.JavisVoiceLive.ask(liveMsg, msg, atts.map(a => a.name))) {
+      chatInput.value = ""; chatInput.style.height = "auto";
+      appendUserMessage(msg, atts);
+      recordTurn("user", msg, atts.map(a => ({ name: a.name, kind: a.kind, url: a.url || "" })));
+      clearAttachments();
+      return;
+    }
+  }
   window.JavisAsk.freezeAll();   // trả lời rồi thì chip của lượt trước hết bấm được
   // 0.173.1: an automatic /goal round (block carries JAVIS_GOAL_ROUND) is drawn as the collapsible round line.
   const _goalRound = (_slash.type === "prefix" && window.JavisLenh && window.JavisLenh.docVong)
@@ -1739,14 +1765,7 @@ function sendMessage(text, opts) {
       // Với lệnh skill (vd /notes): đưa path như dữ liệu, để chính skill quyết định lưu.
       outMsg = `[File đính kèm (đường dẫn), Sources="${src}", Attachments="${attDir}":\n${lines}]\n\n${_slash.message}`;
     } else {
-      const ctx =
-        `[File đính kèm để ĐỌC (đường dẫn):\n${lines}\n` +
-        `Mặc định: chỉ đọc file rồi trả lời, KHÔNG tự lưu đi đâu.\n` +
-        `CHỈ khi user yêu cầu rõ (vd "lưu vào source", "ingest", "ghi vào second brain") thì mới: ` +
-        `chuyển thành .md (ảnh thì đọc hiểu + mô tả) lưu vào Sources="${src}" (ảnh gốc chuyển vào Attachments="${attDir}"), kèm frontmatter source.]`;
-      outMsg = _than
-        ? `${ctx}\n\n${_than}`
-        : `${ctx}\n\nHãy đọc (các) file trên và phản hồi / tóm tắt nội dung chính.`;
+      outMsg = tinDocFile(atts, _than);
     }
   }
   // File đang ghim đi TRƯỚC mọi thứ: nó là ngữ cảnh nền của cả lượt, không phải dữ liệu
@@ -1754,22 +1773,9 @@ function sendMessage(text, opts) {
   // không giữ trạng thái "đang mở file nào" giữa các lượt.
   // Ngữ cảnh giao diện (Voice V1, spec mục 5): trang đang mở, đoạn đang bôi đen, câu Javis bị
   // ngắt lời. Đứng SAU khối file ghim và TRƯỚC câu hỏi; rỗng thì không chèn gì.
-  try {
-    // `voice`: đang nói chuyện bằng giọng (tin từ mic, HAY gõ chữ khi mic rảnh tay đang bật):
-    // câu trả lời sẽ đọc ra loa nên model phải trả lời ngắn như người đang nói (V3).
-    const ctxUi = window.JavisUiContext ? window.JavisUiContext.build({
-      page: nguCanhTrang(), selection: nguCanhChon(), interruptedAt: _ngatLoiTai,
-      voice: _tuGiong || handsFree,
-    }) : "";
-    if (ctxUi) outMsg = `${ctxUi}\n\n${outMsg}`;
-  } catch (e) {}
-  _ngatLoiTai = "";
-  if (pinnedNote) {
-    outMsg = `[FILE ĐANG MỞ trong trình sửa của Javis: ${pinnedNote.abs}\n`
-      + `Đây là file người dùng ĐANG LÀM VIỆC TRÊN ĐÓ - coi như đầu vào của cuộc trò chuyện này. `
-      + `Đọc nó trước khi trả lời. Khi được yêu cầu sửa/viết thêm/dọn lại mà không nói rõ file nào `
-      + `thì ghi thẳng vào chính file này.]\n\n${outMsg}`;
-  }
+  // `voice`: đang nói chuyện bằng giọng (tin từ mic, HAY gõ chữ khi mic rảnh tay đang bật):
+  // câu trả lời sẽ đọc ra loa nên model phải trả lời ngắn như người đang nói (V3).
+  outMsg = boiNguCanh(outMsg, _tuGiong || handsFree);
 
   chatInput.value = ""; chatInput.style.height = "auto";
   clearAttachments();
@@ -1809,6 +1815,38 @@ function sendMessage(text, opts) {
   const _w = _pinWait; _pinWait = null;
   if (_w) _w.then(_send, _send); else _send();
   _tuGiong = false;
+}
+// Khối "[File đính kèm để ĐỌC ...]" đứng trước câu người dùng gõ. Dùng chung cho lượt chat thường
+// và tin có file gửi lúc đang gọi Live (0.236.0), để F5 dựng lại bong bóng ảnh y như nhau.
+function tinDocFile(atts, than) {
+  const lines = atts.map(a => `- ${a.path}`).join("\n");
+  const src = (atts.find(a => a.sources) || {}).sources || "", attDir = (atts.find(a => a.attachments) || {}).attachments || "";
+  const ctx =
+    `[File đính kèm để ĐỌC (đường dẫn):\n${lines}\n` +
+    `Mặc định: chỉ đọc file rồi trả lời, KHÔNG tự lưu đi đâu.\n` +
+    `CHỈ khi user yêu cầu rõ (vd "lưu vào source", "ingest", "ghi vào second brain") thì mới: ` +
+    `chuyển thành .md (ảnh thì đọc hiểu + mô tả) lưu vào Sources="${src}" (ảnh gốc chuyển vào Attachments="${attDir}"), kèm frontmatter source.]`;
+  return than
+    ? `${ctx}\n\n${than}`
+    : `${ctx}\n\nHãy đọc (các) file trên và phản hồi / tóm tắt nội dung chính.`;
+}
+// Ngữ cảnh giao diện (trang, đoạn bôi đen, câu bị ngắt lời) rồi file đang ghim, bọc NGOÀI tin.
+// Thứ tự này chuNguoiGo gỡ ngược lại được, nên bong bóng vẫn chỉ hiện đúng câu người dùng gõ.
+function boiNguCanh(outMsg, voice) {
+  try {
+    const ctxUi = window.JavisUiContext ? window.JavisUiContext.build({
+      page: nguCanhTrang(), selection: nguCanhChon(), interruptedAt: _ngatLoiTai, voice: voice,
+    }) : "";
+    if (ctxUi) outMsg = `${ctxUi}\n\n${outMsg}`;
+  } catch (e) {}
+  _ngatLoiTai = "";
+  if (pinnedNote) {
+    outMsg = `[FILE ĐANG MỞ trong trình sửa của Javis: ${pinnedNote.abs}\n`
+      + `Đây là file người dùng ĐANG LÀM VIỆC TRÊN ĐÓ - coi như đầu vào của cuộc trò chuyện này. `
+      + `Đọc nó trước khi trả lời. Khi được yêu cầu sửa/viết thêm/dọn lại mà không nói rõ file nào `
+      + `thì ghi thẳng vào chính file này.]\n\n${outMsg}`;
+  }
+  return outMsg;
 }
 // Trang đang mở và đoạn đang bôi đen, cho khối NGỮ CẢNH GIAO DIỆN. Chọn trong ô nhập chat thì
 // không tính (đó là câu đang gõ, không phải thứ đang nhìn).
@@ -2568,6 +2606,21 @@ function hideActivity() {
 function setProcessing(s) { isProcessing = s; sendBtn.disabled = s || sendBtn.dataset.wsLock === "1"; }
 // workspace.js calls this after changing its lock, so send ends up disabled for the right reason.
 window.JavisSyncActiveUI = syncActiveUI;
+// composer-dictate.js reports a mic problem with the same passing note (0.230.0).
+window.JavisNoteFlash = ghiChuThoang;
+// 0.231.0: the box is emptied or filled from many places (send, restore after a dropped connection, slash menu,
+// "ask again"...). Watching the value itself keeps the voice chat / send button right without touching each one.
+(function () {
+  if (typeof HTMLTextAreaElement === "undefined" || !(chatInput instanceof HTMLTextAreaElement)) return;
+  const d = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  if (!d || !d.get || !d.set) return;
+  Object.defineProperty(chatInput, "value", {
+    configurable: true,
+    get() { return d.get.call(this); },
+    set(v) { d.set.call(this, v); try { updateStopBtn(); } catch (e) {} },
+  });
+})();
+try { updateStopBtn(); } catch (e) {}   // first paint: an empty box shows voice chat, not send
 
 // ============================================
 // Cuộn thông minh: chỉ tự cuộn khi user đang ở đáy; đang đọc lại phía trên thì
@@ -3572,6 +3625,7 @@ function _pinRestore() {
 // tải file mới kế tiếp.
 let attachNote = "";
 function renderChips() {
+  try { updateStopBtn(); } catch (e) {}   // 0.231.0: an attachment turns voice chat into send
   attachBar.classList.toggle("has-items", pendingAttachments.length > 0 || !!pinnedNote || !!attachNote || !!_quote);
   attachBar.innerHTML = "";
   if (_quote && window.JavisQuote) {
@@ -3956,7 +4010,8 @@ function chupFile(f) {
 // Events
 // ============================================
 chatInput.addEventListener("input", () => {
-  if (isProcessing) syncActiveUI();   // 0.206.0: the send button shows up next to Stop once there is text
+  // 0.206.0: the send button shows up next to Stop once there is text; 0.231.0: and in place of voice chat.
+  if (isProcessing) syncActiveUI(); else updateStopBtn();
   chatInput.style.height = "auto";
   // Ô nhập NỞ THEO CHỮ như claude.ai (chủ yêu cầu 27/08): xuống dòng là thấy toàn bộ văn
   // bản, không phải cuộn trong một ô 3 dòng. Trần ở trang Trò chuyện là 40% màn hình
@@ -4025,6 +4080,7 @@ function tatRanhTay() {
   runActions(turn.micOff());
   updateVoiceFocus();
   try { if (window.JavisTts) window.JavisTts.set(false); } catch (e) {}
+  try { updateStopBtn(); } catch (e) {}   // tests lift this function out alone
 }
 
 // Câu báo lỗi mic. Nói ĐÚNG nguyên nhân, vì ba nguyên nhân cần ba hành động khác hẳn nhau và
@@ -4059,6 +4115,7 @@ voiceBtn.addEventListener("click", () => {
   handsFree = !handsFree;
   if (handsFree) attention.start();
   voiceBtn.classList.toggle("handsfree", handsFree);
+  updateStopBtn();
   if (handsFree) {
     // Bấm mic là GỌI: hiện thanh gọi, nút mic thành Cúp máy (0.65.18).
     _callMuted = false;
@@ -4553,9 +4610,36 @@ async function refreshAuthRow() {
   if (curLbl) curLbl.hidden = !co;
   const p = document.getElementById("setAuthPass");
   if (p) p.placeholder = co ? window.t("app.pw_ph_change") : window.t("app.pw_ph_set");
+  // The server refuses to turn off login on a public server (0.224.0), so do not offer it there.
+  const off = document.getElementById("disableAuthBtn");
+  if (off) off.hidden = !co || !!a.require_login;
   return co;
 }
 window.__javisRefreshAuthRow = refreshAuthRow;
+
+// Turn off login (0.224.0, security report C2): the server wants the current password and, with
+// 2FA on, a code. Shared by both account surfaces (this settings block and console.js renderAccount).
+// Returns {ok, error}; ok=false with no error means the user cancelled.
+async function disableLogin(password) {
+  if (!password) return { ok: false, error: window.t("app.pw_need_cur") };
+  if (!confirm(window.t("app.disable_auth_confirm"))) return { ok: false };
+  const send = async (code) => {
+    const fd = new FormData();
+    fd.append("password", password);
+    if (code) fd.append("code", code);
+    return (await fetch("/auth/disable", { method: "POST", body: fd })).json();
+  };
+  try {
+    let r = await send("");
+    if (!r.ok && r.needs_2fa) {
+      const code = (prompt(window.t("app.disable_auth_code")) || "").trim();
+      if (!code) return { ok: false };
+      r = await send(code);
+    }
+    return r.ok ? { ok: true } : { ok: false, error: r.error || window.t("app.err_low") };
+  } catch (e) { return { ok: false, error: window.t("app.err_net_low") }; }
+}
+window.__javisDisableLogin = disableLogin;
 function _saveSetting(section, dataObj, btn) {
   const fd = new FormData();
   fd.append("section", section);
@@ -4663,9 +4747,14 @@ if (document.getElementById("settingsBtn")) {
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     await fetch("/auth/logout", { method: "POST" }); location.reload();
   });
-  document.getElementById("disableAuthBtn").addEventListener("click", async () => {
-    if (!confirm(window.t("app.disable_auth_confirm"))) return;
-    await fetch("/auth/disable", { method: "POST" }); location.reload();
+  document.getElementById("disableAuthBtn").addEventListener("click", async (e) => {
+    const curEl = document.getElementById("setAuthCur");
+    const btn = e.target; const old = btn.textContent;
+    const r = await disableLogin(curEl ? curEl.value : "");
+    if (r.ok) { location.reload(); return; }
+    if (!r.error) return;
+    btn.innerHTML = ic("triangle-alert", { cls: "ic-warn" }) + " " + escapeHtml(r.error);
+    setTimeout(() => { btn.textContent = old; }, 4000);
   });
 }
 // Lối thoát khi quên mật khẩu (trên màn đăng nhập)

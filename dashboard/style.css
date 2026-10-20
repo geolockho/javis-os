@@ -227,6 +227,11 @@ html {
      thường. "pan-x pan-y" (không có pinch-zoom) là cú pháp tắt zoom, khác "manipulation"
      (vẫn cho pinch-zoom). */
   touch-action: pan-x pan-y;
+  /* 0.240.0 (owner, iPhone): turning the phone sideways and back left the text much bigger. Safari enlarges text in
+     landscape on its own and does not always shrink it back; 100% switches that off. The share page has had it since
+     it was written (share_render.py). */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 body {
   background: var(--bg);
@@ -1555,6 +1560,37 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   animation: micpulse-hf 1.2s ease-in-out infinite;
 }
 @keyframes micpulse-hf { 50% { box-shadow: 0 0 0 7px rgba(255,107,43,0); } }
+/* Dictation (composer-dictate.js, 0.230.0): the mic records into the text box, the wave button is the voice chat.
+   While recording the row swaps to the dictation bar: X, live level meter, timer, stop square, then send. */
+.dict-bar { display: none; flex: 1 1 auto; min-width: 0; align-items: center; gap: 8px; height: 34px; }
+.hud-voice.dictating .dict-bar { display: flex; }
+.hud-voice.dictating .cp-plus, .hud-voice.dictating .cp-chips, .hud-voice.dictating .cp-gap,
+.hud-voice.dictating .dict-btn, .hud-voice.dictating #voiceBtn { display: none; }
+/* 0.231.0: send is hidden while the box is empty (voice chat takes its place), but while dictating it is the
+   "stop and send" button, so it stays even before the first word lands. */
+.hud-voice.dictating #sendBtn { display: flex !important; }
+/* The voice chat button sits where send appears, so it wears the same filled circle: one spot, two jobs. In a call
+   it turns red (.in-call) as before. */
+#voiceBtn:not(.in-call):not(.handsfree) { background: var(--accent-solid); color: var(--on-accent); border-color: transparent; }
+#voiceBtn:not(.in-call):not(.handsfree):hover { opacity: .85; color: var(--on-accent); border-color: transparent; }
+.dict-cancel, .dict-stop {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: transparent; color: var(--text2);
+}
+.dict-cancel:hover, .dict-stop:hover { border-color: var(--accent); color: var(--accent); }
+.dict-stop { background: var(--bg3); color: var(--text); }
+.dict-cancel:focus-visible, .dict-stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dict-wave { flex: 1 1 auto; min-width: 40px; height: 28px; display: block; color: var(--text2); }
+.dict-time { flex: none; font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+.dict-busy { flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-voice.dict-busy-on .dict-wave, .hud-voice.dict-busy-on .dict-time { display: none; }
+.hud-voice.dict-busy-on .dict-stop { opacity: .45; cursor: default; }
+.hud-voice.dictating .voice-input { caret-color: transparent; }
+@media (max-width: 860px) {
+  .dict-cancel, .dict-stop { width: 40px; height: 40px; }
+  .dict-bar { height: 40px; }
+}
 .voice-input {
   flex: none; background: transparent; border: none; border-radius: 0;
   color: var(--text); font-size: 16px; padding: 6px 6px 8px; resize: none; outline: none;
@@ -2048,6 +2084,10 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
 .qs-field > select, .qs-field > input { flex: 0 1 400px; min-width: 0; margin: 0; }
 .qs-field > .toggle { flex: none; }
 .qs-hint { font-size: 12.5px; line-height: 1.5; color: var(--text3); margin: -2px 0 10px; }
+/* Mic test meter (0.222.0): a thin bar that follows the live input level, and the verdict text. */
+.mic-meter { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin: 2px 0 6px; }
+.mic-meter-bar { height: 100%; width: 0%; background: var(--accent); transition: width 80ms linear; }
+.mic-result { font-size: 16px; line-height: 1.5; color: var(--text2); min-height: 1.5em; margin-bottom: 8px; }
 /* Ô chọn kèm nút ngay bên phải (Giọng Javis + Nghe thử ở thẻ Giọng nói): cả cụm chiếm đúng chỗ
    của một ô chọn trong hàng "nhãn trái, ô chọn phải". */
 .qs-field > .v2-voice-row { flex: 0 1 400px; min-width: 0; }
@@ -3469,6 +3509,37 @@ div.cb-quyen > svg { flex: none; margin-top: 2px; }
 .msg-viec.viec-blocked .bubble, .msg-viec.viec-timeout .bubble { border-left-color: var(--warn-line); }
 .msg-viec.viec-failed .bubble { border-left-color: var(--red); }
 .msg-viec.viec-cancelled .bubble { border-left-color: var(--hairline); }
+.msg-viec.viec-hoi .bubble { border-left-color: var(--link-ink); }
+.viec-hoi .viec-head .viec-ico { color: var(--link-ink); }
+/* Tab Theo doi trang (0.239.0, web-watch.js) */
+.ww-head { display: flex; align-items: center; gap: 8px; margin: 22px 0 8px; font-size: 16px; color: var(--text);
+  font-weight: 600; border-bottom: 1px solid var(--hairline); padding-bottom: 6px; }
+.ww-form { margin: 10px 0 18px; padding: 14px; border: 1px solid var(--hairline); border-radius: 10px;
+  background: var(--surface-1); display: flex; flex-direction: column; gap: 10px; }
+.ww-form input:not([type=checkbox]) { font-size: 16px; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--hairline);
+  background: var(--bg2); color: var(--text); width: 100%; box-sizing: border-box; }
+.ww-row { gap: 12px; flex-wrap: wrap; }
+.ww-row .si-field { flex: 1 1 200px; }
+.ww-check { display: flex; gap: 8px; align-items: center; font-size: 15px; }
+.ww-msg { font-size: 14px; color: var(--warn-ink); margin-left: 10px; }
+.ww-warn { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid rgba(224,102,74,.5); border-radius: 8px;
+  background: rgba(224,102,74,.08); font-size: 14px; line-height: 1.5; }
+.ww-card .ww-url { font-size: 14px; margin-top: 4px; overflow-wrap: anywhere; }
+.ww-card .ww-meta { font-size: 13px; color: var(--text3); margin-top: 4px; }
+.ww-card .ww-alert { font-size: 14px; margin-top: 6px; white-space: pre-wrap; }
+.ww-card .ww-err { font-size: 13px; color: var(--warn-ink); margin-top: 4px; }
+.ww-card .ww-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ww-card .ww-del { color: var(--red); }
+.viec-tl { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.viec-tl-o { flex: 1 1 220px; min-width: 0; min-height: 44px; resize: vertical; padding: 9px 11px;
+  border-radius: 10px; border: 1px solid var(--hairline); background: var(--surface-1); color: var(--text);
+  font: inherit; font-size: 16px; line-height: 1.4; }
+.viec-tl-gui { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--link-ink); background: rgba(127,176,255,.14); color: var(--text-hi); font-size: 16px; cursor: pointer; }
+.viec-tl-gui[disabled] { opacity: .5; cursor: default; }
+.viec-tl-gui svg, .viec-tl-xong svg { width: 16px; height: 16px; }
+.viec-tl-bao { flex-basis: 100%; color: var(--red); font-size: 14px; }
+.viec-tl-xong { display: inline-flex; align-items: center; gap: 6px; color: var(--green); font-size: 15px; }
 .viec-head {
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
   margin: -4px 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--hairline);
@@ -3968,7 +4039,12 @@ div.info-body > * { margin: 0; font-size: inherit; }
 .mp-act.is-danger { color: var(--red, #d64545); }
 .mp-target { position: relative; z-index: 1; }
 .mp-layer .mp-lift { position: absolute; display: block; margin: 0; padding: 0; max-width: none; pointer-events: none;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .22); animation: mp-fade .15s ease; }
+/* 0.240.0 (owner, like Zalo): once the first finger is off, hold the lifted copy again to select part of it and copy it
+   with the phone's own callout. Beats the no-selection rule above (html.mp-holding *) on specificity. */
+.mp-layer.is-free .mp-lift { pointer-events: auto; }
+.mp-layer.is-free .mp-lift, .mp-layer.is-free .mp-lift * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 .mp-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   z-index: 3300; padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 20, .86); color: #fff; font-size: 15px;
   pointer-events: none; animation: mp-fade .15s ease; }

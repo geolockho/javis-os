@@ -32,8 +32,8 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=129">
-  <link rel="stylesheet" href="/static/console.css?v=109">
+  <link rel="stylesheet" href="/static/style.css?v=134">
+  <link rel="stylesheet" href="/static/console.css?v=110">
   <!-- Áp tông đã lưu TRƯỚC khi vẽ để không nháy tối rồi mới đổi sang sáng.
        Giá trị cũ "dim" (tông tối-nhạt, gỡ ở 0.9.250) quy về tối; theme.js sẽ ghi đè lại.
        Chế độ "auto" (0.74.0, mặc định khi chưa chọn gì từ 0.75.1) tính theo khung giờ "HH:MM-HH:MM", cùng quy tắc với lightAt() trong
@@ -370,6 +370,17 @@
                 </div>
               </div>
               <div class="qs-hint" id="vcVoiceNote" data-i18n="qs.voice_ml_note" hidden>Giọng đa ngôn ngữ hỗ trợ tiếng Việt.</div>
+              <!-- Mic and speaker test (0.222.0, dashboard/mic-test.js): a person speaking is the only check
+                   a muted mic or a level slider at zero cannot pass. -->
+              <div class="qs-field">
+                <span class="qs-lbl" data-i18n="settings.vc_mic_lbl">Thử mic và loa</span>
+                <div class="v2-voice-row">
+                  <button class="gcard-btn ghost" type="button" id="vcMicTest" data-i18n="settings.vc_mic_btn">Thử mic</button>
+                  <button class="gcard-btn ghost" type="button" id="vcSpkTest" data-i18n="settings.vc_spk_btn">Thử loa</button>
+                </div>
+              </div>
+              <div class="mic-meter" aria-hidden="true"><div class="mic-meter-bar" id="vcMicBar"></div></div>
+              <div class="mic-result" id="vcMicResult" role="status"></div>
               <details class="qs-advanced" id="vcAdvanced">
                 <summary data-i18n="settings.vc_advanced">Nâng cao</summary>
                 <div class="qs-field">
@@ -395,6 +406,25 @@
                     <select class="js-input" id="vcBrainModel"></select>
                   </div>
                   <div class="qs-hint" data-i18n="settings.vc_brain_hint">Bộ não trả lời các câu nói ở đường Cơ bản. Việc cần dữ liệu vẫn đi bộ não chính.</div>
+                </div>
+                <!-- Live over an API key only (0.220.0): console.js shows this box when call.engine is "api". -->
+                <div id="vcLiveBox" hidden>
+                  <div class="qs-field">
+                    <label class="qs-lbl" for="vcLiveProactive" data-i18n="settings.vc_live_proactive">Lọc tiếng xung quanh</label>
+                    <select class="js-input" id="vcLiveProactive">
+                      <option value="on" data-i18n="settings.vc_live_proactive_on">Bật: bỏ qua TV, người bên cạnh</option>
+                      <option value="off" data-i18n="settings.vc_live_proactive_off">Tắt: trả lời mọi câu nghe được</option>
+                    </select>
+                  </div>
+                  <div class="qs-field">
+                    <label class="qs-lbl" for="vcLiveTurn" data-i18n="settings.vc_live_turn">Nhịp trả lời</label>
+                    <select class="js-input" id="vcLiveTurn">
+                      <option value="fast" data-i18n="settings.vc_live_turn_fast">Nhanh: đáp ngay khi bạn ngừng</option>
+                      <option value="normal" data-i18n="settings.vc_live_turn_normal">Vừa (mặc định)</option>
+                      <option value="slow" data-i18n="settings.vc_live_turn_slow">Chậm rãi: chờ bạn nghĩ thêm</option>
+                    </select>
+                  </div>
+                  <div class="qs-hint" data-i18n="settings.vc_live_hint">Áp dụng cho Gemini Live và OpenAI Realtime, từ cuộc gọi kế tiếp.</div>
                 </div>
                 <div class="qs-field" id="vcRateRow">
                   <label class="qs-lbl" for="rateSel" data-i18n="qs.rate_lbl">Tốc độ đọc</label>
@@ -426,6 +456,7 @@
                 <option value="en-US-AndrewMultilingualNeural" data-i18n="qs.voice_opt_andrew">Andrew · Nam, ấm và tự tin · đa ngôn ngữ</option>
                 <option value="en-US-BrianMultilingualNeural" data-i18n="qs.voice_opt_brian">Brian · Nam, gần gũi đời thường · đa ngôn ngữ</option>
                 <option value="en-AU-WilliamMultilingualNeural" data-i18n="qs.voice_opt_william">William · Nam, thân thiện giọng Úc · đa ngôn ngữ</option>
+                <option value="auto" data-i18n="qs.voice_opt_auto">Tự động theo thứ tiếng · Hoài My, Emma hoặc giọng bản xứ</option>
               </select>
             </div>
 
@@ -478,6 +509,15 @@
               </div>
             </div>
 
+            <!-- Remote access through the built-in Cloudflare Tunnel (0.242.0). remote-access.js draws #raBox from
+                 /remote-access/status; the server downloads and supervises cloudflared (remote_tunnel.py). -->
+            <div class="qs-block" data-settings-section="general" id="remoteAccessBlock">
+              <div class="popover-label"><span data-i18n="ra.title">TRUY CẬP TỪ XA</span> <button type="button" class="info-i" aria-expanded="false" aria-label="Xem giải thích" title="Xem giải thích" data-i18n-aria="info.more" data-i18n-title="info.more"><i data-ic="info"></i></button></div>
+              <div class="info-body" hidden data-i18n="ra.intro_long">Javis tự tải và chạy cloudflared (công cụ chính thức, miễn phí của Cloudflare) ngay trên máy này.</div>
+              <div class="opt-sub" data-i18n="ra.sub">Mở Javis từ điện thoại hay máy khác qua link HTTPS, không cần VPS.</div>
+              <div id="raBox" class="ra"></div>
+            </div>
+
           </div>
         </details>
       </aside>
@@ -521,10 +561,31 @@
           </button>
         </div>
         <span class="cp-gap"></span>
-        <button type="button" class="mic-big" id="voiceBtn" title="Bấm để gọi Javis" data-i18n-title="bar.mic">
+        <!-- Dictation bar (composer-dictate.js, 0.230.0): replaces +, chips, mic and voice chat while recording.
+             X drops the recording, the meter shows the mic level, the square stops and keeps the text to edit,
+             and the send button next to it stops and sends. -->
+        <div class="dict-bar" id="dictBar">
+          <button type="button" class="dict-cancel" id="dictCancel" title="Huỷ ghi âm" data-i18n-title="dict.cancel" aria-label="Huỷ ghi âm" data-i18n-aria="dict.cancel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+          <canvas class="dict-wave" id="dictWave" aria-hidden="true"></canvas>
+          <span class="dict-busy" id="dictBusy" hidden data-i18n="dict.busy">Đang chuyển thành chữ...</span>
+          <span class="dict-time" id="dictTime" aria-live="off">0:00</span>
+          <button type="button" class="dict-stop" id="dictStop" title="Dừng ghi, giữ chữ để sửa" data-i18n-title="dict.stop" aria-label="Dừng ghi, giữ chữ để sửa" data-i18n-aria="dict.stop">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+          </button>
+        </div>
+        <!-- Two voice buttons (0.230.0): the mic records speech into the text box (nothing is sent by itself),
+             the sound-wave button is the live voice chat (#voiceBtn, unchanged behaviour). -->
+        <button type="button" class="mic-big dict-btn" id="dictBtn" title="Ghi âm thành chữ" data-i18n-title="dict.btn" aria-label="Ghi âm thành chữ" data-i18n-aria="dict.btn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+        </button>
+        <button type="button" class="mic-big" id="voiceBtn" title="Đàm thoại: nói chuyện trực tiếp với Javis" data-i18n-title="bar.mic" aria-label="Đàm thoại: nói chuyện trực tiếp với Javis" data-i18n-aria="bar.mic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/>
           </svg>
         </button>
         <button type="button" class="stop-btn" id="stopBtn" title="Ngắt lệnh / dừng đọc (Esc)" data-i18n-title="bar.stop" style="display:none">
@@ -851,10 +912,12 @@
   <script src="/static/voice-adaptive.js?v=1"></script>
   <script src="/static/voice-adaptive-ui.js?v=2"></script>
   <script src="/static/voice-attention.js?v=2"></script>
-  <script src="/static/voice-chunker.js?v=1"></script>
-  <script src="/static/voice.js?v=27"></script>
+  <script src="/static/mic-test.js?v=1" defer></script>
+  <script src="/static/voice-chunker.js?v=2"></script>
+  <script src="/static/voice-lang.js?v=1"></script>
+  <script src="/static/voice.js?v=29"></script>
   <script src="/static/graph.js?v=17"></script>
-  <script src="/static/chat-render.js?v=20"></script>
+  <script src="/static/chat-render.js?v=21"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -878,7 +941,7 @@
   <!-- Sáu reaction dùng chung (T2 0.154.0): nạp TRƯỚC chat-reactions.js, app.js, teams.js và mobile-chat.js. -->
   <script src="/static/reactions.js?v=3"></script>
   <!-- Nhấn giữ tin trên điện thoại (0.179.0): nạp TRƯỚC chat-reactions.js và teams.js. -->
-  <script src="/static/msg-press.js?v=3"></script>
+  <script src="/static/msg-press.js?v=4"></script>
   <!-- Vuốt tin sang trái để trích dẫn trên điện thoại (0.216.0): nạp TRƯỚC chat-reactions.js. -->
   <script src="/static/msg-swipe.js?v=1"></script>
   <script src="/static/chat-reactions.js?v=5"></script>
@@ -886,7 +949,7 @@
   <!-- Khối tiến trình từng bước trong khung chat: phải đứng TRƯỚC app.js vì app.js gọi
        window.JavisSteps ngay khi khung tool_call đầu tiên về. -->
   <script src="/static/chat-steps.js?v=2"></script>
-  <script src="/static/chat-viec.js?v=4"></script>
+  <script src="/static/chat-viec.js?v=6"></script>
   <script src="/static/chat-nho.js?v=1"></script>
   <script src="/static/chat-doi.js?v=1"></script>
   <script src="/static/chat-card.js?v=1"></script>
@@ -898,11 +961,11 @@
   <script src="/static/ui-context.js?v=1"></script>
   <script src="/static/ui-actions.js?v=2"></script>
   <!-- Voice V2: nghe nói thẳng (Live), app.js gọi lười khi bấm mic ở chế độ Live. -->
-  <script src="/static/voice-live.js?v=6"></script>
+  <script src="/static/voice-live.js?v=7"></script>
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/incoming-call.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
-  <script src="/static/app.js?v=145"></script>
+  <script src="/static/app.js?v=147"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
   <!-- Thân bảng chọn model dùng chung: phải đứng TRƯỚC model-picker.js (thanh chat) và
@@ -914,9 +977,10 @@
   <script src="/static/composer-folder.js?v=3"></script>
   <script src="/static/branding.js?v=7"></script>
   <script src="/static/quick-settings.js?v=11"></script>
+  <script src="/static/remote-access.js?v=2"></script>
   <script src="/static/chat-zoom.js?v=6"></script>
   <script src="/static/brains-ui.js?v=8"></script>
-  <script src="/static/sessions-ui.js?v=21"></script>
+  <script src="/static/sessions-ui.js?v=22"></script>
   <script src="/static/studio.js?v=45"></script>
   <!-- Trang Cộng sự: nạp SAU studio.js (mượn trình sửa agent/workflow của Studio) và TRƯỚC
        console.js (renderWorkspace ủy quyền cho window.JavisWorkspace). -->
@@ -927,7 +991,7 @@
   <script src="/static/agent-lessons-ui.js?v=4"></script>
   <!-- Tag filter bar and tag picker shared by Cộng sự and Team (0.195.0): load BEFORE workspace.js and teams.js. -->
   <script src="/static/tag-picker.js?v=1"></script>
-  <script src="/static/workspace.js?v=32"></script>
+  <script src="/static/workspace.js?v=33"></script>
   <script src="/static/packs.js?v=1"></script>
   <!-- Hộp chọn thành viên kiểu Zalo (0.142.0): nạp TRƯỚC teams.js, teams.js gọi window.JavisTeamPicker. -->
   <script src="/static/team-picker.js?v=1"></script>
@@ -935,15 +999,16 @@
        (ngăn Nhóm gọi window.JavisAgentJudge.hydrate); góp phần "judge" vào khung nhịp qua window.JavisPulseParts. -->
   <script src="/static/agent-judge-ui.js?v=2"></script>
   <!-- Nút mic nhập chữ của khung soạn Nhóm (0.176.0): nạp TRƯỚC teams.js. -->
-  <script src="/static/dictate.js?v=1"></script>
+  <script src="/static/dictate.js?v=3"></script>
+  <script src="/static/composer-dictate.js?v=2"></script>
   <script src="/static/teams.js?v=18"></script>
   <script src="/static/chatbots-reply-policy.js?v=1"></script>
   <script src="/static/chatbots-try.js?v=1"></script>
   <script src="/static/chatbots.js?v=18"></script>
   <!-- Trang Hội thoại (hộp thư khách): nạp TRƯỚC console.js để renderConversations uỷ quyền được. -->
   <script src="/static/conversations-filters.js?v=1"></script>
-  <script src="/static/ht-media.js?v=2"></script>
-  <script src="/static/conversations.js?v=9"></script>
+  <script src="/static/ht-media.js?v=3"></script>
+  <script src="/static/conversations.js?v=10"></script>
   <!-- Dashboard Token (trang Mức dùng nâng cấp): nạp TRƯỚC console.js để renderUsage ủy quyền được. -->
   <script src="/static/usage.js?v=2"></script>
   <!-- Trang Code (terminal): nạp TRƯỚC console.js để renderCode ủy quyền được. File này CHỈ có
@@ -953,7 +1018,7 @@
   <script src="/static/folder-picker.js?v=2"></script>
   <!-- Trang Coding (nhóm Code): mượn khung chat của app, nên nạp TRƯỚC console.js y như
        workspace.js để renderCoding uỷ quyền được. -->
-  <script src="/static/coding.js?v=9"></script>
+  <script src="/static/coding.js?v=10"></script>
   <!-- Console layer: console.js đăng ký store TRƯỚC khi Alpine khởi động (defer) -->
   <!-- Phần đọc cấu hình của form "Tự thêm MCP" (thuần, có test node). Nạp TRƯỚC console.js. -->
   <script src="/static/mcp-form-parse.js?v=1"></script>
@@ -961,10 +1026,12 @@
   <script src="/static/webhooks.js?v=1"></script>
   <!-- Health section of the Work page (0.199.0): incidents Javis Core handles and the read-only scan. -->
   <script src="/static/health-panel.js?v=1"></script>
-  <script src="/static/console.js?v=178"></script>
+  <!-- Watch tab of the Recurring work page (0.239.0): token-free web page watching (server/web_watch.py). -->
+  <script src="/static/web-watch.js?v=2"></script>
+  <script src="/static/console.js?v=181"></script>
   <script src="/static/mobile-chat.js?v=15"></script>
   <script src="/static/brain-view.js?v=1"></script>
-  <script src="/static/push.js?v=2"></script>
+  <script src="/static/push.js?v=3"></script>
   <script src="/static/install-nudge.js?v=1"></script>
   <script src="/static/notifications.js?v=9"></script>
   <!-- Linh vật ở mép màn hình. Nạp SAU app.js vì nó chỉ được app.js gọi vào

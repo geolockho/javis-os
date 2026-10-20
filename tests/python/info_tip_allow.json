@@ -1,5 +1,7 @@
 {
+ "settings.vc_mic_silent": "status: the mic test verdict, shown only after the person pressed Test mic",
  "app.login_cookie_lost": "error: login failure reason",
+ "app.disable_auth_confirm": "confirm: confirm() before turning off login (says 2FA is kept)",
  "auth.reset_server": "content: reset steps shown after clicking Forgot password",
  "bgs.warn_xep_hang": "status: stall warning inside the popover the user opened",
  "brains.delete_prompt": "confirm: delete-brain prompt",
@@ -69,6 +71,7 @@
  "teams.chat_empty": "placeholder: empty chat area, replaced by first message",
  "teams.import_confirm": "confirm: confirm() on team import",
  "teams.mic_unsupported": "error: shown after pressing mic",
+ "dict.unsupported": "error: passing note shown after pressing the dictate mic",
  "teams.pick.leader_dropped": "status: role=status line after unchecking the leader",
  "teams.remove_confirm": "confirm: confirm() before removing member",
  "teams.share_note": "status: shown after pressing share",

@@ -233,6 +233,10 @@ _WRITE_PATH = None
 _WRITE_PENDING_ARGS: dict[str, dict] = {}
 _WRITE_PENDING_ARGS_MAX = 64
 _REGISTRY_SHADOW_TASKS = set()
+# Nén gzip câu trả lời trọn một cục của API (0.225.0, xem nen_phan_hoi.py). Gắn ĐẦU TIÊN để nằm trong cùng: các
+# middleware gắn sau bọc response thành stream, đứng ngoài chúng thì không còn thấy câu trả lời nào là một cục.
+import nen_phan_hoi
+app.add_middleware(nen_phan_hoi.NenPhanHoi)
 # CORS KHÔNG dùng '*' nữa: dashboard cùng-origin (không cần CORS). Chỉ mở cross-origin cho localhost
 # (tiện dev). Chống trang web độc ĐỌC API qua trình duyệt; phần chống GHI/CSRF ở _csrf_guard bên dưới.
 app.add_middleware(CORSMiddleware,
@@ -701,18 +705,40 @@ def _fit_memory_index(mem: str, cap: int = None) -> str:
 
     # Bậc cuối: buộc phải bỏ bớt dòng. Giữ các dòng ĐẦU (ký ức nền tảng ghi sớm nhất) và nói rõ
     # còn bao nhiêu, kèm đường đọc tiếp - đừng để mất im lặng.
+    # 0.222.0: also NAME the hidden memories (file names only, within a small budget). A model
+    # cannot look up a memory it does not know exists: with only a count, "who is Lan?" got "I do
+    # not know" while facts/lan-em-gai.md sat on disk unread.
+    hidden_budget = min(1200, cap // 5)
     kept, total = [], 0
     items = 0
-    for l in rebuild(None).split("\n"):
-        if total + len(l) + 1 > cap - 300:
+    rebuilt = rebuild(None).split("\n")
+    for l in rebuilt:
+        if total + len(l) + 1 > cap - 300 - hidden_budget:
             break
         kept.append(l)
         total += len(l) + 1
         if _MEM_ITEM_RE.match(l):
             items += 1
     con_lai = sum(1 for l in lines if _MEM_ITEM_RE.match(l)) - items
+    names = []
+    used = 0
+    for l in rebuilt[len(kept):]:
+        m = _MEM_ITEM_RE.match(l)
+        link = re.search(r"\]\(([^)]*)\)", m.group(1)) if m else None
+        if not link:
+            continue
+        slug = Path(link.group(1).strip()).stem
+        if not slug:
+            continue
+        if used + len(slug) + 2 > hidden_budget:
+            names.append("…")
+            break
+        names.append(slug)
+        used += len(slug) + 2
+    ten = (f" Tên file của chúng: {', '.join(names)}. Cần ký ức nào thì đọc memory/facts/<tên>.md."
+           if names else "")
     return "\n".join(kept) + (
-        f"\n\n> (Chỉ mục quá dài nên còn {con_lai} ký ức chưa liệt kê ở đây. "
+        f"\n\n> (Chỉ mục quá dài nên còn {con_lai} ký ức chưa liệt kê ở đây.{ten} "
         "Đọc memory/MEMORY.md để xem đủ danh sách, và memory/facts/ để xem chi tiết.)")
 
 
@@ -1440,7 +1466,9 @@ async def auth_setup(request: Request, username: str = Form(...), password: str 
     if len(password) < 8:
         return JSONResponse({"ok": False, "error": localefmt.chu("Mật khẩu tối thiểu 8 ký tự", "Password must be at least 8 characters")}, status_code=400)
     h, salt = cfgmod.hash_password(password)
-    cfg["auth"] = {"username": username.strip() or "admin", "password_hash": h, "salt": salt}
+    # Keep a 2FA config left by /auth/disable (0.224.0): it comes back in force with the new password.
+    cfg["auth"] = {**cfgmod.kept_totp(cfg), "username": username.strip() or "admin",
+                   "password_hash": h, "salt": salt}
     cfgmod.write_settings(cfg)
     return _session_cookie(JSONResponse({"ok": True}), cfgmod.new_session(), request)
 
@@ -1746,11 +1774,73 @@ async def auth_logout(request: Request):
     return resp
 
 
+_FORWARD_HEADERS = ("x-forwarded-for", "x-real-ip", "forwarded", "cf-connecting-ip")
+
+
+def _direct_local_request(request: Request) -> bool:
+    """The request comes from this machine itself, not through a tunnel or reverse proxy.
+
+    A cloudflared tunnel or a proxy on the same host connects from 127.0.0.1 too, so the client
+    address alone proves nothing: such hops add a forwarding header, a browser on the machine does not.
+    """
+    host = request.client.host if request.client else ""
+    if host not in ("127.0.0.1", "::1"):
+        return False
+    return not any(request.headers.get(h) for h in _FORWARD_HEADERS)
+
+
 @app.post("/auth/disable")
-async def auth_disable():
-    """Tắt yêu cầu đăng nhập (xóa mật khẩu) - chỉ gọi được khi ĐANG đăng nhập (middleware chặn)."""
+async def auth_disable(request: Request, password: str = Form(""), code: str = Form("")):
+    """Turn off the login requirement (clears the password). Security report C2, 0.224.0.
+
+    Before 0.224.0 this took no password, accepted an API token and also wiped the 2FA block, so one
+    click on a borrowed session (or a leaked token) opened the dashboard and its Terminal to whoever
+    could reach it, and the owner lost 2FA for good. Now:
+    - browser session only, never an API token (same rule as /auth/2fa/*);
+    - only on a local machine reached directly: a public bind (require_login) or a request through a
+      tunnel/proxy would leave the dashboard open to the Internet, or reopen /auth/setup to anyone;
+    - current password AND, when 2FA is on, a valid code or recovery code;
+    - the 2FA config is KEPT, so it is back in force as soon as a password is set again.
+    """
+    if (loi := _doi_phien_that(request)) is not None:
+        return loi
+    if cfgmod.require_login() or not _direct_local_request(request):
+        return JSONResponse({"ok": False, "error": localefmt.chu(
+            "Không tắt được đăng nhập trên máy mở ra ngoài (VPS, Docker, tunnel). Chỉ tắt được khi "
+            "mở dashboard ngay trên máy cá nhân chạy Javis.",
+            "Login cannot be turned off on a server reachable from outside (VPS, Docker, tunnel). "
+            "It can only be turned off from the personal machine running Javis.")}, status_code=403)
+    ip = request.client.host if request.client else "?"
+    if _login_locked(ip):
+        return JSONResponse({"ok": False, "error": localefmt.chu("Quá nhiều lần sai - thử lại sau ít phút.", "Too many failed attempts - try again in a few minutes.")}, status_code=429)
     cfg = cfgmod.read_settings()
-    cfg["auth"] = {"username": "", "password_hash": "", "salt": ""}
+    if not cfgmod.auth_enabled(cfg):
+        return {"ok": True, "note": localefmt.chu("Đăng nhập vốn đã tắt", "Login was already off")}
+    if not cfgmod.verify_password(password, cfg):
+        _login_fail(ip)
+        await asyncio.sleep(0.5)   # same slowdown as /auth/login
+        return JSONResponse({"ok": False, "error": localefmt.chu("Sai mật khẩu hiện tại.", "Wrong current password.")}, status_code=401)
+    if cfgmod.totp_enabled(cfg) or cfgmod.totp_hong(cfg):
+        ma = (code or "").strip()
+        can_ma = JSONResponse({"ok": False, "needs_2fa": True, "error": localefmt.chu(
+            "Nhập mã xác thực 2 lớp (hoặc mã khôi phục) để tắt đăng nhập.",
+            "Enter your two-factor code (or a recovery code) to turn off login.")}, status_code=401)
+        if not ma:
+            return can_ma   # not a failed attempt: the dashboard asks for the code after this reply
+        buoc = totp.kiem(cfgmod.totp_secret(cfg), ma, buoc_da_dung=cfgmod.totp_last_step(cfg))
+        if buoc is not None:
+            cfgmod.totp_ghi_buoc(buoc)
+        elif not cfgmod.totp_dung_ma_khoi_phuc(ma):
+            _login_fail(ip)
+            await asyncio.sleep(0.5)
+            return can_ma
+        cfg = cfgmod.read_settings()   # the code check above wrote last_step / used a recovery code
+    _LOGIN_FAILS.pop(ip, None)
+    # Key by key, not a fresh `auth` object: `auth` also holds the 2FA config (see /auth/password).
+    a = dict(cfg.get("auth") or {})
+    a.update(username="", password_hash="", salt="")
+    a.pop("env_applied", None)
+    cfg["auth"] = a
     cfgmod.write_settings(cfg)
     cfgmod.clear_sessions()
     return {"ok": True}
@@ -5135,6 +5225,8 @@ def settings_get():
     safe.setdefault("voice", {})
     safe["voice"]["elevenlabs_key"] = ("••••" + vk[-4:]) if vk else ""
     safe["voice"]["elevenlabs_key_set"] = bool(vk)
+    # The tunnel token never leaves the server; Settings reads /remote-access/status instead.
+    safe.pop("remote_tunnel", None)
     bt = (cfg.get("backup", {}) or {}).get("token", "")
     safe.setdefault("backup", {})
     safe["backup"]["token"] = ("••••" + bt[-4:]) if bt else ""
@@ -5364,7 +5456,7 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             v["brain_provider"] = str(patch["brain_provider"] or "")
         if patch.get("stt_provider") in voice_brain.STT_PROVIDERS:
             v["stt_provider"] = patch["stt_provider"]
-        # Tai nghe lại (0.65.15) thay cho stt_provider: auto | groq | off (voice_ear.CHOICES).
+        # Tai nghe lại (0.65.15) thay cho stt_provider: auto | groq | openai | off (voice_ear.CHOICES).
         if patch.get("ear") in voice_ear.CHOICES:
             v["ear"] = patch["ear"]
         # Giọng của ChatGPT Live (realtime v3 chỉ nhận 9 giọng riêng, mặc định juniper).
@@ -5375,6 +5467,11 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             v["call_engine"] = patch["call_engine"]
         if patch.get("live_provider") in voice_live.PROVIDERS:
             v["live_provider"] = patch["live_provider"]
+        # Live over an API key (0.220.0): ignore speech not meant for Javis, and the reply pace.
+        if "live_proactive" in patch:
+            v["live_proactive"] = bool(patch["live_proactive"])
+        if patch.get("live_turn") in voice_live.TURN_PRESETS:
+            v["live_turn"] = patch["live_turn"]
         # Focus is a browser attention gate. Keep the legacy setting for older clients.
         if "loc_tap_am" in patch:
             v["loc_tap_am"] = bool(patch["loc_tap_am"])
@@ -10149,9 +10246,31 @@ def _agent_chat_prompt(brain, slug) -> str:
     if _resonance_turn_enabled(brain):
         sysprompt = (sysprompt.replace(_AGENT_HAI_LOI, _AGENT_BA_LOI)
                      + "\n# Cộng hưởng (đang bật cho bạn)\n- " + _RESONANCE_GOAL_HINT + "\n")
-    return (sysprompt + "\n\n# Kênh: bạn đang trò chuyện trực tiếp với chủ trên dashboard Javis "
+    return (sysprompt + _agent_builder_block(brain)
+            + "\n\n# Kênh: bạn đang trò chuyện trực tiếp với chủ trên dashboard Javis "
             "(trang Cộng sự). Trả lời như đang nói chuyện, theo ngôn ngữ chủ đang dùng; "
             "không cần báo cáo dạng nhiệm vụ trừ khi được giao việc cụ thể.")
+
+
+def _agent_builder_block(brain) -> str:
+    """Where and how to build agents, workflows and skills, for a chat with an assistant (0.228.0).
+
+    `_agent_chat_prompt` leaves CLAUDE.md and the "LỚP AGENTIC" block out on purpose, and those were the only places
+    that named these paths. Claude Code still found its way (it runs inside the brain folder and loads the
+    javis-builder skill natively), but an API engine only knows what the prompt says: asked to create an agent or
+    give one a model, it answered that it could not (customer report 2026-10-19). Every line here is a hub tool or
+    a vault path every engine reaches.
+    """
+    root = _brain_root(brain)
+    return (
+        "\n# Tạo năng lực mới khi chủ nhờ (mọi engine, kể cả engine API)\n"
+        f"- Trước khi tạo, nạp mẫu chuẩn: `javis_use_skill` name=javis-builder, rồi ghi bằng `javis_write_file` "
+        f"đường dẫn TUYỆT ĐỐI: agent `{_agents_dir(brain)}/<slug>.md`, workflow `{_workflows_dir(brain)}/<slug>.md`, "
+        f"skill `{_skills_dir(brain)}/<slug>/SKILL.md`, loop `{Path(root) / 'Javis' / 'loops'}/<slug>.md`.\n"
+        "- Tạo trợ lý kèm model riêng, hay đổi model của trợ lý đang có: tool `javis_team` op=create_agent / "
+        "op=set_agent_model (slug, model, model_provider). Chưa thấy tool thì tìm bằng `javis_search_tools`.\n"
+        "- Nhắc hẹn, việc định kỳ: `javis_schedule`. Đừng nói là không tạo được khi các tool trên có sẵn.\n"
+    )
 
 
 def _dm_feedback_prompt(brain, slug, conv_sid) -> str:
@@ -11649,6 +11768,46 @@ webhook_feature = webhook_triggers.register(app, webhook_triggers.WebhookDeps(
 
 
 # ============================================================
+# 0.239.0: theo dõi trang web không tốn token (web_watch.py). Mỗi lượt canh chỉ tải trang và so chữ;
+# chỉ khi có chuyện mới mới báo, và chỉ gọi AI khi chủ bật "tóm tắt bằng AI" cho mục đó.
+# ============================================================
+import web_watch
+
+
+async def _watch_send(chat_id, text, viec=None, web="", brain="", dedup=""):
+    return await _notify_owner(chat_id, text, kind="report", source="watch",
+                               viec=viec, web=web, brain=brain, dedup=dedup)
+
+
+async def _watch_summarize(prompt: str) -> str:
+    """Tóm tắt một thay đổi: model nền, CHỈ CHỮ, thư mục rỗng, không MCP (nội dung trang là dữ liệu lạ)."""
+    if os.environ.get("JAVIS_NO_REAL_JUDGE_ENGINE") == "1":
+        raise RuntimeError("JAVIS_NO_REAL_JUDGE_ENGINE")
+    cli = _reply_policy_sandbox_engine("Bạn tóm tắt ngắn một thay đổi trên trang web cho chủ shop. Chỉ trả lời "
+                                       "bằng chữ, 1-3 câu.", "web-watch-summary", cwd_name="web_watch_cwd")
+    base = cli
+    cli = aux_engine.strip_tools(_aux_swap(cli, mode="suggest", tag="web-watch-summary"), base)
+    if not cli.is_available():
+        raise RuntimeError("background engine not ready")
+    final = ""
+    async for ev in cli.query(prompt):
+        if ev.get("type") == "final":
+            final = ev.get("content", "") or ""
+        elif ev.get("type") == "error":
+            raise RuntimeError(str(ev.get("content") or "engine error")[:200])
+    return final
+
+
+watch_feature = web_watch.register(app, web_watch.WebWatchDeps(
+    state_dir=lambda: cfgmod.STATE_DIR,
+    brain_root=lambda b: str(Path(_brain_root(b)).resolve()),
+    send=_watch_send,
+    summarize=_watch_summarize,
+    channels=_kenh_con_thieu,
+))
+
+
+# ============================================================
 # 0.199.0: a broken background run reaches Javis Core (incident_desk.py), plus the read-only health scan
 # (sentinel.py). Idea from OpenMausBot's team incidents and Sentinel.
 # ============================================================
@@ -12748,6 +12907,10 @@ async def _start_scheduler():
         tasks_feature.start()
     except Exception as e:
         print(f"[kanban start] {e}", file=_sys.stderr)
+    try:
+        watch_feature.start()      # 0.239.0: vòng canh trang web (web_watch.py), không gọi model
+    except Exception as e:
+        print(f"[web watch start] {e}", file=_sys.stderr)
     try:
         connect_health.on_engine_down = _loop_notify   # đèn báo não → Telegram, chỉ 1 lần mỗi đợt chết
         connect_health.start()   # vòng check sức khoẻ kết nối + probe đèn báo não
@@ -14562,6 +14725,10 @@ async def tts(
     """Sinh audio đúng nhà cung cấp đã chọn; lỗi không được âm thầm đổi giọng."""
     import sys
     from fastapi import HTTPException, Response
+    if voice == "auto":
+        # "Auto by language" is resolved per chunk in the browser (voice-lang.js); a page cached
+        # from before 0.220.0 can still send the raw value, which Edge would refuse.
+        voice = "en-US-EmmaMultilingualNeural"
     from fastapi.responses import StreamingResponse
     cfg = cfgmod.read_settings()
     provider = ((cfg.get("voice", {}) or {}).get("tts_provider") or "edge").lower()
@@ -14617,7 +14784,8 @@ async def stt_route(file: UploadFile = File(...), lang: str = Form(""), draft: s
                 "ly_do": "tai_tat" if ear["reason"] == voice_ear.REASON_OFF else "thieu_key"}
     # Mồi từ vựng, sửa tên trợ lý, đối chiếu bản nháp: xem voice_ear.transcribe_upload.
     # WebSocket còn quét nghe_sua.sua thêm lần nữa (cho cả chữ Web Speech); hàm idempotent.
-    return await voice_ear.transcribe_upload(cfg, data, file.filename or "voice.webm", lang, draft)
+    return await voice_ear.transcribe_upload(cfg, data, file.filename or "voice.webm", lang, draft,
+                                             provider=ear["provider"])
 
 
 @app.get("/voice/call")
@@ -14755,6 +14923,8 @@ async def voice_options(brains: int = 1):
             loc_tap_am=False,
             focus_mode=v.get("focus_mode") is not False,
             ear=voice_ear.setting(cfg),
+            live_proactive=v.get("live_proactive") is not False,
+            live_turn=voice_live.turn_preset(v.get("live_turn")),
         ),
         # Tai nghe lại đang dùng và vì sao (trang Cài đặt hiện "Đang dùng: ..."), cùng các tai
         # chọn được. Vẽ từ voice_ear để trang và đường LƯU soi cùng một danh sách.
@@ -14853,13 +15023,22 @@ async def _voice_ask_javis(request: str, conv_sid: str, brain: str, key: str = "
     return str(out or "")[:6000]
 
 
+def _live_call_lang(said: str, recognition_lang: str = "") -> str:
+    """Language pinned on a brain turn started from a Live call. `call_language` returns "" when the spoken line is
+    empty or undetectable and the mic is on auto; the brain then followed the handoff the Live model wrote, often in
+    English (owner report 2026-10-19). Fall back to the configured reply language instead of leaving it open."""
+    return lang_mod.call_language(said, recognition_lang) or localefmt.ngon_ngu_tra_loi()
+
+
 @app.websocket("/ws/voice-live")
 async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str = Query("brain"),
                         lang: str = Query("vi-VN")):
     """Nghe nói thẳng (Voice V2 bậc Live): trình duyệt đẩy PCM16 16 kHz, nhận PCM16 24 kHz.
 
     Khung JSON về trình duyệt: ready | interrupted | transcript | tool | turn_done | error.
-    Khung JSON từ trình duyệt: {"type":"text","text":...} | {"type":"stop"}. Byte = audio.
+    Khung JSON từ trình duyệt: {"type":"text","text":...} | {"type":"ask","text":...,"display":...,"files":[...]}
+    | {"type":"stop"}. Byte = audio. "ask" (0.236.0) là tin có file đính kèm gõ trong lúc gọi: chạy MỘT lượt bộ não
+    chính ngay tại đây rồi model chỉ đọc lại, không mở lượt chat thường song song.
     """
     if cfgmod.gate_active() and not cfgmod.valid_session(ws.cookies.get("javis_session", "")):
         await ws.close(code=1008)
@@ -14935,6 +15114,9 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
     spoke = {"t": 0.0}               # lần gần nhất Javis nói về việc nền (kết quả hay tiến độ)
     heartbeat = {"task": None}
     readback = {"pending": 0, "active": False}
+    # File pasted during the call (0.236.0): while its brain turn runs, and ATTACHMENT_GUARD_S after its answer is
+    # read, an ask_javis from the model about an image or file is that same file, not a second turn.
+    attach_guard = {"busy": 0, "until": 0.0, "names": []}
 
     async def from_client():
         while True:
@@ -14955,6 +15137,23 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
                     except Exception:
                         pass
                     await prov.send_text(str(d["text"]))
+                elif d.get("type") == "ask" and d.get("text"):
+                    readback["pending"] = 0
+                    full = str(d["text"])[:20000]
+                    said = str(d.get("display") or "")[:2000]
+                    names = [str(n)[:200] for n in (d.get("files") or []) if str(n or "").strip()][:20]
+                    try:
+                        # The whole text, file block included: the dashboard rebuilds the image bubble from it on F5.
+                        store.append_message(conv_sid, "user", full)
+                    except Exception:
+                        pass
+                    if said:
+                        spoken["text"] = said
+                    attach_guard["busy"] += 1
+                    attach_guard["names"] = names
+                    task = asyncio.create_task(_run_client_ask(full, said))
+                    tool_tasks.add(task)
+                    task.add_done_callback(tool_tasks.discard)
                 elif d.get("type") == "context":
                     # Trang đang mở / đoạn bôi đen: kèm vào yêu cầu gửi bộ não chính, và đẩy vào
                     # kênh im lặng của nhà cung cấp nếu có (GPT-Live thinking.append).
@@ -14997,6 +15196,14 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
         req = str((ev.get("args") or {}).get("request") or "")
         if name != "ask_javis":
             return await _run_one(name, cid, req, [])
+        if (attach_guard["busy"] or asyncio.get_running_loop().time() < attach_guard["until"]) \
+                and voice_live.is_about_attachment(req, attach_guard["names"]):
+            print(f"[voice live] bỏ ask_javis trùng với file vừa gửi trong khung chat: {req[:80]!r}", file=sys.stderr)
+            try:
+                await prov.send_tool_ack(cid, name, voice_live.ATTACHMENT_ACK)
+            except Exception:
+                pass
+            return
         running = [j["request"] for j in jobs.values()]
         if running and voice_live.is_progress_question(req):
             # Hỏi tiến độ ("xong chưa", "đang làm gì"): trả lời NGAY từ sổ việc đang chạy, không chạy
@@ -15005,7 +15212,8 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
             text = voice_live.status_line(list(jobs.values()), asyncio.get_running_loop().time())
             print(f"[voice live] câu hỏi tiến độ, trả lời từ trạng thái: {req[:80]!r}", file=sys.stderr)
             try:
-                if await prov.say_status(text):
+                # A provider that defers tool results needs THIS call answered, or the model waits on it forever.
+                if not _deferred(name) and await prov.say_status(text):
                     # KHÔNG đánh dấu `readback` ở đây (khác câu tự lên tiếng ở `_heartbeat`): mỗi lần giao
                     # việc model tự nói một câu đệm ("Dạ, đợi em xem ạ"), nó tới ngay sau lệnh này và
                     # trước lúc model đọc câu tiến độ. Đánh dấu bây giờ là nuốt nhầm câu đệm và để câu
@@ -15054,6 +15262,13 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
             readback["pending"] += 1
             spoke["t"] = now
 
+    def _deferred(name: str) -> bool:
+        """Gemini 3.1 Live cannot talk while a tool runs: answer ask_javis at once, deliver the result later."""
+        try:
+            return name == "ask_javis" and bool(prov.defers_tool_results())
+        except Exception:
+            return False
+
     def _ensure_heartbeat():
         task = heartbeat["task"]
         if task is None or task.done():
@@ -15063,8 +15278,13 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
 
     async def _run_one(name: str, cid: str, req: str, running: list):
         await _j({"type": "tool", "name": name, "status": "running"})
+        deferred = _deferred(name)
         try:
-            await prov.send_tool_running(cid, name)
+            if deferred:
+                # Close the call now so the model keeps listening and talking; the result follows.
+                await prov.send_tool_result(cid, name, voice_live.DEFERRED_ACK)
+            else:
+                await prov.send_tool_running(cid, name)
         except Exception:
             pass
         loop = asyncio.get_running_loop()
@@ -15087,7 +15307,7 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
                 # xếp hàng trong engine sau việc kia, đúng cái chờ mà 0.71.2 bỏ khoá chung để tránh.
                 key = f"voice:{conv_sid}:p{job_id}" if running else ""
                 result = await _voice_ask_javis(sent, conv_sid, brain, key=key, progress=_note_step,
-                                                call_lang=lang_mod.call_language(spoken["text"], lang))
+                                                call_lang=_live_call_lang(spoken["text"], lang))
             else:
                 result = f"Tool {name} không có."
         except Exception as e:
@@ -15098,7 +15318,8 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
             # Bộ não thấy câu nói thêm không có việc mới: không bong bóng, không đọc ra loa.
             print(f"[voice live] lời nói thêm không có việc mới: {str(running[0])[:60]!r}", file=sys.stderr)
             try:
-                await prov.send_tool_ack(cid, name, voice_live.FOLLOWUP_ACK)
+                if not deferred:   # a deferred call was already answered; a second answer is invalid
+                    await prov.send_tool_ack(cid, name, voice_live.FOLLOWUP_ACK)
             except Exception:
                 pass
             await _j({"type": "tool", "name": name, "status": "done"})
@@ -15111,15 +15332,70 @@ async def voice_live_ws(ws: WebSocket, session_id: str = Query(""), brain: str =
             except Exception:
                 pass
             await _j({"type": "tool_result", "name": name, "text": str(result)})
-            # Đặt TRƯỚC khi trả model: lời đọc lại có thể về ngay khi lệnh vừa đi.
-            readback["pending"] += 1
+            if not deferred:
+                # Đặt TRƯỚC khi trả model: lời đọc lại có thể về ngay khi lệnh vừa đi.
+                readback["pending"] += 1
         try:
-            await prov.send_tool_result(cid, name, result)
+            if deferred:
+                # Wait for a pause so the result does not cut across the person or the model.
+                await prov.wait_quiet(voice_live.LATE_RESULT_WAIT_S)
+                if str(result or "").strip():
+                    readback["pending"] += 1
+                await prov.send_late_result(result)
+            else:
+                await prov.send_tool_result(cid, name, result)
         except Exception as e:
             await _j({"type": "error", "message": localefmt.chu(f"Không trả được kết quả cho model: {e}",
                                                                 f"Could not return the result to the model: {e}")})
         spoke["t"] = loop.time()   # vừa đọc một kết quả: chưa cần chen câu tiến độ ngay sau đó
         await _j({"type": "tool", "name": name, "status": "done"})
+
+    async def _run_client_ask(full: str, said: str):
+        """ONE brain turn for a file pasted in the chat during the call; the model only reads the answer out.
+
+        Same bookkeeping as an ask_javis job (status frames, `jobs` for progress questions, the result bubble), but
+        nobody asked through a tool call, so the answer reaches the model with `read_result`. The dashboard does not
+        open an ordinary chat turn for this message, so this is the only voice that speaks the answer."""
+        await _j({"type": "tool", "name": "ask_javis", "status": "running"})
+        loop = asyncio.get_running_loop()
+        running = [j["request"] for j in jobs.values()]
+        job = {"request": said or "file đính kèm", "started": loop.time(), "step": ""}
+        job_seq["n"] += 1
+        job_id = job_seq["n"]
+        jobs[job_id] = job
+        _ensure_heartbeat()
+
+        async def _note_step(step):
+            job["step"] = str(step or "")
+
+        try:
+            key = f"voice:{conv_sid}:p{job_id}" if running else ""
+            result = await _voice_ask_javis(full, conv_sid, brain, key=key, progress=_note_step,
+                                            call_lang=_live_call_lang(said or spoken["text"], lang))
+        except Exception as e:
+            result = f"Bộ não chính lỗi: {type(e).__name__}: {e}"
+        finally:
+            jobs.pop(job_id, None)
+        try:
+            if str(result or "").strip():
+                try:
+                    store.append_message(conv_sid, "assistant", str(result))
+                except Exception:
+                    pass
+                await _j({"type": "tool_result", "name": "ask_javis", "text": str(result)})
+                # Wait for a pause so the answer does not cut across the person or the model.
+                await prov.wait_quiet(voice_live.LATE_RESULT_WAIT_S)
+                readback["pending"] += 1   # the model's reading is not a second bubble
+                try:
+                    await prov.read_result(str(result))
+                except Exception as e:
+                    await _j({"type": "error", "message": localefmt.chu(f"Không trả được kết quả cho model: {e}",
+                                                                        f"Could not return the result to the model: {e}")})
+            spoke["t"] = loop.time()
+        finally:
+            attach_guard["busy"] = max(0, attach_guard["busy"] - 1)
+            attach_guard["until"] = loop.time() + voice_live.ATTACHMENT_GUARD_S
+            await _j({"type": "tool", "name": "ask_javis", "status": "done"})
 
     async def from_provider():
         while True:
@@ -25513,3 +25789,9 @@ async def diag_ws_drops(body: dict = Body(...)):
     browser can be traced to its cause instead of guessed."""
     loop_watch.note_client_drops(body)
     return {"ok": True}
+
+
+# Remote access through the built-in Cloudflare Tunnel (0.242.0): routes/remote_access.py, remote_tunnel.py.
+# Registered at the end of the file so the route table only grows at the end.
+import routes.remote_access as remote_access_routes  # noqa: E402
+remote_access_routes.register(app, remote_access_routes.RemoteAccessDeps(browser_session_error=_doi_phien_that))

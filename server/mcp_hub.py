@@ -32,6 +32,7 @@ import localefmt
 import mcp_catalog
 import mcp_client
 import mcp_store
+import once_ledger
 import skill_router
 import skill_usage
 import team_gate
@@ -101,7 +102,9 @@ def allow_patterns():
 # `javis_run_tool`. `discover_all(for_bot=True)` drops them before the lazy tier; bot paths pass that flag (API
 # engines directly, Claude Code through the X-Javis-Bot header written by `claude_config_path(bot=True)`).
 # `javis_team` (0.173.0) creates, edits and deletes team chats and writes assistant files: owner-only for the same reason.
-OWNER_ONLY_TOOLS = frozenset({"javis_reply_policy", "javis_reply_policy_tune", "javis_team", "javis_memory"})
+# `javis_watch` (0.239.0) makes the server fetch an address on a schedule and message the owner: not a customer's call.
+OWNER_ONLY_TOOLS = frozenset({"javis_reply_policy", "javis_reply_policy_tune", "javis_team", "javis_memory",
+                              "javis_watch"})
 
 
 # ============================================================
@@ -244,7 +247,13 @@ def _guard(ent, fn, mode):
                            "err": why[:200], "args_keys": sorted((args or {}).keys()), **team_gate.audit_fields()})
             return "ERROR: " + why
         t0 = time.time()
-        result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        if cls == "read":
+            result = await mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, args)
+        else:
+            # 0.238.0: a Kanban job that runs again must not send, post or order twice (once_ledger.py).
+            # Outside a background job this calls straight through.
+            result = await once_ledger.run(
+                fn, args, lambda a: mcp_client.call_route({fn: {"spec": ent["spec"], "tool": tool}}, fn, a))
         _audit_append({"ts": datetime.now().isoformat(timespec="seconds"), "conn_id": conn["id"],
                        "connector": conn.get("connector_id"), "label": conn.get("label"),
                        "tool": tool, "mode": mode, "cls": cls,
@@ -477,7 +486,7 @@ def _safe_read_path(vault_root, p, cho_phep_staging=False, workspace_root=None):
     return trong_vault                  # trong vault nhưng không tồn tại: để chỗ gọi báo
 
 
-def _connections_json(include_ambient=False, hidden=None, bo_qua=None):
+def _connections_json(include_ambient=False, hidden=None, bo_qua=None, owner_chat=False):
     hidden = hidden or {}
     bo_qua = set(bo_qua or ())
     # Sức khoẻ từng nguồn (vòng check định kỳ). Import trong hàm: connect_health import
@@ -528,6 +537,18 @@ def _connections_json(include_ambient=False, hidden=None, bo_qua=None):
             out.append({"connector": s["name"], "label": s["name"], "source": "claude_account",
                         "goi_the_nao": f"Đã có sẵn trong danh sách tool: mcp__{_ambient_prefix(s['name'])}__* "
                                        "- GỌI THẲNG, không qua javis_run_tool."})
+    elif owner_chat:
+        # 0.228.0: an engine with no Claude account (Anthropic API, OpenAI API...) never gets these connectors. Not
+        # listing them let the model answer "there is no such tool" with no way forward (customer report 2026-10-19,
+        # browser control through a Composio connector added on claude.ai). Name them and the two real fixes.
+        # Owner chat only: a customer-facing bot has no business learning which accounts the owner connected.
+        for s in _ambient_servers():
+            out.append({"connector": s["name"], "label": s["name"], "source": "claude_account",
+                        "dung_duoc_o_luot_nay": False,
+                        "ly_do": ("Kết nối này gắn với TÀI KHOẢN Claude của chủ, chỉ có khi model chat là Claude "
+                                  "Code. Model đang chạy bằng API key nên không gọi được. Nói đúng lý do đó, rồi "
+                                  "chỉ hai cách: nối nguồn này ở trang Kết nối của Javis (mọi model đều dùng "
+                                  "được), hoặc đổi model chat sang Claude Code.")})
     return json.dumps(out, ensure_ascii=False, indent=1)
 
 
@@ -579,7 +600,7 @@ def _builtin_tools(mode, vault_root, include_ambient=False, hidden=None, lang=""
         "vào TÀI KHOẢN Claude (Drive/Gmail/lịch...) - loại source='claude_account' gọi THẲNG qua "
         "tool native mcp__<tên>__*, KHÔNG qua javis_run_tool. Dùng khi cần biết đang có nguồn nào / "
         "tài khoản nào là mặc định, hoặc khi không tìm thấy tool tưởng phải có.",
-        {}, [], lambda args: _async_const(_connections_json(include_ambient, hidden, bo_qua)))
+        {}, [], lambda args: _async_const(_connections_json(include_ambient, hidden, bo_qua, owner_chat=staging)))
 
     if not vault_root:
         return tools, route

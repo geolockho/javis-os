@@ -1341,6 +1341,13 @@
     .kn-task-top{display:flex;gap:9px;align-items:flex-start}.kn-task-title{flex:1;color:var(--text);font-size:14px;font-weight:600;line-height:1.35}
     .kn-pill{flex:none;border-radius:99px;padding:2px 7px;font-size:10px;border:1px solid var(--hairline);color:var(--text3)}
     .kn-task-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:5px;color:var(--text3);font-size:11px}
+    .kn-ask{margin-top:8px;padding:9px 10px;border:1px solid rgba(127,176,255,.35);border-radius:10px;background:rgba(127,176,255,.06);cursor:default}
+    .kn-ask-q{color:var(--text);font-size:14px;line-height:1.45;white-space:pre-wrap}
+    .kn-ask-row{display:flex;gap:6px;align-items:flex-end;margin-top:8px}
+    .kn-ask-input{flex:1;min-width:0;resize:vertical;min-height:40px;padding:8px 10px;border-radius:8px;border:1px solid var(--hairline);background:var(--surface-1);color:var(--text);font:inherit;font-size:16px;line-height:1.4}
+    .kn-ask-send{flex:none;padding:9px 12px;border-radius:8px;border:1px solid var(--link-ink);background:rgba(127,176,255,.14);color:var(--text-hi);font-size:14px;cursor:pointer}
+    .kn-ask-send[disabled]{opacity:.5;cursor:default}
+    .kn-qa{padding:8px 0;border-bottom:1px solid var(--surface-2)}.kn-qa b{color:var(--text)}
     .kn-task-result{margin-top:6px;color:var(--text3);font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .kn-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.kn-actions button{padding:3px 8px;border-radius:6px;border:1px solid var(--hairline);background:var(--surface-1);color:var(--text2);font-size:11px;cursor:pointer}.kn-actions button:hover{border-color:var(--link-ink);color:var(--text-hi)}.kn-actions button.danger{color:var(--red)}.kn-actions button.danger:hover{border-color:var(--red);color:var(--red)}
     .kn-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}.kn-dot.live{background:var(--green);box-shadow:0 0 0 4px rgba(63,220,134,.12)}.kn-dot.off{background:var(--text3)}
@@ -2013,6 +2020,7 @@
     el.innerHTML = `<div class="cview-section">
       <div class="si-actions" style="margin-bottom:14px;align-items:center">
         <button class="s-btn" id="lpNew">+ ${esc(window.t("cs.si_add"))}</button>
+        <button class="s-btn-ghost" id="lpMorning">${ic("sun")} ${esc(window.t("cs.si_morning"))}</button>
         <button class="s-btn-ghost" id="lpStop">■ ${esc(window.t("cs.si_stop"))}</button>${infoBtn()}
       </div>
       ${infoBody(`${esc(window.t("cs.si_intro_a"))} <b>loop</b> ${esc(window.t("cs.si_intro_b"))} <b>${esc(window.t("cs.si_intro_c"))}</b> ${esc(window.t("cs.si_intro_d"))} <b>${esc(window.t("cs.si_intro_e"))}</b> ${esc(window.t("cs.si_intro_f"))} <b>${esc(window.t("cs.si_intro_g"))}</b> ${esc(window.t("cs.si_intro_h"))}`)}
@@ -2062,6 +2070,7 @@
       <div class="ach-tabs si-tabs" role="tablist" aria-label="${esc(t("page.selfimprove.label"))}">
         <button type="button" role="tab" data-si-tab="jobs" aria-selected="true">${ic("repeat")}<span>${esc(window.t("cs.si_tab_jobs"))}</span><span class="si-tab-n" id="siNJobs"></span></button>
         <button type="button" role="tab" data-si-tab="health" aria-selected="false">${ic("shield")}<span>${esc(window.t("cs.si_tab_health"))}</span><span class="si-tab-n warn" id="siNHealth" hidden></span></button>
+        <button type="button" role="tab" data-si-tab="watch" aria-selected="false">${ic("eye")}<span>${esc(window.t("cs.si_tab_watch"))}</span></button>
         <button type="button" role="tab" data-si-tab="log" aria-selected="false">${ic("scroll-text")}<span>${esc(window.t("cs.si_tab_log"))}</span></button>
       </div>
       <section data-si-pane="jobs" role="tabpanel">
@@ -2078,6 +2087,7 @@
         <div id="lpGroups">${esc(window.t("common.loading"))}</div>
       </section>
       <section data-si-pane="health" role="tabpanel" hidden><div id="hpSection"></div></section>
+      <section data-si-pane="watch" role="tabpanel" hidden><div id="wwSection"></div></section>
       <section data-si-pane="log" role="tabpanel" hidden>
         <div class="si-log" style="margin-top:0"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.si_log_head"))} · <select id="lpLogFilter" class="loop-sel" style="font-size:14px"><option value="">${esc(window.t("cs.si_log_all"))}</option></select></h3><div id="lpLog">${esc(window.t("common.loading"))}</div></div>
       </section>
@@ -2193,27 +2203,29 @@
     // openForm(loop) = tạo/sửa việc lặp · openForm(null, rem) = SỬA một nhắc hẹn/lịch cron.
     // Trước đây nhắc hẹn tạo xong là bất động (chỉ huỷ/chuyển brain) - muốn đổi giờ cron phải
     // xoá rồi tạo lại, đúng chỗ khách báo "không sửa được lịch cron".
-    async function openForm(lp, rem) {
+    // `tpl` (0.222.0): a ready-made reminder from /reminders/templates pre-fills a NEW reminder.
+    // Nothing is created until Save, so the usual checks (report channel, can_force) still apply.
+    async function openForm(lp, rem, tpl) {
       await ensureBrains();   // đảm bảo ô brain luôn có lựa chọn dù /viec/all chưa tải xong
       fcur = { mode: lp ? lp.mode : "full" };
-      fkind = rem ? "reminder" : "loop";
-      frmode = rem && rem.mode === "task" ? "task" : "notify";
+      fkind = (rem || tpl) ? "reminder" : "loop";
+      frmode = (rem && rem.mode === "task") || (tpl && tpl.mode === "task") ? "task" : "notify";
       // Mở form một nhắc hẹn cũ thì hiện ĐÚNG mức nó đang chạy (bản ghi cũ chưa có trường này
       // thì server đã quy về mặc định trong _view, nên chỗ này không phải đoán lại).
-      frmq = (rem && rem.muc_quyen) || "full";
+      frmq = (rem && rem.muc_quyen) || (tpl && tpl.muc_quyen) || "full";
       el.querySelector("#lpRemLast").checked = !!(rem && rem.remember_last);
       el.querySelector("#lpRemSpeak").checked = !!(rem && rem.speak);
       el.querySelector("#lpRemCall").checked = !!(rem && rem.call);
       const locked = !!(lp || rem);   // đang SỬA (loop hay nhắc) → khoá loại việc + brain
       el.querySelector("#lpSlug").value = lp ? lp.slug : "";
       el.querySelector("#lpRemId").value = rem ? rem.id : "";
-      el.querySelector("#lpName").value = rem ? (rem.label || "") : (lp ? lp.name : "");
-      el.querySelector("#lpBody").value = rem ? (rem.text || "") : (lp ? (lp.body || "") : "");
+      el.querySelector("#lpName").value = rem ? (rem.label || "") : tpl ? (tpl.label || "") : (lp ? lp.name : "");
+      el.querySelector("#lpBody").value = rem ? (rem.text || "") : tpl ? (tpl.text || "") : (lp ? (lp.body || "") : "");
       el.querySelector("#lpInterval").value = lp ? lp.interval_min : 120;
       // Cron sửa được nguyên văn (không phụ thuộc múi giờ). Hẹn MỘT LẦN thì để trống + nói rõ
       // "trống = giữ nguyên", vì viết lại mốc giờ tuyệt đối dễ lệch múi giờ máy người dùng.
       const when = el.querySelector("#lpRemWhen");
-      when.value = rem && rem.cron ? rem.cron : "";
+      when.value = rem && rem.cron ? rem.cron : (tpl && tpl.cron) || "";
       when.placeholder = (rem && !rem.cron)
         ? window.t("cs.si_when_keep", { luc: fmtWhen(rem.due_at) })
         : window.t("cs.si_when_ph2");
@@ -2244,6 +2256,12 @@
       el.querySelector("#lpName").focus();
     }
     el.querySelector("#lpNew").onclick = () => openForm(null);
+    el.querySelector("#lpMorning").onclick = async () => {
+      let d = null;
+      try { d = await (await fetch("/reminders/templates", { cache: "no-store" })).json(); } catch (e) {}
+      const tpl = ((d && d.templates) || []).find(x => x.id === "morning_brief");
+      if (tpl) openForm(null, null, tpl);
+    };
     el.querySelector("#lpCancel").onclick = () => { el.querySelector("#lpForm").style.display = "none"; };
 
     el.querySelector("#lpSave").onclick = async () => {
@@ -2621,13 +2639,15 @@
     // Health (0.199.0): incidents Javis Core is handling and the read-only scan, see dashboard/health-panel.js.
     const opened = {};
     function openTab(name) {
-      if (!["jobs", "health", "log"].includes(name)) name = "jobs";
+      if (!["jobs", "health", "watch", "log"].includes(name)) name = "jobs";
       lsSet(LS_TAB, name);
       el.querySelectorAll("[data-si-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.siTab === name)));
       el.querySelectorAll("[data-si-pane]").forEach(p => { p.hidden = p.dataset.siPane !== name; });
       if (opened[name]) return;
       opened[name] = true;
       if (name === "health" && window.JavisHealthPanel) window.JavisHealthPanel.mount(el.querySelector("#hpSection"));
+      // 0.239.0: theo dõi trang web không tốn token, see dashboard/web-watch.js.
+      if (name === "watch" && window.JavisWebWatch) window.JavisWebWatch.mount(el.querySelector("#wwSection"), fbrain);
       if (name === "log") loadLog();
     }
     el.querySelectorAll("[data-si-tab]").forEach(b => b.onclick = () => openTab(b.dataset.siTab));
@@ -3037,6 +3057,52 @@
       return t("kanban.ago_day", { n: Math.floor(sec / 86400) });
     }
 
+    // Câu hỏi việc đang chờ chủ trả lời (0.235.0), "" khi không có. Việc kẹt từ bản cũ chưa có sổ
+    // hỏi đáp thì câu hỏi chỉ còn trong block_reason; máy chủ vẫn nhận câu trả lời cho nó.
+    function pendingQuestion(t) {
+      if (t.status !== "blocked" || t.block_kind !== "needs_input") return "";
+      const qa = (t.metadata && Array.isArray(t.metadata.qa)) ? t.metadata.qa : [];
+      const last = qa[qa.length - 1];
+      return (last && !last.a) ? String(last.q || "") : String(t.block_reason || "");
+    }
+
+    function askBox(t) {
+      const q = pendingQuestion(t);
+      if (!q) return "";
+      return `<div class="kn-ask" data-ask="${esc(t.id)}">
+        <div class="kn-ask-q">${typeof ic === "function" ? ic("circle-help") : ""} ${esc(q)}</div>
+        <div class="kn-ask-row"><textarea class="kn-ask-input" rows="2" placeholder="${esc(window.t("kanban.answer_ph"))}"></textarea>
+        <button type="button" class="kn-ask-send">${esc(window.t("kanban.answer_send"))}</button></div>
+      </div>`;
+    }
+
+    function qaHistory(t) {
+      const qa = ((t.metadata && Array.isArray(t.metadata.qa)) ? t.metadata.qa : []).filter(x => x && x.a);
+      if (!qa.length) return "";
+      return `<div class="kn-detail-block"><h4>${esc(window.t("kanban.qa_title"))}</h4>${qa.map(x =>
+        `<div class="kn-qa"><div><b>${esc(window.t("kanban.qa_q"))}</b> ${esc(x.q || "")}</div><div><b>${esc(window.t("kanban.qa_a"))}</b> ${esc(x.a || "")}</div></div>`).join("")}</div>`;
+    }
+
+    function bindAskBoxes(scope) {
+      scope.querySelectorAll(".kn-ask[data-ask]").forEach(box => {
+        // Bấm vào ô trả lời không được mở ngăn kéo chi tiết của thẻ.
+        box.onclick = ev => ev.stopPropagation();
+        const input = box.querySelector(".kn-ask-input"), send = box.querySelector(".kn-ask-send");
+        send.onclick = async ev => {
+          ev.stopPropagation();
+          const answer = input.value.trim();
+          if (!answer) { input.focus(); return; }
+          send.disabled = true;
+          let r = null;
+          try { r = await post("/kanban/task/answer", { id: box.dataset.ask, answer }); } catch (e) {}
+          send.disabled = false;
+          if (!r || !r.ok) { alert((r && r.error) || t("kanban.cant_update")); return; }
+          closeDrawer();
+          await load();
+        };
+      });
+    }
+
     function taskActions(t) {
       const acts = [];
       // Việc dừng lại vì CHƯA ĐƯỢC CẤP QUYỀN thao tác ra ngoài: nút đầu tiên phải là nút cấp
@@ -3045,7 +3111,8 @@
       const canQuyen = t.status === "blocked" && t.block_kind === "capability";
       if (canQuyen) acts.push(`<button data-act="grant" data-id="${esc(t.id)}">${esc(window.t("kanban.act_grant"))}</button>`);
       if (t.status === "review") acts.push(`<button data-act="done" data-id="${esc(t.id)}">${CHECK_ICON} ${esc(window.t("kanban.act_approve"))}</button>`);
-      if (!canQuyen && (t.status === "blocked" || t.status === "review")) acts.push(`<button data-act="retry" data-id="${esc(t.id)}">↻ ${esc(window.t("kanban.act_retry"))}</button>`);
+      // Việc đang chờ câu trả lời: Thử lại chỉ chạy lại không kèm câu trả lời rồi hỏi y hệt, nên bỏ đi.
+      if (!canQuyen && (t.status === "blocked" || t.status === "review") && !pendingQuestion(t)) acts.push(`<button data-act="retry" data-id="${esc(t.id)}">↻ ${esc(window.t("kanban.act_retry"))}</button>`);
       if (t.status === "running") acts.push(`<button data-act="cancel" data-id="${esc(t.id)}">${esc(window.t("kanban.act_stop"))}</button>`);
       if (t.status !== "running") acts.push(`<button class="danger" data-act="archive" data-id="${esc(t.id)}">${esc(window.t("kanban.act_archive"))}</button>`);
       return acts;
@@ -3053,12 +3120,13 @@
 
     function taskHtml(t, area) {
       const acts = taskActions(t);
-      const reason = t.block_reason ? `<div class="kn-task-result" style="color:var(--red)">${esc(t.block_reason)}</div>` : "";
+      const ask = askBox(t);
+      const reason = !ask && t.block_reason ? `<div class="kn-task-result" style="color:var(--red)">${esc(t.block_reason)}</div>` : "";
       const result = !reason && t.result ? `<div class="kn-task-result">${esc(t.result.slice(0, 240))}</div>` : "";
       return `<div class="kn-task" data-task="${esc(t.id)}">
         <div class="kn-task-top"><div class="kn-task-title">${_prioIcon(t.priority)} ${esc(t.title)}</div><span class="kn-pill">${esc(_kstatus(t.status))}</span></div>
         <div class="kn-task-meta"><span>${esc(t.capability || "auto")}</span><span>attempt ${Number(t.attempts || 0)}/${Number(t.max_attempts || 3)}</span><span>${ago(t.updated_at)}</span></div>
-        ${reason}${result}
+        ${ask}${reason}${result}
         ${acts.length ? `<div class="kn-actions">${acts.join("")}</div>` : ""}
       </div>`;
     }
@@ -3099,6 +3167,7 @@
     function bindActions() {
       el.querySelectorAll(".kn-task[data-task]").forEach(row => row.onclick = () => showTask(row.dataset.task));
       bindActionButtons(el);
+      bindAskBoxes(el);
     }
 
     // Xoá tất cả của một khu. Hai khu hai hậu quả khác nhau nên hỏi bằng hai câu khác nhau:
@@ -3131,11 +3200,14 @@
         <div style="color:var(--text);white-space:pre-wrap">${esc(t.intent || "")}</div>
         <div class="kn-task-meta" style="margin-top:10px"><span>${esc(_kstatus(t.status))}</span><span>${esc(t.capability || "auto")}</span><span>mode ${esc(t.execution_mode || "auto")}</span><span>${esc(window.t("kanban.prio_lc"))} ${Number(t.priority || 2)}</span></div>
         ${acts.length ? `<div class="kn-actions" style="margin-top:14px">${acts.join("")}</div>` : ""}
-        ${t.block_reason ? `<div class="kn-detail-block"><h4>${esc(window.t("kanban.blocked_reason"))}</h4><div style="color:var(--red)">${esc(t.block_reason)}</div></div>` : ""}
+        ${pendingQuestion(t) ? `<div class="kn-detail-block"><h4>${esc(window.t("kanban.answer_title"))}${window.JavisInfo ? window.JavisInfo.btn(window.t("info.more")) : ""}</h4>${window.JavisInfo ? window.JavisInfo.body(esc(window.t("kanban.answer_info"))) : ""}${askBox(t)}</div>`
+          : (t.block_reason ? `<div class="kn-detail-block"><h4>${esc(window.t("kanban.blocked_reason"))}</h4><div style="color:var(--red)">${esc(t.block_reason)}</div></div>` : "")}
+        ${qaHistory(t)}
         ${t.result ? `<div class="kn-detail-block"><h4>${esc(window.t("kanban.result"))}</h4><div style="white-space:pre-wrap">${esc(t.result)}</div></div>` : ""}
         <div class="kn-detail-block"><h4>${esc(window.t("kanban.runs"))} (${runs.length})</h4>${runs.length ? runs.map(r => `<div class="kn-event"><b>${esc(r.status)}</b> · ${new Date(Number(r.started_at || 0) * 1000).toLocaleString()}${r.error ? `<div style="color:var(--red)">${esc(r.error)}</div>` : ""}</div>`).join("") : `<div class="dim">${esc(window.t("kanban.no_runs"))}</div>`}</div>
         <div class="kn-detail-block"><h4>${esc(window.t("kanban.lifecycle"))}</h4>${events.length ? events.map(v => `<div class="kn-event"><b>${esc(v.event_type)}</b> · ${new Date(Number(v.created_at || 0) * 1000).toLocaleString()}<div>${esc(v.message || "")}</div></div>`).join("") : `<div class="dim">${esc(window.t("kanban.no_events"))}</div>`}</div>`;
       bindActionButtons(drawerBody);
+      bindAskBoxes(drawerBody);
     }
 
     async function load() {
@@ -6631,7 +6703,18 @@
     const lo = document.getElementById("acLogout");
     if (lo) lo.onclick = async () => { await fetch("/auth/logout", { method: "POST" }); location.reload(); };
     const dis = document.getElementById("acDisable");
-    if (dis) dis.onclick = async () => { if (confirm(window.t("cs.ac_disable_confirm"))) { await fetch("/auth/disable", { method: "POST" }); renderAccount(el); } };
+    // 0.224.0: the server wants the current password (+ a 2FA code) and refuses on a public
+    // server, so the button is hidden there. The flow lives in app.js, shared with the settings block.
+    if (dis) {
+      fetch("/auth/status").then(r => r.json()).then(a => { if (a.require_login) dis.hidden = true; }).catch(() => {});
+      dis.onclick = async () => {
+        const curEl = document.getElementById("acCur");
+        if (!window.__javisDisableLogin) { acStatus.innerHTML = Icons.warn(window.t("cs.ac_err_dot")); return; }
+        const r = await window.__javisDisableLogin(curEl ? curEl.value : "");
+        if (r.ok) { renderAccount(el); return; }
+        if (r.error) acStatus.innerHTML = Icons.warn(r.error);
+      };
+    }
     renderTfa(el);
   }
 
@@ -6989,6 +7072,17 @@
       } catch (e) {}
     };
 
+
+    // Live over an API key: TV filter and reply pace (0.220.0). ChatGPT Live and the basic path
+    // decide turn-taking themselves, so the box only shows when the call really runs on an API key.
+    const liveBox = $("vcLiveBox");
+    if (liveBox) {
+      liveBox.hidden = call.engine !== "api";
+      $("vcLiveProactive").value = v.live_proactive === false ? "off" : "on";
+      $("vcLiveTurn").value = v.live_turn || "normal";
+      $("vcLiveProactive").onchange = () => luuGiong({ live_proactive: $("vcLiveProactive").value === "on" });
+      $("vcLiveTurn").onchange = () => luuGiong({ live_turn: $("vcLiveTurn").value });
+    }
 
     $("vcEngine").value = call.setting || "auto";
     $("vcEngine").onchange = async () => {
@@ -7690,17 +7784,19 @@
     .cp-ico-btn .ic{ vertical-align:-2px; }
     /* Thu gọn cột Hội thoại/Thư mục như sidebar (chủ yêu cầu 27/08): desktop thu về dải
        hẹp chỉ còn nút mở lại (.side-thu, có nhớ), màn hẹp giữ drawer như cũ. Nút thu nằm
-       ngay góc panel (cùng icon panel-left với nút thu rail); nút lịch sử trên thanh tiêu
-       đề cũng toggle được cùng trạng thái. */
-    .cp-side-toggle{ display:inline-block; }
+       ngay góc panel (cùng icon panel-left với nút thu rail).
+       0.243.0: the clock button on the title bar duplicated that corner button, so on a
+       computer it is gone; on a phone the title bar keeps a panel-left button that opens the
+       drawer, and the same corner button closes it. */
+    .cp-side-toggle{ display:none; }
     .cside-thu-btn, .cside-expand{ display:none; }
+    .chatpage-side .cside-tabs{ padding-right:34px; }
+    .cside-thu-btn{ display:flex; align-items:center; justify-content:center;
+      position:absolute; top:16px; right:10px; width:27px; height:27px; border-radius:7px;
+      border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; }
+    .cside-thu-btn:hover{ color:var(--accent); border-color:var(--accent); }
     @media (min-width:861px){
       .chatpage-side{ position:relative; }
-      .chatpage-side .cside-tabs{ padding-right:34px; }
-      .cside-thu-btn{ display:flex; align-items:center; justify-content:center;
-        position:absolute; top:16px; right:10px; width:27px; height:27px; border-radius:7px;
-        border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; }
-      .cside-thu-btn:hover{ color:var(--accent); border-color:var(--accent); }
       .chatpage.side-thu .chatpage-side{ width:46px; padding:14px 8px; align-items:center; overflow:hidden; }
       .chatpage.side-thu .chatpage-side > :not(.cside-expand){ display:none; }
       .chatpage.side-thu .chatpage-side > .cside-expand{ display:flex; align-items:center;
@@ -7786,7 +7882,9 @@
       .chatpage-bar{ gap:6px; min-width:0; }
       .cp-min span{ display:none; }
       .cp-min{ padding:4px 8px; }
-      .cp-side-toggle{ display:inline-block; }
+      .cp-side-toggle{ display:inline-flex; align-items:center; padding:4px 8px; }
+      .cside-thu-btn{ width:34px; height:34px; top:12px; }
+      .chatpage-side .cside-tabs{ padding-right:42px; }
       .chatpage-side{ position:absolute; left:0; top:0; bottom:0; z-index:6; width:min(84vw,300px);
         transform:translateX(-105%); transition:transform .2s ease; box-shadow:10px 0 40px var(--shadow-veil); background:var(--bg); }
       .chatpage.side-open .chatpage-side{ transform:none; }
@@ -7911,6 +8009,39 @@
     };
   }
   if (typeof window !== "undefined") window.JavisNeoCotTrai = _neoCotTrai;
+
+  // 0.243.0 (owner, 20/10/2026): the clock button on the title bar did exactly what the
+  // panel-left button in the column corner does, so the column now has ONE pair of buttons:
+  // collapse in its corner, expand on the narrow strip left behind. On a phone the column is
+  // a drawer, so the same corner button closes the drawer and the title bar keeps only a
+  // panel-left button to open it (CSS hides that one on a computer).
+  // Call AFTER JavisChatSide.mount: mount rewrites the column's innerHTML and would drop them.
+  function _setSideFolded(page, folded) {
+    page.classList.toggle("side-thu", folded);
+    try { localStorage.setItem("javis_chatside_thu", folded ? "1" : "0"); } catch (e) {}
+  }
+  function _addSideFoldButtons(page, sideEl) {
+    if (!page || !sideEl) return;
+    sideEl.querySelectorAll(":scope > .cside-thu-btn, :scope > .cside-expand").forEach((n) => n.remove());
+    const narrow = () => window.matchMedia("(max-width: 860px)").matches;
+    const foldBtn = document.createElement("button");
+    foldBtn.className = "cside-thu-btn"; foldBtn.type = "button";
+    foldBtn.title = window.t("cs.cp_side_collapse"); foldBtn.dataset.i18nTitle = "cs.cp_side_collapse";
+    foldBtn.setAttribute("aria-label", foldBtn.title); foldBtn.dataset.i18nAria = "cs.cp_side_collapse";
+    foldBtn.innerHTML = ic("panel-left");
+    foldBtn.onclick = () => {
+      if (narrow()) page.classList.remove("side-open");
+      else _setSideFolded(page, true);
+    };
+    const openBtn = document.createElement("button");
+    openBtn.className = "cside-expand"; openBtn.type = "button";
+    openBtn.title = window.t("cs.cp_side_expand"); openBtn.dataset.i18nTitle = "cs.cp_side_expand";
+    openBtn.setAttribute("aria-label", openBtn.title); openBtn.dataset.i18nAria = "cs.cp_side_expand";
+    openBtn.innerHTML = ic("panel-left");
+    openBtn.onclick = () => _setSideFolded(page, false);
+    sideEl.appendChild(foldBtn); sideEl.appendChild(openBtn);
+  }
+  if (typeof window !== "undefined") window.JavisSideFoldButtons = _addSideFoldButtons;
 
   function _borrowNoteEditor(into) {
     const ed = document.getElementById("noteEditor");
@@ -8041,7 +8172,9 @@
         '<aside class="chatpage-side" id="chatPageSide"></aside>' +
         '<div class="chatpage-main">' +
           '<div class="chatpage-bar">' +
-            '<button class="cp-ico-btn cp-side-toggle" type="button" data-i18n-title="cs.cp_toggle_hist" title="' + esc(window.t("cs.cp_toggle_hist")) + '">' + ic("history") + '</button>' +
+            // Phone only (CSS hides it on a computer): opens the Conversations/Files drawer.
+            '<button class="cp-ico-btn cp-side-toggle" type="button" data-i18n-title="cs.cp_side_open" data-i18n-aria="cs.cp_side_open" ' +
+              'title="' + esc(window.t("cs.cp_side_open")) + '" aria-label="' + esc(window.t("cs.cp_side_open")) + '">' + ic("panel-left") + '</button>' +
             // Chữ nằm trong <span> để màn hẹp ẩn được, giữ lại icon. Để chữ trần thì không
             // có cách nào ẩn mà không mất luôn cả nút.
             '<button class="cp-ico-btn cp-min" type="button" id="cpMinBtn" data-i18n-title="cs.cp_min_title" data-i18n-aria="cs.cp_min_title" ' +
@@ -8069,28 +8202,10 @@
     // Thu gọn cột Hội thoại/Thư mục: màn hẹp giữ drawer như cũ; desktop thu về dải hẹp
     // và nhớ lựa chọn. Nút thu/mở gắn SAU khi JavisChatSide.mount vì mount ghi đè innerHTML
     // của panel - gắn trước là nút biến mất.
-    const isNar = () => window.matchMedia("(max-width: 860px)").matches;
     const sideEl = el.querySelector("#chatPageSide");
-    const datSideThu = (thu) => {
-      page.classList.toggle("side-thu", thu);
-      try { localStorage.setItem("javis_chatside_thu", thu ? "1" : "0"); } catch (e) {}
-    };
+    const datSideThu = (thu) => _setSideFolded(page, thu);
     try { if (localStorage.getItem("javis_chatside_thu") === "1") page.classList.add("side-thu"); } catch (e) {}
-    if (sideEl) {
-      const thuBtn = document.createElement("button");
-      thuBtn.className = "cside-thu-btn"; thuBtn.type = "button";
-      thuBtn.title = window.t("cs.cp_side_collapse"); thuBtn.dataset.i18nTitle = "cs.cp_side_collapse"; thuBtn.innerHTML = ic("panel-left");
-      thuBtn.onclick = () => datSideThu(true);
-      const moBtn = document.createElement("button");
-      moBtn.className = "cside-expand"; moBtn.type = "button";
-      moBtn.title = window.t("cs.cp_side_expand"); moBtn.dataset.i18nTitle = "cs.cp_side_expand"; moBtn.innerHTML = ic("panel-left");
-      moBtn.onclick = () => datSideThu(false);
-      sideEl.appendChild(thuBtn); sideEl.appendChild(moBtn);
-    }
-    el.querySelector(".cp-side-toggle").onclick = () => {
-      if (isNar()) { page.classList.toggle("side-open"); return; }
-      datSideThu(!page.classList.contains("side-thu"));
-    };
+    _addSideFoldButtons(page, sideEl);
     // Cột Hội thoại/Thư mục kéo được ở đường biên phải (0.148.0, col-resize.js); màn hẹp là ngăn kéo, CSS ẩn tay kéo.
     if (sideEl && window.JavisColResize) {
       // 0.196.0: let go narrower than the fold point and the column folds away, as its collapse button does.
@@ -8100,7 +8215,7 @@
       window.JavisColResize.apply(oSide);
       window.JavisColResize.attach(sideEl, oSide);
     }
-    _neoCotTrai(page, el.querySelector("#chatPageSide"), slot);
+    el.querySelector(".cp-side-toggle").onclick = _neoCotTrai(page, sideEl, slot);
     // Khung chat PHẢI khi đang sửa file (.edit-on): nút thu co vào bên phải + nhớ trạng
     // thái. Nút gắn vào slot SAU khi mượn node chat nên không bị _borrowChatNodes chen chỗ.
     const mainEl = el.querySelector(".chatpage-main");

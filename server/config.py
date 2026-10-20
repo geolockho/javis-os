@@ -75,6 +75,8 @@ _DEFAULT = {
         "live_provider": "gemini",     # gemini | openai (đều cần API key ở trang Models)
         "live_model": "",              # rỗng = gợi ý trong voice_live.PROVIDERS
         "live_voice": "",
+        "live_proactive": True,        # Live qua API: bỏ qua tiếng không nói với Javis (TV, người bên cạnh)
+        "live_turn": "normal",         # fast | normal | slow: nhịp trả lời của Live qua API
     },
     "model": {
         # --- Mô hình MAIN MODEL theo provider (mới) ---
@@ -526,6 +528,8 @@ _SECRET_PATHS = (
     # Secret TOTP là thứ SINH RA mã đăng nhập, nên nó ngang hàng mật khẩu chứ không phải một
     # tuỳ chọn. Ai đọc được nó thì tự sinh mã 2FA mãi mãi, và chủ máy không hề hay biết.
     "auth.totp.secret",
+    # Cloudflare Tunnel token (remote_tunnel.py): whoever holds it can serve any site on the owner's tunnel hostname.
+    "remote_tunnel.token",
 )
 
 
@@ -1144,8 +1148,16 @@ def auth_enabled(cfg=None):
 def require_login():
     """Có BẮT BUỘC đăng nhập để dùng Javis không (kể cả khi CHƯA đặt mật khẩu → ép setup).
     - JAVIS_REQUIRE_LOGIN=1/0 ép bật/tắt tường minh.
+    - Built-in remote access (Cloudflare Tunnel, remote_tunnel.py) is on → True.
     - Mặc định: BẬT khi server nghe public (JAVIS_HOST=0.0.0.0, vd Docker/Hostinger/VPS) -
       vì Claude chạy full quyền, không được để hở ai cũng vào được."""
+    # The built-in Cloudflare Tunnel (remote_tunnel.py) puts a localhost-only Javis on the Internet, which the bind
+    # address below cannot see. It wins over an explicit JAVIS_REQUIRE_LOGIN=0 for the same reason.
+    try:
+        if (read_settings().get("remote_tunnel") or {}).get("enabled"):
+            return True
+    except Exception:
+        pass
     v = os.getenv("JAVIS_REQUIRE_LOGIN", "").strip().lower()
     if v in ("1", "true", "yes", "on"):
         return True
@@ -1208,6 +1220,15 @@ def totp_enabled(cfg=None):
     bật trước khi người dùng chứng minh app của họ sinh đúng mã là tự khoá mình ra ngoài."""
     t = _totp_conf(cfg)
     return bool(t.get("enabled")) and bool(t.get("secret"))
+
+
+def kept_totp(cfg=None) -> dict:
+    """`{"totp": ...}` to carry into a NEW `auth` object, or `{}` when there is nothing to keep.
+
+    Turning off login (0.224.0) keeps the 2FA block, so whoever creates the account again (setup
+    page, JAVIS_ADMIN_PASSWORD at boot) must not replace `auth` wholesale and drop it."""
+    t = ((cfg or read_settings()).get("auth") or {}).get("totp")
+    return {"totp": t} if isinstance(t, dict) and t.get("enabled") else {}
 
 
 def totp_secret(cfg=None):
@@ -1576,7 +1597,8 @@ def provision_admin_from_env():
     marker = {"username": user, "hash": hash_password(pw, m_salt)[0], "salt": m_salt}
     if not a.get("password_hash"):
         h, salt = hash_password(pw)
-        cfg["auth"] = {"username": user, "password_hash": h, "salt": salt, "env_applied": marker}
+        cfg["auth"] = {**kept_totp(cfg), "username": user, "password_hash": h, "salt": salt,
+                       "env_applied": marker}
         write_settings(cfg)
         return "created"
     applied = a.get("env_applied") if isinstance(a.get("env_applied"), dict) else {}
