@@ -122,3 +122,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Lỗi No scopes requested khi cài Slack app]]
+
+## [2026-10-23] ingest | tự học từ chat
+
+Đã tạo:
+- [[Cấp kubeconfig theo namespace có duyệt admin]]

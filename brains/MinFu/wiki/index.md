@@ -43,3 +43,4 @@ Tri thức chưng cất trong MinFu. Đọc trang liên quan và citation nguồ
 - [[devops/Vertical Pod Autoscaler (VPA)]] - ## Tóm tắt
 Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `requests
 - [[Lỗi No scopes requested khi cài Slack app]] - Slack báo "Invalid permissions requested / No scopes requested" khi cài app, khi
+- [[Cấp kubeconfig theo namespace có duyệt admin]] - Cấp quyền kubeconfig cho dev nên dựa trên danh sách namespace được phép (whiteli
