@@ -75,3 +75,5 @@
 - [Tự robocopy sang repo sau mỗi lần sửa kubeconfig-generator](facts/tu-dong-robocopy-sau-moi-lan-sua-kubeconfig.md) - Sau mỗi lần sửa code kubeconfig-generator trong workspace, Javis tự robocopy sang repo D:\FSEL\other-services\kubeconfig-generator.
 - [Cluster fsel-prod và fsel-local chưa cài Kyverno hay Gatekeeper](facts/cluster-fsel-chua-co-kyverno-gatekeeper.md) - Kiểm ngày 2026-10-23: fsel-prod K8s v1.25.10, fsel-local v1.34.0, cả hai chưa có Kyverno hay Gatekeeper.
 - [Lệnh robocopy thiếu /XO làm ghi đè .gitignore trong repo](facts/robocopy-thieu-xo-ghi-de-gitignore.md) - Lần sync đầu của kubeconfig-generator không có /XO, nên .gitignore trong repo bị thay bằng bản gốc.
+- [Tiến độ kubeconfig-generator sau khi chuyển cách B và sửa values ArgoCD](facts/tien-do-kubeconfig-generator-sau-cach-b.md) - Đến 2026-10-23: code cách B 89 test qua, values ArgoCD đã sửa, chưa commit, chưa push, chưa sync.
+- [Service kubeconfig-generator trỏ cổng 4180 của oauth2-proxy](facts/argocd-values-kubeconfig-generator-service-4180.md) - Chart fsel đặt targetPort bằng service.port, nên Service phải trỏ 4180 để Ingress vào được.

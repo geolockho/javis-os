@@ -1,4 +1,5 @@
 ---
+superseded_by: tien-do-kubeconfig-generator-sau-cach-b
 type: reference
 provenance: assistant
 origin: javis-learned
@@ -12,3 +13,7 @@ Còn mở:
 - Chốt domain email cho oauth2-proxy.
 - Chốt có bỏ object Namespace khỏi RBAC không, vì ArgoCD prune có thể xoá namespace dùng chung.
 - Secret đã tạo với GROUP_MAP_PATH thì tạo lại với NAMESPACES_PATH.
+
+
+## Lịch sử
+- [2026-10-23] Bị thay thế bởi [[tien-do-kubeconfig-generator-sau-cach-b]] (user đổi thông tin).
