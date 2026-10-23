@@ -52,3 +52,5 @@
 - [Cách xưng hô của người dùng: t và m](facts/cach-xung-ho-user-t-m.md) - Người dùng tự xưng "t", gọi Javis là "m" (ghi nhận từ hội thoại 2026-10-14).
 - [Đang muốn công cụ cấp kubeconfig theo namespace cho dev](facts/cong-cu-kubeconfig-theo-namespace.md) - Người dùng muốn một công cụ cấp kubeconfig giới hạn theo namespace cho dev; đang hỏi cách viết prompt, chưa bắt đầu viết (thực tế tính đến 2026-10-23).
 - [Yêu cầu công cụ kubeconfig theo namespace đã có bản mô tả](facts/cong-cu-kubeconfig-theo-namespace-yeu-cau.md) - Người dùng đã điền xong prompt: 2 cluster, web nhỏ, read-only, có bước duyệt qua màn hình admin (thực tế tính đến 2026-10-23).
+- [Chốt dựng công cụ kubeconfig theo namespace bằng Javis](facts/dung-cong-cu-kubeconfig-bang-javis.md) - Người dùng muốn Javis tạo agent, skill và workflow để dựng công cụ cấp kubeconfig, rồi push code lên GitLab (thực tế tính đến 2026-10-23).
+- [Repo GitLab của công cụ kubeconfig-generator](facts/repo-kubeconfig-generator.md) - Repo đích để push code công cụ cấp kubeconfig theo namespace (thực tế tính đến 2026-10-23).
