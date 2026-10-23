@@ -18,3 +18,7 @@ Thực tế tính đến 2026-10-23:
 
 ## Lịch sử
 - [2026-10-23] Bị thay thế bởi [[code-kubeconfig-generator-da-co-trong-workspace]] (user đổi thông tin).
+
+
+## Lịch sử
+- [2026-10-23] Bị thay thế bởi [[tien-do-kubeconfig-generator-sau-viet-code]] (user đổi thông tin).
