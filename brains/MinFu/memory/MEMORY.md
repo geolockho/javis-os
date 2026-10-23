@@ -55,3 +55,6 @@
 - [Chốt dựng công cụ kubeconfig theo namespace bằng Javis](facts/dung-cong-cu-kubeconfig-bang-javis.md) - Người dùng muốn Javis tạo agent, skill và workflow để dựng công cụ cấp kubeconfig, rồi push code lên GitLab (thực tế tính đến 2026-10-23).
 - [Repo GitLab của công cụ kubeconfig-generator](facts/repo-kubeconfig-generator.md) - Repo đích để push code công cụ cấp kubeconfig theo namespace (thực tế tính đến 2026-10-23).
 - [Chốt cách triển khai công cụ kubeconfig-generator](facts/quyet-dinh-cong-cu-kubeconfig-generator.md) - Clone tại D:\FSEL\other-services\kubeconfig-generator, push thẳng main, commit dưới tên hophu, secret qua k8s; namespace test chờ, dừng chờ duyệt kiến trúc.
+- [Kiến trúc kubeconfig-generator đã được duyệt](facts/kien-truc-kubeconfig-generator-da-duyet.md) - User duyệt kiến trúc Javis đề xuất cho công cụ cấp kubeconfig, chỉ sửa: DB chỉ dùng PostgreSQL (ngày 2026-10-23).
+- [FKE không giới hạn hạn token](facts/fke-khong-gioi-han-han-token.md) - Theo user, FKE không giới hạn hạn TokenRequest, nên kubeconfig hạn dài dùng được (ghi nhận 2026-10-23).
+- [Đường mạng từ dev tới API FKE](facts/duong-mang-dev-toi-api-fke.md) - Máy dev gọi được hai endpoint API kubeconfig: api.djtaj383.prd.m.fke.fptcloud.com và 101.99.7.167:6444 (theo user, 2026-10-23).
