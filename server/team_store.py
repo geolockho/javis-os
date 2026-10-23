@@ -61,6 +61,10 @@ CAP_MAX = {"volunteer_k": 5, "judge_off_batch": 1, "reply_parallel": 1}
 FIXED_CAPS = {"running_jobs": 1, "no_progress": 2}
 TEAM_STATUS = ("active", "paused", "archived")
 STEP_KINDS = ("plan", "work", "help", "synthesize", "reply")
+# A step that waits for every step before it (a sequential plan), see `TeamStore.add_step(held=...)`.
+STEP_HELD = "held"
+# Steps that still have to run or finish: a job with one of these left is not done.
+STEP_OPEN = ("queued", STEP_HELD, "running", "waiting", "waiting_owner")
 TURN_ROLES = ("leader_reply", "member_reply", "plan", "work", "help", "synthesize", "member_volunteer")
 # Kết cục của một lượt trả lời trò chuyện (0.142.0), lưu bền để tải lại trang hay khởi động lại máy chủ không mất dấu:
 # queued (đang chờ) -> running (đang trả lời) -> done (xong) | error (lỗi, kèm lý do, có Thử lại).
@@ -219,8 +223,13 @@ class TeamStore:
         team_migration.snapshot_once(self.path, "team_reactions", "axis", suffix=T2_SNAPSHOT_SUFFIX)
         # 0.207.0: one copy before the approval gate's column, so a downgrade can restore the store as it was.
         team_migration.snapshot_once(self.path, "teams", "work_mode", suffix=GATE_SNAPSHOT_SUFFIX)
+        team_migration.snapshot_before_table(self.path, 'teams', 'team_cap_settings', '.pre-0.283.0')
         with closing(self._conn()) as c:
             c.executescript(_SCHEMA)
+            c.execute('CREATE TABLE IF NOT EXISTS team_cap_settings(team_id TEXT NOT NULL, cap TEXT NOT NULL, '
+                      'set_at REAL NOT NULL, event_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(team_id,cap))')
+            if 'event_id' not in {r[1] for r in c.execute('PRAGMA table_info(team_cap_settings)')}:
+                c.execute('ALTER TABLE team_cap_settings ADD COLUMN event_id INTEGER NOT NULL DEFAULT 0')
             for table, col, decl in _T2_REACTION_COLS:
                 if col not in {r[1] for r in c.execute(f"PRAGMA table_info({table})").fetchall()}:
                     c.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
@@ -526,7 +535,18 @@ class TeamStore:
             after = dict(before, **clean)
             c.execute("UPDATE teams SET caps_json=?, updated_at=? WHERE team_id=?", (_j(after), time.time(), team_id))
             self._event(c, team_id, "caps_set", by, before, after)
+            event_id = c.execute('SELECT MAX(id) FROM team_events WHERE team_id=?', (team_id,)).fetchone()[0]
+            if by == 'owner':
+                for key in clean:
+                    c.execute('INSERT INTO team_cap_settings(team_id,cap,set_at,event_id) VALUES(?,?,?,?) '
+                              'ON CONFLICT(team_id,cap) DO UPDATE SET set_at=excluded.set_at,event_id=excluded.event_id',
+                              (team_id, key, time.time(), event_id))
         return self.get(team_id)
+
+    def owner_caps_after(self, team_id, event_id):
+        with closing(self._conn()) as c:
+            return {r['cap'] for r in c.execute('SELECT cap FROM team_cap_settings WHERE team_id=? AND event_id>?',
+                                                (team_id, int(event_id)))}
 
     def log_event(self, team_id: str, kind: str, by: str, before: Any = None, after: Any = None) -> None:
         with self._Tx(self) as c:
@@ -686,7 +706,9 @@ class TeamStore:
                 "note": r["note"], "created_at": r["created_at"], "updated_at": r["updated_at"]}
 
     def add_step(self, task_id: str, team_id: str, kind: str, agent_key: str, job_revision: int, brief: str,
-                 input_refs: list, parent_step: Optional[str] = None) -> dict:
+                 input_refs: list, parent_step: Optional[str] = None, held: bool = False) -> dict:
+        """`held` (customer report 0.270, Code 23): the step waits for every step before it. It is not queued, so no
+        wave or tick picks it; `release_held_step` queues it once the job has nothing else left to run."""
         if kind not in STEP_KINDS:
             raise TeamError("loại bước không hợp lệ")
         now = time.time()
@@ -695,9 +717,9 @@ class TeamStore:
                                 (task_id,)).fetchone()[0])
             sid = "st_" + secrets.token_hex(8)
             c.execute("INSERT INTO team_steps(step_id,task_id,team_id,seq,kind,agent_key,job_revision,brief,"
-                      "input_refs_json,parent_step,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                      "input_refs_json,parent_step,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (sid, task_id, team_id, seq, kind, agent_key, int(job_revision), str(brief or "")[:8000],
-                       _j(list(input_refs or [])), parent_step, now, now))
+                       _j(list(input_refs or [])), parent_step, STEP_HELD if held else "queued", now, now))
             return self._step(c.execute("SELECT * FROM team_steps WHERE step_id=?", (sid,)).fetchone())
 
     def steps(self, task_id: str) -> list:
@@ -722,6 +744,20 @@ class TeamStore:
             return [self._step(r) for r in c.execute(
                 "SELECT * FROM team_steps WHERE task_id=? AND status='queued' ORDER BY seq", (task_id,)).fetchall()]
 
+    def release_held_step(self, task_id: str, extra_inputs: Optional[list] = None) -> Optional[dict]:
+        """Queue the FIRST held step of the job (lowest seq), its inputs extended with `extra_inputs` (the results of the
+        steps before it, so the step sees what it waited for). None when no step is held."""
+        with self._Tx(self) as c:
+            r = c.execute("SELECT * FROM team_steps WHERE task_id=? AND status=? ORDER BY seq LIMIT 1",
+                          (task_id, STEP_HELD)).fetchone()
+            if r is None:
+                return None
+            refs = list(json.loads(r["input_refs_json"] or "[]"))
+            refs += [x for x in (extra_inputs or []) if x not in refs]
+            c.execute("UPDATE team_steps SET status='queued', input_refs_json=?, updated_at=? WHERE step_id=? AND status=?",
+                      (_j(refs), time.time(), r["step_id"], STEP_HELD))
+            return self._step(c.execute("SELECT * FROM team_steps WHERE step_id=?", (r["step_id"],)).fetchone())
+
     def claim_step(self, step_id: str) -> bool:
         with self._Tx(self) as c:
             cur = c.execute("UPDATE team_steps SET status='running', updated_at=? WHERE step_id=? AND status='queued'",
@@ -744,7 +780,7 @@ class TeamStore:
     def cancel_open_steps(self, task_id: str, note: str) -> int:
         with self._Tx(self) as c:
             return c.execute("UPDATE team_steps SET status='cancelled', note=?, updated_at=? "
-                             "WHERE task_id=? AND status IN ('queued','waiting','waiting_owner')",
+                             "WHERE task_id=? AND status IN ('queued','held','waiting','waiting_owner')",
                              (note, time.time(), task_id)).rowcount
 
     def set_step_status(self, step_id: str, status: str, note: str = "") -> None:

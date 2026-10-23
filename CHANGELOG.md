@@ -6,6 +6,171 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.293.0] - 2026-10-23
+### Cải thiện
+- **Chuẩn bị các lượt thử có đối chứng.** Đặt chỗ cho quản lý thử nghiệm, ghép cặp bản gốc với đề xuất và báo cáo kết quả. Phạm vi cuối cùng sẽ được ghi sau kiểm chứng; chưa bật candidate thay đổi hay áp dụng trên brain thật.
+
+## [0.292.0] - 2026-10-23
+### Thêm mới
+- **Duyệt đề xuất sửa thân skill.** Studio có màn hình xem nguyên văn bản gốc, diff và kết quả thử đã lưu; chủ sở hữu có thể tạo đề xuất, cấp quyền sửa đúng vùng hoặc diff và thu hồi quyền. Nội dung được lưu mã hóa riêng, giữ nguyên hash và byte khi tải xuống. Chưa bật thử candidate thay đổi hoặc áp dụng trên bộ não thật.
+
+## [0.291.0] - 2026-10-23
+### Thêm mới
+- **Chuẩn bị thử agent và skill trên dữ liệu cố định.** Xây phép thử riêng, bộ case và hồ sơ nghiệm thu để kiểm thay đổi mà không chạm nội dung hay hành động đang dùng. Chưa tự bật trên bộ não thật.
+
+## [0.290.0] - 2026-10-22
+### Thêm mới
+- **Thanh mục tiêu ngay trên khung chat.** Đặt `/goal` xong là có một thanh để bám theo: chữ mục tiêu, đồng hồ đếm thời gian, nút xoá, tạm dừng hay chạy tiếp, và mũi tên xem chi tiết (vòng mấy, còn thiếu gì). Thanh hiện ở mọi khung chat.
+- **Nhiều mục tiêu cùng lúc.** Mỗi hội thoại một mục tiêu. Có từ hai mục tiêu trở lên thì đầu thanh hiện số, bấm vào xổ ra danh sách, bấm một dòng để mở đúng hội thoại đó.
+- **Lệnh đã gõ được tô màu.** Gõ `/goal`, `/plan` hay tên một skill vào khung chat là phần lệnh đổi sang màu cam, nhìn là biết Javis sẽ hiểu chỗ nào là lệnh.
+### Cải thiện
+- **Mục tiêu tạm dừng chứ không mất.** Bấm Dừng hay nhắn chen giữa chừng thì mục tiêu chỉ tạm dừng; sang hội thoại khác thì nó chờ, quay lại là chạy tiếp; tải lại trang vẫn còn trên thanh.
+- **Menu lệnh / gọn và thẳng hàng.** Mỗi lệnh một dòng, cột lệnh rộng bằng nhau nên mô tả không còn lệch, chữ nhỏ lại, có tiêu đề nhóm Lệnh, Cộng sự, Quy trình, Skill.
+
+## [0.289.0] - 2026-10-22
+### Sửa lỗi
+- **Webhook: AI giờ đọc trọn sự kiện.** Trước đây AI chỉ nhận 8.000 ký tự đầu, nên ngay một đơn POSCake một món cũng bị cắt mất mã đơn và tổng tiền, và lời dặn "xem trạng thái rồi làm" có thể đoán sai. Giờ AI nhận tới 40.000 ký tự, viết gọn trên một dòng; dài hơn thì bị cắt và AI được báo rõ là đã cắt.
+- Trang chi tiết sự kiện hiện tới 64.000 ký tự thay vì 8.000.
+### Cải thiện
+- Hướng dẫn webhook dùng đúng tên trường thật của POSCake, và có thêm cách dùng một webhook cho mọi nguồn, để lời dặn tự quyết định làm gì.
+
+## [0.287.0] - 2026-10-22
+### Thêm mới
+- **Đặt nền cho cải tiến có kiểm chứng.** Chuẩn bị quản lý bản agent và skill để thử thay đổi riêng, giữ nguyên nội dung đang dùng. Chưa tự chạy phép thử hoặc áp dụng trên bộ não thật.
+
+## [0.286.0] - 2026-10-22
+### Sửa lỗi
+- **Chọn model trong chat với trợ lý không còn đổi model của khung chat chính.** Áp dụng cho mọi trợ lý lẫn Javis Core: model chọn ở đó chỉ ghim cho đúng cuộc chat ấy. Trợ lý chưa chọn model thì chạy theo model chính, và có thêm dòng "Theo model của khung chat chính" để bỏ ghim.
+- **Model ghim của trợ lý hết hạn mức gói thì tự chạy tạm model của khung chat chính,** tới khi gói mở lại thì quay về model đã ghim.
+- **Javis Core chạy theo mức suy luận của khung chat chính** cho tới khi bạn chọn mức riêng cho nó. Mức suy luận trong chat trợ lý luôn được lưu cho đúng trợ lý đó.
+
+## [0.285.0] - 2026-10-22
+### Cải thiện
+- **Nghiệm thu đúng sản phẩm Team đã làm.** Nhóm bật tính năng được gắn tiêu chí mặc định; xác nhận đi cùng kết quả đã lưu và phiên bản đang xem.
+- **Theo dõi mức dùng, giữ chất lượng.** Phân biệt số yêu cầu và chi phí biết rõ, ước tính hoặc quy đổi từ thuê bao. Mức tham khảo không dừng việc hay đổi model.
+- **Chuẩn bị so sánh nghiệp vụ công bằng.** Bộ pilot chạy thử khô với hai nhánh tách biệt; kết quả nghiệp vụ thật vẫn cần dữ liệu thật và chủ chấm.
+
+## [0.284.0] - 2026-10-22
+### Sửa lỗi
+- **Đổi mức suy luận của Javis Core không còn kéo theo khung chat chính.** Javis Core giờ có mức suy luận riêng như mọi trợ lý khác, mặc định Medium. Trước đây chat với Javis Core dùng chung mức của khung chat chính, nên đổi ở đây là bên kia đổi theo.
+### Cải thiện
+- Mức suy luận trong phần cài đặt trợ lý dùng cùng tên tiếng Anh với khung chat chính: Off, Light, Medium, High, Extra, Ultra.
+
+## [0.282.0] - 2026-10-22
+### Sửa lỗi
+- **Bot Zalo không còn bị "điếc" khi có một phiên khác của cùng nick đang chạy.** Sau lần cập nhật hôm nay, một bản Zalo cũ sót lại cứ giành kết nối, bot chỉ nghe được tin vài giây sau mỗi lần nối lại nên bỏ lỡ tin tag và tin nhắn riêng. Javis giờ tự tắt bản Zalo cũ trên máy, thẻ bot báo đỏ, và chuông báo bạn nếu phiên giành kết nối nằm ở nơi khác (Zalo Web, một Javis khác).
+- **Câu bot trả lời mà Zalo không nhận thì báo lỗi gửi,** không còn hiện như đã gửi trong khi khách không thấy gì. Zalo MCP 1.6.1 cũng gửi tin đúng qua phiên mới sau mỗi lần nối lại.
+### Thêm mới
+- **Bot đọc được tag Zalo của cuộc chat** (Gia đình, Bạn bè, Công ty, Khách...) nên biết mình đang nói với ai. Form bot Zalo cá nhân có thêm mục **"Không trả lời các cuộc chat có tag Zalo"**: tick tag lấy thẳng từ Zalo hoặc gõ tên, chat mang tag đó thì bot im hẳn.
+- **Bot Zalo cá nhân tự quyết nhắn nhiều tin ngắn** (tối đa 4 tin) khi câu trả lời có từ hai ý trở lên, thay vì một tin dài khó đọc.
+
+## [0.281.0] - 2026-10-22
+### Cải thiện
+- **Chạy bộ test không còn làm đầy ổ C.** Trước đây mỗi lượt chạy để lại hơn 1000 thư mục rác trong thư mục Temp của Windows, dồn lại có lúc tới 50.000 thư mục, khoảng 30 GB. Giờ mỗi file test dùng một thư mục tạm riêng và tự xoá khi chạy xong.
+- **Lần chạy bị dừng ngang cũng không để lại rác lâu.** Thư mục của lượt bị tắt giữa chừng được dọn ở lần chạy test kế tiếp.
+
+## [0.280.0] - 2026-10-22
+### Cải thiện
+- **Tin nhắn riêng 1-1: bot được im và báo bạn khi gặp câu khó.** Ở chế độ Tự đánh giá, tin nhắn riêng giờ có thêm lựa chọn thứ ba ngoài trả lời và im: câu mà tài liệu và Agent không đủ căn cứ, hoặc việc bạn phải tự quyết (giảm giá, khiếu nại, hoàn tiền, hẹn lịch), bot không đoán nữa mà im và báo bạn ở chuông Javis.
+- **Thư báo ghi rõ khách nhắn gì và bot ghi chú vì sao không tự trả lời.** Tin khách vẫn nằm trong Hòm thư bot để bạn trả lời tay. Một khách hỏi dồn nhiều câu khó thì chuông chỉ kêu một lần mỗi 10 phút, nhật ký bot vẫn ghi đủ từng câu.
+- **Nút Thử bot hiện "Bot sẽ im và báo bạn ở chuông"** kèm ghi chú của bot, để bạn thử trước khi bật thật. Hướng dẫn trong Agent của bạn vẫn luôn thắng: Agent đã dặn cách xử lý loại tin nào thì bot làm đúng như vậy.
+
+## [0.278.0] - 2026-10-22
+### Cải thiện
+- **Khung chat Nhóm dùng được như khung Trò chuyện.** Sao chép tin, nút Copy của khối mã, Enter trên điện thoại (xuống dòng thay vì gửi), vuốt để trích dẫn, trích đúng đoạn đang bôi và "Xem thêm" cho tin dài đều chạy giống khung chat chính.
+- **Ảnh bạn gửi trong Nhóm bấm vào là phóng to ngay trong app;** ảnh hỏng hiện khung báo thay vì ô vỡ.
+- **Tin bạn gửi hiện ngay,** rớt mạng thì có nút Thử lại. File tải lên bị kẹt sẽ báo lỗi chứ không quay mãi.
+- **Đọc tin cũ không bị giật xuống cuối,** có nút "Tin mới" để quay về; tin mới tới không xoá đoạn chữ bạn đang bôi đen. Nút trong thẻ trả lời giờ gửi vào đúng Nhóm.
+
+## [0.276.0] - 2026-10-22
+### Bảo mật
+- **Webhook che luôn mã tài khoản nhân viên.** Trước đây ô xem sự kiện (đã che) và file mẫu xuất ra vẫn giữ mã của người tạo đơn, người sửa, người bán vì đó là trường "id". Giờ mọi giá trị nằm dưới người tạo, người sửa, người bán, người chăm sóc đều bị che như thông tin khách.
+- File mẫu POSCake trong mã nguồn đã được xuất lại, không còn mã tài khoản nào.
+### Cải thiện
+- Công cụ chạy thử staging tự xoá thư mục tạm khi mọi bước đạt (giữ lại khi có bước lỗi, hoặc khi chạy với `--keep`).
+
+## [0.275.0] - 2026-10-22
+### Sửa lỗi
+- **Việc nền đáng tin hơn.** Nhắc việc chạy đúng giờ ở mọi brain, kể cả brain chưa có vòng lặp. Lỗi mạng lúc máy vừa bật giờ ghi là "lỗi" và tự thử lại sau vài phút, việc đã gửi thì không gửi lại. Gói Claude báo giờ mở lại (ví dụ 1:50 sáng) thì Javis tự hẹn chạy lại. Vòng lặp nhớ các vòng trước nên không đề xuất trùng.
+- **Nhóm làm việc trơn tru hơn.** Thành viên đọc được file Excel (mọi sheet, kết quả công thức, ô lỗi) và biết trang PDF nào là ảnh scan, không phải xin duyệt từng lệnh. Lệnh đã duyệt không bị chặn lại, thẻ duyệt ghi rõ lệnh. Các bước phải làm lần lượt chạy đúng thứ tự, việc còn bước chưa chạy không bị báo Xong.
+- **Project và cộng sự dùng được ở mọi kênh.** Luật của project áp dụng cả khi chat qua CLI và Telegram, và giữ nguyên khi cuộc trò chuyện sang phiên mới; lệnh `javis` có thêm `--project`. Trên Telegram, gõ `@tên-cộng-sự` để cộng sự đó trả lời, `/agent tên` để giao cả cuộc chat, `/agent off` để về Javis.
+- **Sao lưu GitHub không còn đẩy nhật ký chạy thô của cộng sự và chữ trích từ file đính kèm.** Bản đã lỡ đẩy trước đây vẫn nằm trong repo; khi mọi máy đã cập nhật, bạn có thể xoá tay trên GitHub.
+
+### Cải thiện
+- **Rõ ràng hơn ở những chỗ dễ bấm nhầm.** Form Thêm việc nói rõ mức Toàn quyền được tự sửa file, chạy lệnh, gửi tin mà không hỏi lại (vẫn là mặc định). Ô duyệt trên bảng Việc đổi tên thành "Duyệt kết quả sau khi làm xong". Nút Ngắt ở thẻ Claude Code hỏi lại trước khi đăng xuất, và có công tắc tắt tự cập nhật Claude Code ngay trên màn hình. Trang Mức dùng tính tiền việc chạy bằng DeepSeek và đếm cả lượt của Nhóm.
+- **Sửa các lỗi khách hàng báo trên bản 0.270.0.**
+
+## [0.274.0] - 2026-10-22
+### Thêm mới
+- **Webhook thành cửa nhận sự kiện bền.** Mỗi sự kiện được ghi vào đĩa trước khi Javis trả lời "đã nhận" (202). Máy tắt, cập nhật hay sập giữa chừng thì lúc mở lại Javis chạy tiếp, không mất đơn.
+- **Lọc và chống trùng chặt chẽ.** Lọc đúng kiểu dữ liệu (số 1 khác chữ "1"), kiểm được từng món trong đơn, và khoá chống trùng ghép từ nhiều trường (cửa hàng, mã đơn, trạng thái) có thời hạn. Sự kiện không khớp được ghi kèm lý do và không tốn lượt AI.
+- **Gửi tiếp không cần AI:** sang một địa chỉ HTTP (giữ nguyên nội dung gốc), một Google Apps Script (phải có biên nhận mới tính là xong) hoặc một plugin như POSCake Zalo. Mỗi nơi chạy riêng, có thể đặt nơi nào chạy sau nơi nào; bấm Chạy lại chỉ gửi lại nơi bị lỗi.
+- **Tự thử lại** sau 1, 5 rồi 30 phút, tối đa 24 giờ. Việc có thể đã làm mà không rõ kết quả thì Javis giữ lại hỏi bạn, không tự gửi lại.
+- **Trang webhook có ba phần: Cấu hình, Sự kiện, Tình trạng.** Hai công tắc riêng: Tắt nhận (từ chối sự kiện mới) và Tạm dừng xử lý (vẫn nhận và lưu, chỉ chưa chạy).
+- **Gửi thử thật có xem trước:** dán nội dung mẫu, xem từng hành động sẽ làm gì, rồi mới gửi. Sự kiện thử có chỗ chống trùng riêng.
+- **Diễn biến của từng sự kiện:** nhận, xác thực, lọc, gửi đi, từng lần thử, biên nhận, kết quả và thông báo. Tìm được theo mã đơn và theo khoảng ngày.
+- **Chạy lại với cấu hình hiện tại** có xem trước, và nói rõ hành động nào đã thành công hoặc chưa rõ sẽ có thể chạy thêm một lần. Webhook bị sửa sau lúc xem trước thì phải xem trước lại.
+- **Chạy lại mọi sự kiện bị chặn:** sửa xong ở bên ngoài (bật lại plugin, đổi khoá ở nơi nhận) thì một nút chạy lại hết, không phải bấm từng sự kiện.
+- **Sự kiện lỗi được giữ nguyên nội dung** tới khi bạn chạy lại hoặc bấm **Xoá**, nên Chạy lại luôn gửi đúng dữ liệu đã nhận.
+- **Kiểm chữ ký Stripe, GitHub, Shopify, Systeme.io** theo đúng cách của từng nơi, có thời gian chồng khi đổi khoá. Những nơi này không cần gửi kèm khoá Javis: chữ ký của họ là đủ. Systeme.io chưa thử với tài khoản thật nên được ghi là chưa kiểm chứng. POSCake chưa có kiểm chữ ký vì chưa có tài liệu chính thức.
+- **Công cụ quay về bản cũ** (`server/webhook_rollback.py`): sao lưu kho, xuất các sự kiện còn dở để đối soát, viết lại danh sách webhook cho bản cũ.
+### Bảo mật
+- Khoá API và khoá ký được mã hoá trên đĩa, không hiện trên giao diện, không nằm trong lịch sử cấu hình. Hãy sao lưu `webhook_keys.json` cùng `webhook_secrets.json`.
+- Nội dung sự kiện mặc định được che: chỉ hiện mã, trạng thái, thời gian, số tiền, số lượng và tên sản phẩm, mọi giá trị khác bị che. Xem hoặc xuất bản gốc đều được ghi vào nhật ký kiểm tra.
+- Webhook mới chỉ nhận khoá trong header, không nhận `?token=` trên đường dẫn (webhook cũ vẫn dùng được). Một địa chỉ gửi sai khoá nhiều lần bị tạm chặn.
+- Gửi đi luôn nối vào đúng địa chỉ đã kiểm, nên một tên miền không đổi được sang địa chỉ nội bộ giữa chừng.
+### Cải thiện
+- Giới hạn mới cho mỗi webhook: 300 sự kiện mỗi phút, 10.000 sự kiện chờ. Lượt AI (30 mỗi giờ) chỉ áp cho phần AI, không chặn phần gửi bằng code; hết lượt AI thì đơn vẫn được giữ.
+- Thông báo: mọi lần, chỉ khi lỗi (lỗi lặp gộp làm một), tóm tắt mỗi ngày theo múi giờ bạn chọn, hoặc tắt. Tắt vẫn giữ cảnh báo hệ thống như sắp đầy đĩa.
+- Lần đầu chạy bản này, danh sách webhook chuyển vào kho mới (có bản sao lưu) và webhook cũ chạy như trước.
+- Tên miền tạm thời không phân giải được thì Javis thử lại sau, không báo lỗi hẳn.
+- Javis khởi động nhanh hơn một chút: phần webhook, thư viện mã hoá của thông báo đẩy và uvicorn chỉ nạp khi cần.
+### Sửa lỗi
+- Apps Script đã chạy nhưng trả về trang không đọc được thì sự kiện thành "chưa rõ" chứ không phải "lỗi", nên bấm Chạy lại không ghi thêm một dòng trùng.
+- Lưu cấu hình từ một tab cũ, hay hai tab lưu cùng lúc, không làm khoá bí mật quay về bản cũ.
+- Xoá một webhook thì các sự kiện còn chờ của nó được huỷ và tự dọn theo hạn lưu, không giữ dữ liệu khách mãi.
+- Bộ lọc trên danh sách (`[*]`) giờ coi "không rõ" là không rõ: một điều kiện `not(any ...)` trên đơn có món thiếu trường có thể bị bỏ qua ở chỗ trước đây chạy. Xem lại bộ lọc kiểu này bằng Thử quy tắc.
+- Sự kiện bị cách ly (quy tắc không đọc được) giờ được báo cho bạn, gộp làm một tin, và giữ nguyên nội dung trong 30 ngày. Chạy lại một đơn đã chạy ở sự kiện khác bị từ chối, không gửi hai lần. Lỗi lặp lại được gộp theo loại lỗi, không báo mỗi đơn một tin.
+- Lúc nhiều sự kiện cùng gọi một plugin, sự kiện phải chờ lượt không còn bị tính oan một lần thử khi chưa gửi gì.
+- **Bị từ chối vì quá tải (429) thì lần gửi lại vẫn chạy.** Trước đây mã chống trùng bị giữ lại, nên lần gửi lại bị báo trùng và đơn không bao giờ chạy.
+
+## [0.272.0] - 2026-10-22
+### Thêm mới
+- **Dán hoặc kéo ảnh thẳng vào ghi chú.** Ảnh được nén sang WebP ngay trên trình duyệt, lưu vào thư mục `images/` của brain và chèn sẵn vào ghi chú; kéo góc ảnh để đổi cỡ. (Đóng góp của @quangndna.)
+- **Danh sách tự nối dòng trong trình soạn ghi chú.** Enter ở cuối một gạch đầu dòng, việc cần làm hay danh sách đánh số sẽ tự thêm dòng mới cùng loại; Tab và Shift+Tab thụt lề. Trong khối code thì không tự nối. (Đóng góp của @quangndna.)
+- **Mở nhanh nhật ký hôm nay:** nút lịch trên thanh công cụ ghi chú, hoặc Ctrl+D (Cmd+D trên Mac) khi đang ở khung ghi chú. Đã có thì mở, chưa có thì tạo mới, không ghi đè. (Đóng góp của @quangndna.)
+### Sửa lỗi
+- **Bấm Dừng là Antigravity dừng thật.** Trước đây lượt chạy bằng Antigravity vẫn tiếp tục chạy ngầm sau khi bấm Dừng, có khi tới 15 phút. Lượt im lặng quá lâu giờ cũng có hạn chót thật. (Đóng góp của @Aurus2207.)
+- Bấm Dừng giờ tắt luôn các tiến trình con mà engine sinh ra, không để sót.
+
+## [0.270.0] - 2026-10-21
+### Sửa lỗi
+- **Kết nối chạy bằng npx không còn hỏng vĩnh viễn sau lần cài đầu.** Trước đây nếu Javis vừa khởi động lại mà một kết nối còn đang tải gói, nó có thể bị ngắt giữa chừng, để lại bản cài dở và báo lỗi MODULE_NOT_FOUND mãi. Giờ Javis chờ lần cài đầu xong, tự dọn bản cài dở, và sau mỗi lần khởi động lại sẽ thử mọi kết nối rồi báo một lần nếu có cái không chạy. Kết nối đang cài lần đầu hiện chấm vàng thay vì đỏ. (Đóng góp của @dev23072005.)
+- **Agent có model Codex cũ không còn đổi model chính của bạn.** Áp dụng cho cả chat với trợ lý trên dashboard lẫn lượt chạy qua `/chat`: Javis chỉ sửa model của đúng trợ lý hoặc phiên đó.
+### Thêm mới
+- **Gọi đúng một trợ lý qua `/chat` và lệnh `javis`.** Ứng dụng ngoài gửi thêm `agent=<slug>` (hoặc `javis --agent <slug>`) là lượt đó chạy bằng lời nhắc, skill và model của trợ lý ấy, có phiên riêng và vẫn ghi bài học như khi chat trên dashboard. Trợ lý hay brain không có thật thì báo lỗi rõ, không lặng lẽ chạy model chính. (Đóng góp của @QuanAMG.)
+
+## [0.269.0] - 2026-10-21
+### Sửa lỗi
+- **Nút Cập nhật chạy lại được trên máy cài Javis dưới user thường.** Từ 0.267.0, máy chạy service Javis bằng user không phải root bấm cập nhật là báo "Interactive authentication required" và đứng nguyên bản cũ. Giờ Javis tự chuyển sang cách không cần quyền quản trị: tải bản mới trong lúc Javis cũ vẫn chạy, rồi khởi động lại một lần. Máy chạy bằng root không đổi gì.
+- Nếu máy vẫn chưa cho phép, màn hình nói rõ lệnh cập nhật tay và một lệnh (`sudo loginctl enable-linger`) để nút cập nhật dùng được từ lần sau.
+- **Lưu ý:** máy đang kẹt ở 0.267.0 hoặc 0.268.0 cần cập nhật tay đúng một lần để lên bản này (`git pull --ff-only`, cài thư viện, `sudo systemctl restart javis`). Từ đó nút Cập nhật chạy bình thường.
+
+## [0.268.0] - 2026-10-21
+### Sửa lỗi
+- **Đọc được file SharePoint qua Composio ở mức Chỉ đọc.** Trước đây mọi lệnh SharePoint, kể cả liệt kê thư mục hay tải file về đọc, đều bị chặn như thao tác nguy hiểm vì tên ứng dụng bắt đầu bằng chữ SHARE (chia sẻ). Giờ Javis bỏ qua tên ứng dụng khi xét lệnh: đọc chạy ở mức Chỉ đọc, còn tải lên, chia sẻ, xoá vẫn cần Toàn quyền như cũ.
+
+## [0.267.0] - 2026-10-21
+### Sửa lỗi
+- **Team không còn bắt duyệt khi trợ lý chỉ đọc file.** Ở nhóm "cần duyệt", lệnh đọc nối nhiều bước (`cd ...; cat ...; sed -n ...; grep "a\|b" ...`) từng bị coi là hành động ra ngoài và dừng việc chờ chủ nhóm. Giờ Javis tách từng lệnh ra xét riêng: đọc, tìm, in ra thì chạy luôn. Ghi file, xoá, chạy mã, gửi đi vẫn phải chờ duyệt như cũ.
+- **Khung chat Team không còn bị treo trên điện thoại.** Một lần gửi rơi đúng lúc mạng chập chờn từng làm nút gửi khoá mãi, phải thoát hẳn app mới dùng lại được. Giờ mỗi lần gọi máy chủ tự bỏ sau 30 giây và báo mất mạng, bấm gửi lại là được (không bị gửi trùng). Quay lại app sau hơn 20 giây thì khung Team tự tải lại tin mới.
+- **VPS chạy image tự đóng gói giờ được báo đúng cách cập nhật.** Javis chuyển từ máy tính lên VPS bằng cách đóng gói image tại chỗ (tên kiểu `javis-cwi:pc-0.206.0`) thì bấm cập nhật hay Redeploy vẫn đứng yên ở bản cũ, vì image đó không nằm trên kho nào. Trang Cập nhật giờ nói thẳng điều này và chỉ cách đổi sang image chính thức một lần, dữ liệu giữ nguyên. Các bước có trong DEPLOY.md, mục Cập nhật.
+- **Cập nhật trên VPS không còn làm Javis tắt hẳn.** Bấm cập nhật ở bản cài bằng systemd: updater từng bị chính lệnh dừng service giết giữa chừng, Javis tắt mà không bật lại. Giờ updater tách ra chạy riêng rồi mới dừng service. Bản cài đặt tên riêng (`JAVIS_NAME`, ví dụ `javis-shop`) cũng được dừng và bật đúng service của nó.
+
+## [0.266.0] - 2026-10-21
+### Cải thiện
+- **Ấn giữ tin nhắn trên điện thoại lại bôi chữ và sao chép như bình thường.** Khung chat chính bỏ lớp làm tối, hàng emoji và thẻ Trả lời / Sao chép khi ấn giữ: giữ ngón tay là điện thoại tự hiện tay kéo chọn chữ và nút Sao chép của máy, chọn được đúng đoạn cần copy. Các nút Trả lời, Sao chép, Sửa, Gửi lại vẫn ở hàng nhỏ hiện ra khi chạm vào tin, kéo tin sang trái vẫn là trích dẫn. Muốn thả emoji khác thì ấn giữ nút like ở góc bong bóng.
+
 ## [0.265.0] - 2026-10-21
 ### Cải thiện
 - **Tài liệu có hướng dẫn kết nối Anthropic Compatible.** Trang hướng dẫn Models thêm mục C1: chuẩn bị gì từ bên bán, điền 3 ô ở đâu, cách đặt làm model chính, và bảng xử lý từng câu báo lỗi. Gửi link mục này cho khách là họ tự làm được.

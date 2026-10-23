@@ -32,8 +32,8 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=136">
-  <link rel="stylesheet" href="/static/console.css?v=111">
+  <link rel="stylesheet" href="/static/style.css?v=139">
+  <link rel="stylesheet" href="/static/console.css?v=112">
   <!-- Áp tông đã lưu TRƯỚC khi vẽ để không nháy tối rồi mới đổi sang sáng.
        Giá trị cũ "dim" (tông tối-nhạt, gỡ ở 0.9.250) quy về tối; theme.js sẽ ghi đè lại.
        Chế độ "auto" (0.74.0, mặc định khi chưa chọn gì từ 0.75.1) tính theo khung giờ "HH:MM-HH:MM", cùng quy tắc với lightAt() trong
@@ -199,6 +199,7 @@
           <span class="vault-tools">
             <button class="mini-btn" id="vtNewFile" title="Tạo file mới ở gốc brain" data-i18n-title="vault.new_file">＋</button>
             <button class="mini-btn" id="vtNewDir" title="Tạo thư mục mới ở gốc brain" data-i18n-title="vault.new_dir"><i data-ic="folder-plus"></i></button>
+            <button class="mini-btn" id="vtDaily" title="Nhật ký hôm nay (Ctrl+D / Cmd+D khi đang ở khung ghi chú)" data-i18n-title="vault.daily"><i data-ic="calendar"></i></button>
             <button class="mini-btn" id="vtRefresh" title="Làm mới cây" data-i18n-title="vault.refresh">⟳</button>
             <button class="mini-btn" id="vtCollapse" title="Thu gọn panel Vault (như sidebar)" data-i18n-title="vault.collapse"><i data-ic="panel-left"></i></button>
           </span>
@@ -554,6 +555,11 @@
          thật không". Được đăng ký trong CHAT_NODE_IDS (console.js) nên sang trang Trò chuyện
          là nó đi theo, không bị bỏ lại như thanh #toolBar cũ. -->
     <div class="bg-strip" id="bgStrip" hidden></div>
+
+    <!-- Thanh MỤC TIÊU của /goal (chat-goal.js, 0.290.0): mục tiêu đang theo đuổi, đồng hồ, nút xoá, tạm dừng,
+         xem chi tiết; nhiều mục tiêu thì có số ở đầu, bấm xổ danh sách. Ẩn khi không có mục tiêu. Nằm trong
+         CHAT_NODE_IDS (console.js) nên sang trang Trò chuyện là đi theo khung chat. -->
+    <div class="goal-bar" id="goalBar" hidden></div>
 
     <!-- The Coding page's own chip row (that page inserts its chips here on desktop). Empty on the home
          page, so hidden (.model-bar:empty). The model chip moved into the composer in 0.153.0. -->
@@ -943,7 +949,7 @@
   <script src="/static/voice-lang.js?v=1"></script>
   <script src="/static/voice.js?v=29"></script>
   <script src="/static/graph.js?v=17"></script>
-  <script src="/static/chat-render.js?v=21"></script>
+  <script src="/static/chat-render.js?v=22"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -952,25 +958,33 @@
   <script src="/static/task-suggest.js?v=1"></script>
   <!-- Bảng lệnh của trình soạn .md (nút thanh công cụ + phím tắt + menu "/"). PHẢI đứng
        trước console.js: _neBuildToolbar đọc window.JavisEditorCmds để vẽ nút. -->
-  <script src="/static/editor-cmds.js?v=1"></script>
+  <script src="/static/editor-cmds.js?v=2"></script>
   <!-- Đếm từ + ký tự cho trình sửa file (0.65.32). Thuần, console.js dùng qua window.JavisWordCount. -->
   <script src="/static/word-count.js?v=1"></script>
   <script src="/static/file-editor.js?v=13"></script>
+  <!-- Insert images into a note (paste/drop/button): compress, then save into images/. After
+       editor-cmds.js because it shares its editor lookup (contextFor). -->
+  <script src="/static/note-images.js?v=1"></script>
   <script src="/static/chat-ask.js?v=2"></script>
   <script src="/static/limit-resume.js?v=1"></script>
-  <script src="/static/chat-slash.js?v=4"></script>
+  <script src="/static/chat-slash.js?v=5"></script>
   <!-- Lệnh "/" hệ thống (/status /model /compact /plan /goal ...): chạy lệnh mà chat-slash.js vừa nhận
        diện. Phải nạp TRƯỚC app.js (sendMessage gọi window.JavisLenh) và SAU chat-slash.js (đọc menu). -->
-  <script src="/static/chat-lenh.js?v=1"></script>
-  <script src="/static/chat-acts.js?v=4"></script>
+  <script src="/static/chat-goal.js?v=1"></script>
+  <script src="/static/chat-lenh.js?v=2"></script>
+  <script src="/static/chat-acts.js?v=5"></script>
+  <!-- One POST /upload with progress and stall watch, shared by the main chat and the Team chat (app.js, teams.js). -->
+  <script src="/static/chat-upload.js?v=1"></script>
+  <!-- Stick to the latest message, the jump button and its "New messages" pill, shared by app.js and teams.js. -->
+  <script src="/static/chat-scroll.js?v=1"></script>
   <script src="/static/chat-quote.js?v=2"></script>
   <!-- Sáu reaction dùng chung (T2 0.154.0): nạp TRƯỚC chat-reactions.js, app.js, teams.js và mobile-chat.js. -->
   <script src="/static/reactions.js?v=3"></script>
   <!-- Nhấn giữ tin trên điện thoại (0.179.0): nạp TRƯỚC chat-reactions.js và teams.js. -->
-  <script src="/static/msg-press.js?v=4"></script>
+  <script src="/static/msg-press.js?v=5"></script>
   <!-- Vuốt tin sang trái để trích dẫn trên điện thoại (0.216.0): nạp TRƯỚC chat-reactions.js. -->
   <script src="/static/msg-swipe.js?v=1"></script>
-  <script src="/static/chat-reactions.js?v=5"></script>
+  <script src="/static/chat-reactions.js?v=6"></script>
   <script src="/static/chat-marks.js?v=4"></script>
   <!-- Khối tiến trình từng bước trong khung chat: phải đứng TRƯỚC app.js vì app.js gọi
        window.JavisSteps ngay khi khung tool_call đầu tiên về. -->
@@ -978,7 +992,7 @@
   <script src="/static/chat-viec.js?v=6"></script>
   <script src="/static/chat-nho.js?v=1"></script>
   <script src="/static/chat-doi.js?v=1"></script>
-  <script src="/static/chat-card.js?v=1"></script>
+  <script src="/static/chat-card.js?v=2"></script>
   <script src="/static/chat-resonance.js?v=3"></script>
   <script src="/static/resonance-agent.js?v=5"></script>
   <!-- Voice V1: khối ngữ cảnh giao diện + bộ nhận lệnh ui_action, nạp TRƯỚC app.js. -->
@@ -991,7 +1005,7 @@
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/incoming-call.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
-  <script src="/static/app.js?v=148"></script>
+  <script src="/static/app.js?v=150"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
   <!-- Thân bảng chọn model dùng chung: phải đứng TRƯỚC model-picker.js (thanh chat) và
@@ -1007,7 +1021,9 @@
   <script src="/static/chat-zoom.js?v=6"></script>
   <script src="/static/brains-ui.js?v=8"></script>
   <script src="/static/sessions-ui.js?v=23"></script>
-  <script src="/static/studio.js?v=45"></script>
+  <link rel="stylesheet" href="/static/improvement-candidates.css?v=1">
+  <script src="/static/improvement-candidates.js?v=1"></script>
+  <script src="/static/studio.js?v=46"></script>
   <!-- Trang Cộng sự: nạp SAU studio.js (mượn trình sửa agent/workflow của Studio) và TRƯỚC
        console.js (renderWorkspace ủy quyền cho window.JavisWorkspace). -->
   <!-- Tab Công việc của trợ lý (0.142.0): nạp TRƯỚC workspace.js, workspace.js gọi window.JavisAgentJobs. -->
@@ -1027,7 +1043,7 @@
   <!-- Nút mic nhập chữ của khung soạn Nhóm (0.176.0): nạp TRƯỚC teams.js. -->
   <script src="/static/dictate.js?v=3"></script>
   <script src="/static/composer-dictate.js?v=2"></script>
-  <script src="/static/teams.js?v=18"></script>
+  <script src="/static/teams.js?v=20"></script>
   <script src="/static/chatbots-reply-policy.js?v=1"></script>
   <script src="/static/chatbots-try.js?v=1"></script>
   <script src="/static/chatbots.js?v=18"></script>
@@ -1049,13 +1065,13 @@
   <!-- Phần đọc cấu hình của form "Tự thêm MCP" (thuần, có test node). Nạp TRƯỚC console.js. -->
   <script src="/static/mcp-form-parse.js?v=1"></script>
   <!-- Webhooks section of the Work page (0.198.0): load BEFORE console.js, which mounts window.JavisWebhooks. -->
-  <script src="/static/webhooks.js?v=1"></script>
+  <script src="/static/webhooks.js?v=7"></script>
   <!-- Health section of the Work page (0.199.0): incidents Javis Core handles and the read-only scan. -->
   <script src="/static/health-panel.js?v=1"></script>
   <!-- Watch tab of the Recurring work page (0.239.0): token-free web page watching (server/web_watch.py). -->
   <script src="/static/web-watch.js?v=3"></script>
   <script src="/static/login-vault.js?v=2"></script>
-  <script src="/static/console.js?v=185"></script>
+  <script src="/static/console.js?v=186"></script>
   <script src="/static/mobile-chat.js?v=15"></script>
   <script src="/static/brain-view.js?v=1"></script>
   <script src="/static/push.js?v=3"></script>
