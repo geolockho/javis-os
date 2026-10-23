@@ -64,3 +64,5 @@
 - [Code kubeconfig-generator viết trong brain rồi copy sang repo](facts/viet-code-kubeconfig-generator-trong-brain-roi-copy.md) - Ngày 2026-10-23 người dùng đồng ý viết code trong brain tại workspace/kubeconfig-generator, rồi robocopy sang repo D:\FSEL\other-services\kubeconfig-generator.
 - [Code kubeconfig-generator đã có trong workspace (thực tế tính đến 2026-10-23)](facts/code-kubeconfig-generator-da-co-trong-workspace.md) - Javis đã viết code kubeconfig-generator trong brain tại workspace/kubeconfig-generator; chưa commit, chưa push.
 - [Tiến độ kubeconfig-generator sau khi viết code bản đầu](facts/tien-do-kubeconfig-generator-sau-viet-code.md) - Code bản đầu đã viết trong brain, 69 test qua, chưa commit, chưa push (thực tế tính đến 2026-10-23).
+- [Namespace của công cụ kubeconfig-generator là fsel-internal-tools](facts/ns-kubeconfig-generator-fsel-internal-tools.md) - Ngày 2026-10-23 user yêu cầu đổi namespace của tool sang fsel-internal-tools.
+- [Tiến độ kubeconfig-generator sau khi thêm CI và đổi namespace](facts/tien-do-kubeconfig-generator-sau-ci-va-ns.md) - Đến 2026-10-23: 69 test qua, đã thêm CI và đổi namespace, chưa commit và chưa push.
