@@ -54,3 +54,4 @@
 - [Yêu cầu công cụ kubeconfig theo namespace đã có bản mô tả](facts/cong-cu-kubeconfig-theo-namespace-yeu-cau.md) - Người dùng đã điền xong prompt: 2 cluster, web nhỏ, read-only, có bước duyệt qua màn hình admin (thực tế tính đến 2026-10-23).
 - [Chốt dựng công cụ kubeconfig theo namespace bằng Javis](facts/dung-cong-cu-kubeconfig-bang-javis.md) - Người dùng muốn Javis tạo agent, skill và workflow để dựng công cụ cấp kubeconfig, rồi push code lên GitLab (thực tế tính đến 2026-10-23).
 - [Repo GitLab của công cụ kubeconfig-generator](facts/repo-kubeconfig-generator.md) - Repo đích để push code công cụ cấp kubeconfig theo namespace (thực tế tính đến 2026-10-23).
+- [Chốt cách triển khai công cụ kubeconfig-generator](facts/quyet-dinh-cong-cu-kubeconfig-generator.md) - Clone tại D:\FSEL\other-services\kubeconfig-generator, push thẳng main, commit dưới tên hophu, secret qua k8s; namespace test chờ, dừng chờ duyệt kiến trúc.

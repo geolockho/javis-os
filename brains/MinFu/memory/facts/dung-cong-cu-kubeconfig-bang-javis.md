@@ -1,4 +1,5 @@
 ---
+superseded_by: quyet-dinh-cong-cu-kubeconfig-generator
 type: decision
 provenance: user
 origin: javis-learned
@@ -10,3 +11,7 @@ Người dùng chốt dựng công cụ cấp kubeconfig theo namespace bằng c
 **Vì sao:** người dùng muốn tận dụng partner, skills và workflow của Javis cho việc này ([[conversations/2026-10-23]]).
 
 **Áp dụng:** tính đến 2026-10-23 chưa tạo file nào. Trước khi tạo, hỏi lại các điểm còn mở: namespace thử trên fsel-local, nơi đặt code, workflow có dừng chờ duyệt kiến trúc không, và cách push (nhánh riêng hay main, cùng quyền ghi). Không coi công cụ là đã xong.
+
+
+## Lịch sử
+- [2026-10-23] Bị thay thế bởi [[quyet-dinh-cong-cu-kubeconfig-generator]] (user đổi thông tin).
