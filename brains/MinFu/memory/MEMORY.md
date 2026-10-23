@@ -68,3 +68,4 @@
 - [Tiến độ kubeconfig-generator sau khi thêm CI và đổi namespace](facts/tien-do-kubeconfig-generator-sau-ci-va-ns.md) - Đến 2026-10-23: 69 test qua, đã thêm CI và đổi namespace, chưa commit và chưa push.
 - [Bỏ điều kiện group GitLab, dùng danh sách namespace để cấp quyền kubeconfig](facts/bo-group-gitlab-dung-danh-sach-namespace.md) - Dev đăng nhập SSO đều xin được namespace trong danh sách, admin vẫn duyệt từng request (chốt 2026-10-23).
 - [Tiến độ kubeconfig-generator sau khi bỏ group GitLab](facts/tien-do-kubeconfig-generator-sau-bo-group.md) - 77 test qua, chưa commit, chưa push; cổng soát RBAC lần 2 và domain email còn mở (thực tế tính đến 2026-10-23).
+- [Database của kubeconfig-generator nằm trên Postgres fsel-local](facts/db-kubeconfig-generator-postgres-local.md) - DB kubeconfig_generator trên Postgres namespace postgresql-local-fsel, cluster fsel-local; mật khẩu do user tự đặt.
