@@ -48,4 +48,6 @@
 - [Loop monitor fsel-prod rơi xuống Ollama local gemma3:4b và lỗi](facts/loop-monitor-fsel-prod-roi-xuong-ollama-gemma3.md) - Ngày 2026-10-14 loop monitor fsel-prod lỗi qua nhiều engine: Claude CLI không khả dụng, rồi Ollama local gemma3:4b (không hỗ trợ tool, chưa pull, context 4096).
 - [Pod fsel-prod dùng dưới 10% request (thực tế tính đến 2026-10-14 13:55)](facts/snapshot-pod-fsel-prod-usage-thap-2026-10-14.md) - Mẫu lúc 13:55 ngày 14/10: 6 pod thuộc aggregation-worker-prod và tracking-worker-prod có CPU và RAM usage dưới 10% request.
 - [Kênh DM Slack của bot Javis trong Minh Phú Space](facts/slack-dm-bot-javis-minh-phu-space.md) - Ngày 2026-10-14 Javis gửi thử thành công vào DM D0C8NA6EP61; dùng khi nhắn riêng qua Slack, không phải kênh alert.
-- [Zalo MCP không có tool tin nhắn ẩn](facts/zalo-mcp-khong-co-tool-tin-nhan-an.md) - Ngày 2026-10-15, Zalo MCP không liệt kê được mục Trò chuyện ẩn; chỉ có danh sách cuộc chat trong bộ đệm.
+- [Zalo MCP có thể không có tool tin nhắn ẩn (chưa xác minh)](facts/zalo-mcp-khong-co-tool-tin-nhan-an.md) - Nguồn là câu trả lời chưa gọi thử ngày 2026-10-15; gọi tool thật trước khi khẳng định.
+- [Cách xưng hô của người dùng: t và m](facts/cach-xung-ho-user-t-m.md) - Người dùng tự xưng "t", gọi Javis là "m" (ghi nhận từ hội thoại 2026-10-14).
+- [Đang muốn công cụ cấp kubeconfig theo namespace cho dev](facts/cong-cu-kubeconfig-theo-namespace.md) - Người dùng muốn một công cụ cấp kubeconfig giới hạn theo namespace cho dev; đang hỏi cách viết prompt, chưa bắt đầu viết (thực tế tính đến 2026-10-23).
