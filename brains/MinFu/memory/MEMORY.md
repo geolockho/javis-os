@@ -58,3 +58,6 @@
 - [Kiến trúc kubeconfig-generator đã được duyệt](facts/kien-truc-kubeconfig-generator-da-duyet.md) - User duyệt kiến trúc Javis đề xuất cho công cụ cấp kubeconfig, chỉ sửa: DB chỉ dùng PostgreSQL (ngày 2026-10-23).
 - [FKE không giới hạn hạn token](facts/fke-khong-gioi-han-han-token.md) - Theo user, FKE không giới hạn hạn TokenRequest, nên kubeconfig hạn dài dùng được (ghi nhận 2026-10-23).
 - [Đường mạng từ dev tới API FKE](facts/duong-mang-dev-toi-api-fke.md) - Máy dev gọi được hai endpoint API kubeconfig: api.djtaj383.prd.m.fke.fptcloud.com và 101.99.7.167:6444 (theo user, 2026-10-23).
+- [Domain của công cụ kubeconfig-generator](facts/domain-kubeconfig-generator.md) - Công cụ dùng domain kubeconfig-generator.fsel.edu.vn, Redirect URI OAuth là /oauth2/callback (ghi nhận 2026-10-23).
+- [Công cụ ghi file của Javis không ghi được repo ngoài brain](facts/ghi-repo-ngoai-brain-qua-terminal.md) - Công cụ ghi file của Javis từ chối D:\FSEL\other-services\kubeconfig-generator (nằm ngoài brain), nhưng PowerShell trong terminal ghi được.
+- [Tiến độ công cụ kubeconfig-generator đến 2026-10-23](facts/tien-do-kubeconfig-generator-2026-10-23.md) - Kiến trúc đã duyệt, chưa viết code; OAuth app, claim groups và namespace test còn mở (thực tế tính đến 2026-10-23).
