@@ -73,3 +73,5 @@
 - [Chuyển từ whitelist sang label namespace cho kubeconfig-generator](facts/chuyen-sang-label-namespace-kubeconfig.md) - Ngày 2026-10-23 người dùng chọn hướng label namespace thay whitelist; đang là mục tiêu, chưa triển khai.
 - [Chốt cách B: Kyverno sinh RoleBinding theo label namespace](facts/chot-cach-b-kyverno-label-namespace.md) - Người dùng chốt cách B (Kyverno generate RoleBinding theo label) cho kubeconfig-generator, thay whitelist; chưa triển khai.
 - [Tự robocopy sang repo sau mỗi lần sửa kubeconfig-generator](facts/tu-dong-robocopy-sau-moi-lan-sua-kubeconfig.md) - Sau mỗi lần sửa code kubeconfig-generator trong workspace, Javis tự robocopy sang repo D:\FSEL\other-services\kubeconfig-generator.
+- [Cluster fsel-prod và fsel-local chưa cài Kyverno hay Gatekeeper](facts/cluster-fsel-chua-co-kyverno-gatekeeper.md) - Kiểm ngày 2026-10-23: fsel-prod K8s v1.25.10, fsel-local v1.34.0, cả hai chưa có Kyverno hay Gatekeeper.
+- [Lệnh robocopy thiếu /XO làm ghi đè .gitignore trong repo](facts/robocopy-thieu-xo-ghi-de-gitignore.md) - Lần sync đầu của kubeconfig-generator không có /XO, nên .gitignore trong repo bị thay bằng bản gốc.
