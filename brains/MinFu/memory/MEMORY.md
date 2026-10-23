@@ -51,3 +51,4 @@
 - [Zalo MCP có thể không có tool tin nhắn ẩn (chưa xác minh)](facts/zalo-mcp-khong-co-tool-tin-nhan-an.md) - Nguồn là câu trả lời chưa gọi thử ngày 2026-10-15; gọi tool thật trước khi khẳng định.
 - [Cách xưng hô của người dùng: t và m](facts/cach-xung-ho-user-t-m.md) - Người dùng tự xưng "t", gọi Javis là "m" (ghi nhận từ hội thoại 2026-10-14).
 - [Đang muốn công cụ cấp kubeconfig theo namespace cho dev](facts/cong-cu-kubeconfig-theo-namespace.md) - Người dùng muốn một công cụ cấp kubeconfig giới hạn theo namespace cho dev; đang hỏi cách viết prompt, chưa bắt đầu viết (thực tế tính đến 2026-10-23).
+- [Yêu cầu công cụ kubeconfig theo namespace đã có bản mô tả](facts/cong-cu-kubeconfig-theo-namespace-yeu-cau.md) - Người dùng đã điền xong prompt: 2 cluster, web nhỏ, read-only, có bước duyệt qua màn hình admin (thực tế tính đến 2026-10-23).

@@ -1,4 +1,5 @@
 ---
+superseded_by: cong-cu-kubeconfig-theo-namespace-yeu-cau
 type: business
 provenance: user
 origin: javis-learned
@@ -11,3 +12,7 @@ Người dùng muốn viết một công cụ cung cấp kubeconfig theo namespa
 - Chưa chốt: cách dev đăng nhập (SSO/OIDC hay ServiceAccount có token hạn), một hay nhiều cluster, hình thức giao (CLI, web nhỏ hay Slack bot), mức quyền và có bước duyệt hay không.
 
 **Áp dụng:** khi người dùng quay lại bàn về công cụ này, hỏi lại các điểm chưa chốt ở trên trước khi đề xuất thiết kế. Không coi đây là việc đã giao hay đã có công cụ.
+
+
+## Lịch sử
+- [2026-10-23] Bị thay thế bởi [[cong-cu-kubeconfig-theo-namespace-yeu-cau]] (user đổi thông tin).
