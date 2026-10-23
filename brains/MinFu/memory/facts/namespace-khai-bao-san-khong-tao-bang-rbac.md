@@ -1,4 +1,5 @@
 ---
+superseded_by: chuyen-sang-label-namespace-kubeconfig
 type: decision
 provenance: user
 origin: javis-learned
@@ -10,3 +11,7 @@ updated: 2026-10-23
 **Giữ whitelist:** `deploy/configmap-namespaces.yaml` vẫn là nguồn duy nhất, namespace phải khai báo trước khi dev xin quyền. User chọn giữ whitelist thay vì dùng label `kubeconfig-generator/enabled=true`. Hướng label chỉ là đề xuất, chưa triển khai (mục tiêu, chưa chốt) [[conversations/2026-10-23]].
 
 **Áp dụng:** khi thêm namespace mới, sửa ConfigMap rồi chạy `gen_rbac.py --catalog deploy/configmap-namespaces.yaml --out deploy/rbac`. Không đưa lại object Namespace vào RBAC. Liên quan [[ns-kubeconfig-generator-fsel-internal-tools]] và [[bo-group-gitlab-dung-danh-sach-namespace]].
+
+
+## Lịch sử
+- [2026-10-23] Bị thay thế bởi [[chuyen-sang-label-namespace-kubeconfig]] (user đổi thông tin).
