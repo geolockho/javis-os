@@ -61,3 +61,4 @@
 - [Domain của công cụ kubeconfig-generator](facts/domain-kubeconfig-generator.md) - Công cụ dùng domain kubeconfig-generator.fsel.edu.vn, Redirect URI OAuth là /oauth2/callback (ghi nhận 2026-10-23).
 - [Công cụ ghi file của Javis không ghi được repo ngoài brain](facts/ghi-repo-ngoai-brain-qua-terminal.md) - Công cụ ghi file của Javis từ chối D:\FSEL\other-services\kubeconfig-generator (nằm ngoài brain), nhưng PowerShell trong terminal ghi được.
 - [Tiến độ công cụ kubeconfig-generator đến 2026-10-23](facts/tien-do-kubeconfig-generator-2026-10-23.md) - Kiến trúc đã duyệt, chưa viết code; OAuth app, claim groups và namespace test còn mở (thực tế tính đến 2026-10-23).
+- [Code kubeconfig-generator viết trong brain rồi copy sang repo](facts/viet-code-kubeconfig-generator-trong-brain-roi-copy.md) - Ngày 2026-10-23 người dùng đồng ý viết code trong brain tại workspace/kubeconfig-generator, rồi robocopy sang repo D:\FSEL\other-services\kubeconfig-generator.
