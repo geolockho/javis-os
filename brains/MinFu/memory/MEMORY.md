@@ -90,3 +90,4 @@
 - [Role và DB kubeconfig_generator chưa có trên Postgres fsel-local](facts/db-kubeconfig-generator-chua-tao-tren-fsel-local.md) - Kiểm ngày 2026-10-26: postgresql-0 chỉ có role postgres và DB postgres, ticket, jira; app báo password authentication failed.
 - [Thêm fsGroup và defaultMode 0440 cho volume clusters của kubeconfig-generator](facts/kubeconfig-generator-fsgroup-defaultmode.md) - Đã sửa values.yaml trong argocd-deploy-clean, chưa commit, để pod app đọc được secret kubeconfig
 - [Repo argocd-deploy-clean chứa values của kubeconfig-generator](facts/argocd-deploy-clean-values-kubeconfig-generator.md) - values.yaml của kubeconfig-generator nằm ở argocd-deploy-clean, Argo CD deploy từ đó (theo lời user)
+- [Kubeconfig fsel-local cần tls-server-name cho IP 101.99.7.167](facts/tls-server-name-fsel-local.md) - Secret fsel-local.yaml thiếu tls-server-name 10.10.0.182 nên app không đọc được label namespace (thực tế tính đến 2026-10-26).

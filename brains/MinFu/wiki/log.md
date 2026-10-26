@@ -127,3 +127,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Cấp kubeconfig theo namespace có duyệt admin]]
+
+## [2026-10-26] ingest | tự học từ chat
+
+Đã tạo:
+- [[Cookie secret của oauth2-proxy phải đúng 16, 24 hoặc 32 byte]]
