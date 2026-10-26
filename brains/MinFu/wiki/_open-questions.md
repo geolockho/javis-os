@@ -31,3 +31,5 @@ Questions the wiki cannot fully answer yet. One per line:
 - [ ] (2026-10-08) [[Vertical Pod Autoscaler (VPA)]]: đề xuất bổ sung từ chat 2026-10-08 (dedup) - status: open
 
 - [ ] (2026-10-08) [[devops/Vertical Pod Autoscaler (VPA)]]: provenance=assistant (Javis tự nói, cần xác minh) - status: open
+
+- [ ] (2026-10-26) [[Cấp kubeconfig theo namespace có duyệt admin]]: đề xuất bổ sung từ chat 2026-10-26 (dedup) - status: open
