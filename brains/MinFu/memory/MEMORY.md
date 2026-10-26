@@ -91,3 +91,5 @@
 - [Thêm fsGroup và defaultMode 0440 cho volume clusters của kubeconfig-generator](facts/kubeconfig-generator-fsgroup-defaultmode.md) - Đã sửa values.yaml trong argocd-deploy-clean, chưa commit, để pod app đọc được secret kubeconfig
 - [Repo argocd-deploy-clean chứa values của kubeconfig-generator](facts/argocd-deploy-clean-values-kubeconfig-generator.md) - values.yaml của kubeconfig-generator nằm ở argocd-deploy-clean, Argo CD deploy từ đó (theo lời user)
 - [Kubeconfig fsel-local cần tls-server-name cho IP 101.99.7.167](facts/tls-server-name-fsel-local.md) - Secret fsel-local.yaml thiếu tls-server-name 10.10.0.182 nên app không đọc được label namespace (thực tế tính đến 2026-10-26).
+- [Chọn giao diện Dark Console và Card/Wizard cho kubeconfig-generator](facts/chon-giao-dien-kubeconfig-generator.md) - Ngày 2026-10-26 user chọn kết hợp kiểu 2 (Dark Console) và kiểu 4 (Card và Wizard) cho giao diện.
+- [Bản preview giao diện kubeconfig-generator trong workspace](facts/preview-giao-dien-kubeconfig-generator.md) - Bản xem trước 6 trang giao diện nằm tại workspace/kubeconfig-generator-preview, dùng dữ liệu giả.
