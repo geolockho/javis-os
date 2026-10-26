@@ -88,3 +88,5 @@
 - [kubeconfig-generator đã push main và deploy thử fsel-local](facts/kubeconfig-generator-da-push-va-deploy-fsel-local.md) - Ngày 2026-10-26 code lên origin/main commit b06c5ac; pod fsel-local đang CrashLoopBackOff (thực tế tính đến 2026-10-26).
 - [deploy/secret.yaml đã vào .gitignore trước khi push](facts/secret-yaml-da-vao-gitignore.md) - Ngày 2026-10-26 người dùng yêu cầu chặn commit secret; deploy/secret.yaml đã được ignore, không lên GitLab.
 - [Role và DB kubeconfig_generator chưa có trên Postgres fsel-local](facts/db-kubeconfig-generator-chua-tao-tren-fsel-local.md) - Kiểm ngày 2026-10-26: postgresql-0 chỉ có role postgres và DB postgres, ticket, jira; app báo password authentication failed.
+- [Thêm fsGroup và defaultMode 0440 cho volume clusters của kubeconfig-generator](facts/kubeconfig-generator-fsgroup-defaultmode.md) - Đã sửa values.yaml trong argocd-deploy-clean, chưa commit, để pod app đọc được secret kubeconfig
+- [Repo argocd-deploy-clean chứa values của kubeconfig-generator](facts/argocd-deploy-clean-values-kubeconfig-generator.md) - values.yaml của kubeconfig-generator nằm ở argocd-deploy-clean, Argo CD deploy từ đó (theo lời user)
