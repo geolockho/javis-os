@@ -85,3 +85,6 @@
 - [Kyverno đã có trên fsel-prod và fsel-local](facts/kyverno-dang-chay-tren-hai-cluster.md) - Kiểm ngày 2026-10-26 bằng kubectl chỉ đọc: fsel-prod chạy Kyverno 1.11.5, fsel-local chạy Kyverno 1.19.2.
 - [Không khôi phục .gitignore bị ghi đè](facts/khong-khoi-phuc-gitignore-bi-ghi-de.md) - Người dùng không muốn khôi phục .gitignore của repo kubeconfig-generator sau lần robocopy thiếu /XO.
 - [Sửa thẳng trong repo thì đồng bộ ngược về brain](facts/dong-bo-nguoc-repo-ve-brain.md) - Khi người dùng sửa trực tiếp trong repo kubeconfig-generator, Javis kiểm rồi đồng bộ ngược về brain, bỏ qua file secret thật.
+- [kubeconfig-generator đã push main và deploy thử fsel-local](facts/kubeconfig-generator-da-push-va-deploy-fsel-local.md) - Ngày 2026-10-26 code lên origin/main commit b06c5ac; pod fsel-local đang CrashLoopBackOff (thực tế tính đến 2026-10-26).
+- [deploy/secret.yaml đã vào .gitignore trước khi push](facts/secret-yaml-da-vao-gitignore.md) - Ngày 2026-10-26 người dùng yêu cầu chặn commit secret; deploy/secret.yaml đã được ignore, không lên GitLab.
+- [Role và DB kubeconfig_generator chưa có trên Postgres fsel-local](facts/db-kubeconfig-generator-chua-tao-tren-fsel-local.md) - Kiểm ngày 2026-10-26: postgresql-0 chỉ có role postgres và DB postgres, ticket, jira; app báo password authentication failed.
