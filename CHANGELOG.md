@@ -6,9 +6,184 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.331.0] - 2026-10-26
+### Sửa lỗi
+- **Tag người trong nhóm Zalo không còn hiện thành mã trên điện thoại.** Khi bot trả lời một người (ví dụ "@Tuan Fernel") mà trong nhóm có người khác tên ngắn hơn ("Tuan"), Javis từng gắn thêm một tag thứ hai đè lên tag đầu. Máy tính vẫn hiện đúng, còn điện thoại hiện ra một đoạn mã `href="zm://..."`. Giờ mỗi chữ chỉ mang một tag, và người tên "Tuan" viết riêng ở chỗ khác trong câu vẫn được tag đúng.
+
+## [0.330.0] - 2026-10-26
+### Thêm mới
+- **Nút tạm ngừng mọi bản cải tiến của một bộ não.** Một lần bấm gỡ mọi bản sửa skill, quy trình trợ lý, mô tả định tuyến và gói đang dùng; trợ lý quay về bản gốc. Khác với tắt tự cải tiến, vốn giữ các bản bạn đã áp.
+- **Cải tiến có giới hạn và chỉ khi có lý do thật.** Mỗi loại lỗi chỉ được tinh chỉnh hai bước liền, bước sau cần bằng chứng mới hoặc bạn giao; ba lần không đổi gì thì dừng. Xuất gói chỉ mang quy trình bạn chọn và đã che khoá bí mật; gói nhập về luôn là bản chưa kiểm.
+
+## [0.329.0] - 2026-10-26
+### Thêm mới
+- **Trang Mức dùng có thêm phần "24 giờ qua"**, ngay dưới ba ô đầu trang:
+  - **Cửa sổ 5 giờ theo từng giờ:** đường đi lên hay xuống, vạch mốc là trần bạn khai (hoặc mức cao nhất bạn từng chạm), đổi màu khi tới gần mốc, kèm một câu cho biết còn dư hay nên dời việc nặng.
+  - **Token từng giờ:** giờ nào sáng nay đốt nhiều token, tách theo Claude, ChatGPT và API.
+  - **Giờ AI dồn nhiều trong 7 ngày:** ô màu từ ít tới nhiều cho 24 giờ trong ngày, kèm gợi ý giờ vắng để đặt việc nền.
+- **Vòng tròn hạn mức gói ngay cạnh chip Effort**, cho Claude Code đăng nhập gói Pro/Max và ChatGPT qua Codex:
+  - Xanh khi còn nhiều, vàng từ 50%, **đỏ từ 80% của phiên 5 giờ hoặc của tuần**, cái nào sát hơn thì tính cái đó.
+  - Bấm vào là thấy hai thanh "Phiên 5 giờ" và "Tuần", kèm giờ làm mới, giống bảng hạn mức của Claude.
+  - Tiêu đề bảng ghi luôn tên gói đang dùng, ví dụ "Claude · Max" hay "ChatGPT · Plus".
+  - Số lấy thẳng từ Claude Code và Codex sau mỗi lượt chat, Javis không đọc mã đăng nhập của bạn. Model chạy bằng API key thì không hiện vòng này.
+  - **Grok Build và Antigravity** không báo số %, nên vòng của hai bộ não này màu xám và chỉ chuyển đỏ khi chúng từ chối một lượt vì hết hạn mức, kèm giờ làm mới nếu có.
+### Cải thiện
+- **Nút tia sét (Fast mode) chuyển vào góc trên bên phải khung Effort.** Bật sét thì thanh mức suy nghĩ có hạt sáng chạy, tắt thì chỉ là dải màu đứng yên. Chip Effort hiện một tia sét nhỏ khi Fast mode đang bật.
+- **Biểu đồ token theo ngày** giãn hết bề ngang, số ngày to và dễ đọc hơn (trước đây dồn vào một góc, chữ rất nhỏ).
+- **Nút "Tặng sao" ở góc trái gọn gàng hơn:** giờ là một nút riêng trải hết bề ngang, nằm dưới số phiên bản, chữ luôn trên một dòng (trước đây "Give a star" bị gãy làm hai dòng). Khi thu gọn thanh bên, nút chỉ còn hình ngôi sao.
+
+## [0.327.0] - 2026-10-26
+### Thêm mới
+- **Thử cải tiến cho cả nhóm trợ lý một cách công bằng.** Javis chụp lại đội hình, vai trò, model và tiêu chí nghiệm thu của mỗi lần thử; hai lần thử khác nhau ngoài đúng chỗ đang thử thì không được đem ra so. Kết quả chỉ ghi vào hồ sơ, không tự đánh dấu việc thật là xong hay gửi đi đâu.
+- **Kinh nghiệm đem sang trợ lý, nhóm hay bộ não khác luôn được ghi là "chưa kiểm"** cho tới khi thử lại ở chỗ mới.
+
+## [0.325.0] - 2026-10-26
+### Thêm mới
+- **Áp dụng bản sửa skill và quy trình của một trợ lý thành một gói.** Hai phần bật và gỡ cùng lúc: phần nào hỏng hay bị gỡ thì cả gói dừng, trợ lý quay về bản gốc, không bao giờ nửa mới nửa cũ.
+
+## [0.324.0] - 2026-10-26
+### Thêm mới
+- **Lời mời tặng Javis 1 ngôi sao trên GitHub**, hiện đúng lúc bạn vui: lần đầu thả tim cho một câu trả lời, khi Javis vừa làm xong việc cho bạn, khi tròn 50 hay 100 lượt trò chuyện, tròn 1 tháng dùng Javis, hay vừa có bản mới. Mỗi lần một lời chào riêng, linh vật là ngôi sao cam của Javis.
+- **Hướng dẫn 3 bước có hình** cho người chưa dùng GitHub bao giờ: hình chỉ đúng chỗ nút Star trên máy tính lẫn điện thoại, đăng nhập GitHub bằng Gmail chỉ một chạm. Số sao hiện thật từ GitHub kèm mốc kế tiếp, tự cập nhật.
+- **Không làm phiền:** đóng thì hỏi lại sau 3 ngày, "Để sau" là 7 ngày, tối đa 6 lần; đã tặng hay chọn "Đừng hỏi nữa" thì thôi hẳn, trên mọi thiết bị. Muốn tặng lúc nào cũng có nút "Tặng sao" dưới số phiên bản và thẻ "Ủng hộ Javis" ở trang Cập nhật.
+
+## [0.323.0] - 2026-10-26
+### Thêm mới
+- **Quy trình riêng cho từng trợ lý.** Bạn viết một đoạn cách làm (kiểm nguồn trước, đối chiếu kỳ trước, bàn giao ra sao) và chọn nơi trợ lý dùng nó: chat riêng, nhóm, việc Kanban hay bước quy trình. File trợ lý, luật bạn dặn, model và quyền giữ nguyên; bạn gỡ lúc nào cũng được.
+
+## [0.322.0] - 2026-10-25
+### Thêm mới
+- **Cài plugin từ tệp .zip.** Trang Plugin có nút "Cài từ tệp .zip": chọn tệp, Javis mở ra xem trước tên, phiên bản, các công cụ và mức quyền của từng công cụ, danh sách tệp bên trong, rồi mới cài khi bạn đồng ý. Plugin cài xong luôn ở trạng thái tắt, bạn xem lại rồi tự bật. Thả nhầm một gói cửa hàng (.zip có javis-pack.yaml) thì Javis tự chuyển sang luồng cài gói.
+- **Nhờ Javis tạo plugin là Javis cài luôn tại chỗ**, không còn phải tải tệp về rồi tải lên lại. Javis cũng đọc và sửa được plugin đã có. Plugin Javis tạo hoặc sửa phần mã luôn bị tắt cho tới khi bạn bật ở trang Plugin; sửa mà lỗi cú pháp thì Javis từ chối, bản cũ giữ nguyên.
+### Sửa lỗi
+- **Bấm "Thêm" link trong tài liệu của trợ lý, project hay cuộc trò chuyện giờ luôn có phản hồi.** Trước đây dán một link đã có sẵn trong danh sách, hoặc bấm khi ô còn trống, thì ô URL bị xoá trắng mà không báo gì, trông như nút hỏng. Nay Javis nói rõ "Link này đã có trong danh sách" và làm sáng hàng đó lên, nhắc dán URL khi ô trống, và báo "Đã thêm" khi xong. Dán thiếu https:// (kiểu docs.google.com/...) thì Javis tự thêm.
+### Bảo mật
+- Tệp .zip plugin bị kiểm tra như gói cửa hàng: chặn đường dẫn lạ, liên kết tắt, tệp quá lớn, mã đã biên dịch (.pyc, .so). Không ghi đè plugin đang có nếu bạn chưa chọn thay thế, không đụng tới plugin có sẵn của app.
+
+## [0.320.0] - 2026-10-25
+### Thêm mới
+- **Kiểm mô tả skill trước khi đổi.** Bạn soạn mô tả mới và một bộ câu hỏi mẫu (nên chọn skill này, không nên chọn skill nào, nên chọn skill khác); Javis cho xem bản mới giúp chọn đúng thêm bao nhiêu câu và có làm chọn sai câu nào không. Bản làm chọn sai bị loại.
+
+## [0.318.0] - 2026-10-25
+### Thêm mới
+- **Mỗi cuộc chat trong Hòm thư bot có nút "..."**, bấm là làm được ngay mà không cần mở chat: đánh dấu chưa đọc để nhớ quay lại, ghim lên đầu, gắn tag, chọn bot tự trả lời hay "Tôi lo", chép nhanh số điện thoại hoặc email khách để lại.
+- **Ẩn bớt cuộc chat cho gọn**, xem lại ở mục "Đã ẩn" trong ô Tình trạng. Khách nhắn tin mới thì cuộc chat tự hiện lại, không lỡ khách. Trên điện thoại nút "..." mở một bảng lớn dễ bấm ở cuối màn hình.
+### Sửa lỗi
+- **Ảnh bạn gửi trong Hòm thư bot hiện thành ảnh.** Trước đây chỉ ảnh của khách mới hiện, còn ảnh bạn (hoặc bot) gửi đi chỉ là dòng chữ "image https://...jpg". Giờ ảnh nào cũng hiện ngay trong bong bóng, bấm vào là xem to, để bạn kiểm soát được mình đã gửi gì cho khách.
+### Cải thiện
+- **Nút bấm rõ ràng hơn, không còn mờ.** Các nút phụ có viền rõ, chữ đậm và cỡ 16px, đọc dễ ở cả giao diện sáng lẫn tối. Nút đỏ (xoá, tắt) và nút "Tải lại" ở dải báo bản mới cũng dễ đọc hơn.
+- **Nút đứng cạnh ô nhập cao bằng và thẳng hàng**, như "Nghe thử" cạnh ô chọn giọng, nút lưu tên miền, nút "..." trên thẻ bot. Nút ở chân các cửa sổ xếp gọn về bên phải.
+
+## [0.316.0] - 2026-10-25
+### Thêm mới
+- **Áp dụng thử theo tỉ lệ (canary).** Khi áp dụng bản skill đã sửa cho một trợ lý, bạn chọn được 10%, 25% hay 50% số cuộc chat: mỗi cuộc chat cố định một nhóm, nhóm còn lại dùng bản gốc làm đối chứng.
+- **Phiếu Đạt / Chưa đạt của bạn là thước đo.** Bảng canary liệt kê các lần trợ lý dùng skill ở cả hai nhóm để bạn chấm; emoji không tính. Hai cuộc chat dùng bản mới bị chấm Chưa đạt là bản mới tự tạm ngừng ngay.
+- **Chỉ nâng lên toàn bộ khi đủ quan sát:** tối thiểu 7 ngày và 10 phiếu của nhóm bản mới, và vẫn do bạn bấm. Có thể cho phép một trợ lý tự mở canary 10% khi ứng viên qua kiểm định đầy đủ, thu hồi lúc nào cũng được.
+
+## [0.314.0] - 2026-10-25
+### Thêm mới
+- **Áp dụng thử bản skill đã sửa cho một trợ lý.** Trong Studio, mở Cải tiến của một skill, duyệt đúng phần sửa rồi chọn trợ lý: bản mới chỉ dùng trong khung chat riêng với trợ lý đó. File skill gốc không bị đụng tới, bấm **Quay lại bản gốc** là việc mới dùng bản cũ ngay.
+- Bản thử tự **tạm ngừng** khi anh sửa skill gốc, tắt skill hoặc thu hồi quyền sửa; không bao giờ tự gộp hay bật lại skill đã tắt. Bản nào bị phép so sánh chấm là kém hơn thì không áp dụng được.
+- Nhãn nói thật mức bằng chứng: "Áp dụng thử thủ công, chưa chứng minh tốt hơn" cho tới khi qua kiểm định đầy đủ. Hiện bản thử chỉ có tác dụng với bộ não chạy qua API; Claude Code, Codex, Grok và Antigravity vẫn dùng bản gốc.
+
+## [0.313.0] - 2026-10-25
+### Thêm mới
+- **Gắn tag màu cho từng cuộc chat** trong Hòm thư bot, giống Pancake: tạo, đổi tên, đổi màu, xoá tag ngay trong cuộc chat. Tag hiện thành chip màu trên danh sách (2 chip đầu, còn lại gom "+N") và lọc được theo tag.
+- **Lọc khách đã để lại số điện thoại hoặc email.** Javis tự nhận số và email khách gõ trong tin nhắn (0912..., +84..., có hay không khoảng trắng), kể cả các cuộc chat cũ. Nút "Có SĐT/email" là bộ lọc riêng nên kết hợp được, ví dụ "Cần trả lời" và có SĐT. Số hoặc email hiện ngay đầu cuộc chat, bấm chọn là copy được.
+- **Trên điện thoại, bộ lọc gọn vào một nút "Lọc"** cạnh ô tìm (có số bộ lọc đang bật), danh sách chat được gần trọn màn hình. Trên máy tính các ô lọc giữ đủ chữ, thiếu chỗ thì xuống hàng thay vì bị cắt.
+- **Xếp khách chờ trả lời lâu nhất lên đầu** bằng mục "Chờ lâu nhất" trong ô Tình trạng.
+- **Kéo được cột danh sách hội thoại** cho rộng hẹp tuỳ ý trên máy tính. Kéo hẳn vào trong thì chỉ còn chữ cái đầu, nhấp đúp để về như cũ.
+### Sửa lỗi
+- **Một người mở Javis ở máy khác không còn làm mọi trang đang mở báo "Mất kết nối".** Mỗi lần mở trang, Javis tra địa chỉ IP của máy chủ và tên miền ngay trên luồng chính; máy chủ có mạng ra ngoài chậm thì đứng hình 12 đến 24 giây và mọi trình duyệt khác rớt kết nối. Giờ việc tra chạy riêng, tra hỏng thì nhớ lại hai phút để người vào sau không phải chờ lại.
+- **Hòm thư bot: tìm rồi xoá không còn mất danh sách.** Tìm khách xong chuyển tab rồi quay lại, ô tìm trống mà danh sách vẫn kẹt ở kết quả cũ, không có gì để xoá. Giờ ô tìm giữ đúng chữ đang lọc, xoá đi là danh sách hiện đủ.
+
+## [0.312.0] - 2026-10-25
+### Cải thiện
+- **Trang Kết nối dễ tìm hơn.** Tab Đã kết nối có ô tìm kiếm: gõ tên dịch vụ hay tên tài khoản là lọc ngay, tìm cả trong các nguồn sẵn của Claude Code.
+- **Nguồn sẵn của Claude Code và Codex chỉ hiện cái đang chạy.** Nguồn chưa đăng nhập gom vào một dòng "Đã ẩn N nguồn chưa đăng nhập", bấm Xem nếu cần. Tên gọn hơn ("Meta ADS" thay cho "claude.ai Meta ADS").
+- Bỏ thông báo xanh "ChatGPT chạy qua Codex CLI" ở đầu trang Kết nối. Thông báo vàng khi bộ não chưa gọi được công cụ vẫn giữ.
+- **Chọn agent có ô tìm kiếm.** Ở form tạo bot và ở từng bước của quy trình, ô chọn agent giờ mở ra danh sách gọn: tên đầy đủ, mô tả ngắn bên dưới, gõ không dấu vẫn tìm ra ("dao dien" ra "Đạo diễn"). Trên điện thoại danh sách trượt lên từ dưới.
+
+## [0.311.0] - 2026-10-25
+### Thêm mới
+- **Thẻ Facebook Messenger ở trang Kết nối.** Dán Page ID, App ID, App secret và một token bất kỳ từ Graph API Explorer, Javis tự đổi sang token Trang không hết hạn, tự khai webhook và gắn Trang vào app. Hết cảnh dán nhầm token người dùng rồi gặp lỗi 100, lỗi 210. Cảm ơn @adiagri09-code.
+- **Bảng kiểm tra từng bước** sau khi nối: token, quyền, App secret, webhook, Trang gắn app, bot đang trực. Dòng nào đỏ có cách sửa ngay bên dưới. Mỗi Trang có nút Kiểm tra, Sửa tự động và Đổi token.
+- Bot Messenger im lặng thì hỏi Javis: bộ não nào cũng kiểm tra được qua tool `messenger_check` và sửa được qua `messenger_repair`.
+### Sửa lỗi
+- **Skill đã tắt là tắt hẳn.** Trước đây tắt một skill mà còn bản cũ nằm trong `.claude/skills` hay `.agents` thì skill vẫn hiện lại trong danh sách và vẫn được nạp. Giờ tắt là tắt ở mọi chỗ: danh sách skill, lúc bộ não gọi skill theo tên, lúc Javis tự chọn skill. Javis cũng không nạp file skill đang bị sửa dở, trỏ ra ngoài brain hoặc nặng quá 1 MB.
+- **Quy trình không còn cho qua bước kiểm chứng bị lỗi.** Trước đây máy kiểm chứng trả "ĐẠT" rồi mới báo lỗi thì vẫn tính là đạt và bước sau vẫn chạy. Giờ cứ lỗi là dừng, giống bước chính. Cảm ơn @hwangrin.
+
+## [0.310.0] - 2026-10-25
+### Thêm mới
+- **Kho kết nối có thêm Google Analytics (GA4).** Kết nối bằng tài khoản Google là Javis đọc được số liệu website: lượt truy cập, nguồn khách, trang được xem nhiều, báo cáo theo thời gian thực. Chỉ đọc, không sửa gì trong Analytics. Cảm ơn @congsang1294.
+### Sửa lỗi
+- **Team: lưu lại tiêu chí nghiệm thu là kiểm lại thật.** Việc đã bị chấm "chưa đạt tiêu chí", mở Nghiệm thu lưu lại tiêu chí để kiểm lần nữa thì trước đây kẹt mãi ở "Đang kiểm lại sản phẩm theo tiêu chí mới" và không có lượt kiểm nào chạy. Giờ lượt kiểm lại chạy ngay và ghi kết quả mới.
+
+## [0.309.0] - 2026-10-25
+### Thêm mới
+- **Kiến thức bot và trợ lý học được giờ nằm trong brain.** Bài học, độ nhiệt tình, ngưỡng theo nhóm, hồ sơ vai trò của bộ phán xử, cùng bài học, cách trình bày và bộ phán xử riêng của từng trợ lý được ghi vào thư mục `Javis/learned/` của brain, mỗi bot và mỗi trợ lý một file. Chép brain sang máy khác hay khôi phục từ GitHub là Javis tự nạp lại vào đúng bot và trợ lý cùng tên.
+- Các ca học từ tin nhắn của khách nằm trong file riêng `.private.json`: vẫn đi theo thư mục brain nhưng không bao giờ lên GitHub. Nút "quên hết" và xoá bot xoá luôn các file này.
+### Sửa lỗi
+- **Thẻ bot gọn lại, không còn tràn chữ.** Lỗi, cảnh báo và nhóm đang chờ cho phép giờ gom thành một hàng "Tình trạng" có đếm số trên thẻ. Bấm Xem để mở cửa sổ đọc đầy đủ (chữ dài tự xuống dòng) và bấm Cho phép hay Bỏ qua ngay trong đó.
+- **Tin Zalo không còn lộ mã thẻ tên trên điện thoại.** Có lúc bot gửi kèm đoạn mã `href="zm://Profile/...">@Tên</a_mention>`: Zalo trên máy tính ẩn được nhưng trên điện thoại hiện nguyên văn. Giờ Javis gỡ sạch mã này, kể cả khi mã bị vỡ, trên mọi đường gửi tin Zalo, và hai tên đứng liền nhau được tách bằng một khoảng trắng.
+- **Nút Nhập tin cũ dễ thấy hơn.** Trước đây nút này nằm lẫn trong chip tên tài khoản Zalo trên thẻ bot, gần như không ai nhận ra. Giờ menu "..." của thẻ bot có hẳn mục Nhập tin cũ (lấy khoảng 2 tuần tin gần nhất vào Hộp thư).
+
+## [0.308.0] - 2026-10-24
+### Sửa lỗi
+- **Ô dán mã khi đăng nhập Claude không còn bị co bé tí.** Nút Gửi chiếm hết hàng nên ô mã chỉ còn chừng 24px. Giờ ô rộng hết hàng, chữ 16px dễ đọc, trên điện thoại nút xuống dòng dưới. Mở link xong con trỏ tự vào ô mã, bấm Enter là gửi, khoảng trắng thừa khi dán tự bị bỏ.
+### Cải thiện
+- **Thẻ Anthropic Compatible không bắt gõ tên model nữa.** Chỉ cần Base URL và API key rồi bấm Kết nối, Javis tự lấy danh sách model của cổng để bạn chọn ở mục Model chính. Cổng nào không tự báo danh sách thì Javis mới mở thêm ô tên model, kèm sẵn các tên Claude thường dùng để chọn.
+
+## [0.306.0] - 2026-10-24
+### Cải thiện
+- **Cài trên Windows hoặc macOS là Javis tự chạy cùng máy và tự mở trình duyệt.** Cài xong dashboard mở luôn, và từ đó mỗi lần đăng nhập máy Javis tự chạy rồi tự mở dashboard, không phải bấm gì. Trước đây phải tự bật tính năng này, và khi bật thì Javis chỉ chạy ngầm, mở máy lên không thấy đâu.
+- Không muốn tự mở: trên Windows bấm Tắt ở thẻ Khởi động cùng máy (trang Cài đặt) hoặc chạy `javis-autostart.bat uninstall`; trên macOS chạy `./bin/javis-autostart.sh uninstall`.
+- Máy Windows đã bật tự khởi động từ trước vẫn chạy ngầm như cũ; bấm Tắt rồi Bật lại một lần là có thêm phần tự mở dashboard.
+
+## [0.304.0] - 2026-10-24
+### Sửa lỗi
+- **VPS Ubuntu 26 trên Hostinger có HTTPS mà không cần điền gì, lần này chạy thật.** Bản 0.302.0 lấy nhầm tên: cổng HTTPS xin chứng chỉ cho một link, còn Javis lại kiểm tra link khác, nên bấm Open vẫn ở lại trang IP và không có HTTPS. Giờ cổng HTTPS phục vụ cả `javis.srvXXXX.hstgr.cloud` lẫn `srvXXXX.hstgr.cloud`, và Javis thử đúng hai link đó.
+### Cải thiện
+- **Cài đặt, mục Tên miền nói rõ link VPS đang ở bước nào:** đã chạy (kèm nút mở), đang chờ chứng chỉ (kèm lời nhắc mở cổng 80, 443 ở Tường lửa của hPanel), hay máy có Traefik nên cần dán dòng `DOMAIN_NAME`.
+
+## [0.302.0] - 2026-10-24
+### Sửa lỗi
+- **Nút Open của Hostinger không còn mở localhost.** Cài xong mà chưa đặt `DOMAIN_NAME` thì bấm Open giờ ra `http://<ip-vps>:7777`, vào được Javis ngay. Trước đây file cài ghi `localhost` vào chỗ tên miền nên Open mở nhầm về chính máy người bấm.
+### Thêm mới
+- **Cài xong bấm Open là vào thẳng link VPS.** Trên VPS Hostinger không có Traefik (Ubuntu 26), không cần điền gì: Javis tự lấy tên VPS, tự cấp HTTPS cho `https://javis.srvXXXX.hstgr.cloud`, và trang mở bằng IP tự chuyển sang link đó khi nó đã chạy. Giống ứng dụng cài từ Catalog của Hostinger.
+### Cải thiện
+- **Javis tự gợi ý link miễn phí của VPS Hostinger.** Mở Cài đặt, mục Tên miền: Javis dò ra tên `srvXXXX.hstgr.cloud` của VPS và hiện sẵn dòng `DOMAIN_NAME=javis.srvXXXX.hstgr.cloud` kèm nút sao chép. Dán vào Environment rồi Redeploy là có HTTPS và nút Open ra đúng link.
+
+## [0.300.0] - 2026-10-24
+### Sửa lỗi
+- **Một link cài Hostinger dùng được cho cả Ubuntu 24 lẫn Ubuntu 26.** Mẫu Ubuntu 26 trắng không có Traefik, nên trước đây dán link là Javis chạy nhưng tên miền không bao giờ có HTTPS. Giờ link đi kèm một cổng HTTPS (Caddy) tự bật khi máy không có Traefik và tự cấp SSL cho `DOMAIN_NAME`; máy có Traefik thì nó nhường, không đụng gì.
+### Cải thiện
+- Tài liệu cài đặt nói rõ: Traefik chỉ lo HTTPS, còn cập nhật là việc của Watchtower đi kèm, nên nút **Cập nhật ngay** chạy như nhau trên mọi bản Ubuntu.
+
+## [0.298.0] - 2026-10-23
+### Sửa lỗi
+- **Giọng chọn trên máy này dùng được cả trên máy khác.** Trước đây giọng đọc chỉ lưu trong trình duyệt đang mở, nên chọn giọng nữ trên máy tính thì điện thoại vẫn giữ giọng cũ, lưu bao nhiêu lần cũng vậy. Giờ giọng lưu trên Javis, mọi máy và ghi chú giọng nói gửi qua Telegram, Zalo đều dùng đúng giọng đó.
+### Cải thiện
+- **Thẻ Giọng nói nói rõ bạn sẽ nghe giọng nào.** Mỗi giọng ghi Nữ hay Nam (cả giọng ChatGPT Live như Juniper, Cove). Đầu thẻ ghi cuộc gọi dùng giọng gì và câu trả lời đọc bằng giọng gì.
+- **Hai ô giọng tách rõ:** Giọng khi gọi và Giọng đọc câu trả lời. Hai giọng khác giới thì có cảnh báo và nút đổi một chạm.
+- **Đã lưu hiện ngay dưới ô vừa đổi**, không còn nằm tít cuối thẻ.
+- **Nút Lưu của agent rõ hơn:** nút cam có biểu tượng ghi Lưu thay đổi, luôn nằm ở cuối form, báo "Có thay đổi chưa lưu" và "Đã lưu". Bấm Ctrl+S cũng lưu được.
+
+## [0.296.0] - 2026-10-23
+### Cải thiện
+- **Đề xuất sửa skill từ bằng chứng tuning.** Chủ sở hữu có thể chạy bản gốc trên dữ liệu đã cấp quyền, chốt kết quả rồi yêu cầu model tạo tối đa hai bản sửa để duyệt.
+- **Đánh giá riêng ý nghĩa và phụ thuộc.** Mỗi bản sửa có hồ sơ đánh giá độc lập; kết quả thiếu bằng chứng vẫn giữ trạng thái chưa rõ, quyền duyệt của chủ được giữ nguyên.
+- **Dừng và phục hồi thử nghiệm chặt chẽ hơn.** Giữ dữ liệu và lượt đang chạy đến khi dọn dẹp được xác minh, kể cả khi tiến trình chủ tắt đột ngột trên Windows. Thử candidate thay đổi và áp dụng trên brain thật vẫn chưa được mở.
+
+## [0.295.0] - 2026-10-23
+### Bảo mật
+- **Vá lỗ hổng Node.js ngày 21/10/2026.** Node.js công bố 10 lỗ hổng, nặng nhất là lỗi Brotli cho phép chạy mã từ xa. Ảnh Docker mới chạy Node.js 22.23.4 đã vá, nên bản Docker chỉ cần cập nhật Javis là xong.
+- **Javis tự kiểm tra Node.js trên máy.** Máy còn chạy bản chưa vá hoặc đã hết hỗ trợ (Node 20 trở xuống) thì chuông Thông báo hiện tin Bảo mật, ghi rõ bản đang dùng và lệnh nâng cấp cho Windows, Mac, Linux. Máy đã vá thì không bị nhắc.
+- **Cài mới luôn lấy bản đã vá.** `install.sh` không còn nhận Node 20 hay Node 22 cũ: nó tự cài Node.js 22 bản mới nhất, còn Node 24 hay 26 chưa vá thì cảnh báo để bạn tự nâng.
+
 ## [0.293.0] - 2026-10-23
 ### Cải thiện
-- **Chuẩn bị các lượt thử có đối chứng.** Đặt chỗ cho quản lý thử nghiệm, ghép cặp bản gốc với đề xuất và báo cáo kết quả. Phạm vi cuối cùng sẽ được ghi sau kiểm chứng; chưa bật candidate thay đổi hay áp dụng trên brain thật.
+- **Quản lý và so sánh thử nghiệm skill.** Lưu cố định thí nghiệm, quyền sửa và lịch đối chứng; báo cáo giữ đúng kết quả đã chốt và kiểm đủ các lượt. Chủ sở hữu có thể dừng/khôi phục thử nghiệm an toàn với tác vụ đang chạy. Candidate thay đổi, qualification cuối và áp dụng trên brain thật vẫn chưa được bật.
 
 ## [0.292.0] - 2026-10-23
 ### Thêm mới

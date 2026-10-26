@@ -84,6 +84,7 @@ import mcp_store
 import mcp_client
 import mcp_catalog
 import mcp_hub
+from improvement_task_skill_turn import TaskSkillTurn
 import connect_health   # sức khoẻ kết nối: vòng check nền + phân loại lỗi tiếng người
 import purge          # xoá kết nối cho sạch: chủ sở hữu duy nhất của việc dọn dấu vết
 import core_off       # năng lực MẶC ĐỊNH gỡ được: trạng thái ghi ở STATE_DIR, không sửa cây code
@@ -143,6 +144,7 @@ import zalo_bot   # kênh Zalo Bot của chủ (API chính thức) - cùng khế
 import owner_channels   # owner's control channels on Slack and WhatsApp (0.71.0)
 import whatsapp_bot     # WhatsApp transport + webhook router (0.71.0)
 import messenger_bot    # Messenger transport + webhook router (0.134.0)
+import messenger_setup  # Messenger connect wizard and health check (0.311.0)
 import channel_context   # metadata kênh + gom file trả về kênh chat (port gateway hermes-agent)
 import lang as lang_mod   # chốt ngôn ngữ trả lời cho một lượt
 import lang_registry      # sổ đăng ký: mọi thứ về một ngôn ngữ nằm đúng một chỗ
@@ -173,6 +175,7 @@ import channels          # sổ đăng ký kênh của Hộp thư hội thoại 
 import conversations     # Hộp thư hội thoại khách: kho khách -> hội thoại -> tin (Chatbot V2)
 import zalo_personal_channel   # Hộp thư hội thoại: đọc tin Zalo cá nhân từ MCP theo cursor
 import deploy_info              # Javis đang đứng ở đâu (docker/native) - xem _deploy_mode
+import node_security            # News item when this machine's Node.js misses a security release
 import ollama_catalog           # danh mục model để gợi ý + tìm kiếm
 import ollama_local             # dò/tải/gỡ model trên máy chạy Ollama
 import sessions                  # PROJECT_INSTRUCTIONS_MAX cho khối project trong system prompt
@@ -259,6 +262,9 @@ _AUTH_PUBLIC_PREFIX = ("/static", "/health", "/s/", "/hooks/")
 # /brand-logo: hiện trên màn đăng nhập (trước session). /tls-check: Caddy gọi (không đăng nhập được).
 _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth/setup",
                       "/brand-logo", "/brand-theme.css", "/tls-check",
+                      # /domain/auto, /domain/whoami (0.302.0): the login page opened by IP asks whether a
+                      # verified https link exists; neither reveals anything beyond that link and a random id.
+                      "/domain/auto", "/domain/whoami",
                       # /hub/mcp: Claude CLI/Codex gọi bằng Bearer hub_token riêng (không có cookie).
                       # /connect/oauth/callback: browser redirect từ provider OAuth về.
                       "/hub/mcp", "/connect/oauth/callback",
@@ -1012,7 +1018,7 @@ def do_phan_bo_prompt(brain: str = "brain") -> dict:
 
 
 def build_adaptive_source_prompt(brain: str = "brain", include_memory: bool = False,
-                                 include_skills: bool = False) -> str:
+                                 include_skills: bool = False, *, routing_overlays: bool = False) -> str:
     """Small Phase 8 base. Context Compiler already owns identity/safety/output contracts.
 
     Only a source that has not entered its canary is restored here. This intentionally
@@ -1042,7 +1048,12 @@ def build_adaptive_source_prompt(brain: str = "brain", include_memory: bool = Fa
         try:
             system_sync.ensure_synced(root)
             system_sync.mirror_skills(root)
+            # M4: owner-applied routing descriptions of the main chat only when the caller says the turn
+            # runs on an API engine; CLI engines also read .claude/skills natively.
             skill_meta = skill_router.list_skills(root)
+            if routing_overlays:
+                import improvement_routing
+                skill_meta = improvement_routing.with_descriptions(skill_meta, improvement_routing.main_chat_descriptions(root))
             parts.append(_skill_router_block(brain, root, skill_meta))
         except Exception:
             # The caller records source fallback through Phase 8 status; empty router
@@ -3009,7 +3020,9 @@ async def _api_stream_mcp(prov, key, model, messages, reasoning="off", brain=Non
                     coding_ctx_cua_phien=_cctx,
                 )
                 inventory_tools, inventory_route = mcp_hub.registry_inventory(
-                    mode, vault_root=vault_root, force_lazy=force_lazy, staging=True)
+                    mode, vault_root=vault_root, force_lazy=force_lazy, staging=True,
+                    workspace_root=list(_cctx.workspace_roots) if _cctx is not None else None,
+                    coding_ctx_cua_phien=_cctx)
             else:
                 servers = mcp_store.servers_for_client()
                 if servers:
@@ -3118,6 +3131,9 @@ def _get_adaptive_context():
             cfgmod.STATE_DIR, _CAPABILITY_REGISTRY, _CONTEXT_COMPILER,
             _CONTEXT_RUNTIME, cfgmod.read_settings,
         )
+        import improvement_routing
+        # M4: owner-applied routing descriptions for the brain's main chat; the canary skips them for CLI engines.
+        _ADAPTIVE_CONTEXT.routing_descriptions = improvement_routing.main_chat_descriptions
     return _ADAPTIVE_CONTEXT
 
 
@@ -3399,6 +3415,12 @@ def _schedule_registry_shadow(trace, brain, tools, route, query, provider, model
     đúng cái filter mà Phase 9 dựa vào - không bao giờ quan sát được.
     """
     if not trace:
+        return
+
+    from improvement_task_skill_scope import has_binding
+    if has_binding():
+        # Frozen task descriptors belong to the private owner, never the global
+        # derived source. Shadow publication is optional observational work.
         return
 
     async def _job():
@@ -5414,6 +5436,10 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         for k in ("openai_tts_voice", "openai_tts_model", "elevenlabs_voice"):
             if patch.get(k):
                 v[k] = str(patch[k]).strip()
+        # 0.298.0: the Edge voice is kept here too, not only in one browser's localStorage. Before, a voice
+        # picked on the laptop never reached the phone (it kept its old voice) nor the voice notes.
+        if "edge_voice" in patch and voice_note.valid_edge_voice(patch.get("edge_voice")):
+            v["edge_voice"] = str(patch["edge_voice"]).strip()
         import tts_eleven   # 0.255.0: only a model the settings page offers
         if str(patch.get("elevenlabs_model") or "").strip() in tts_eleven.MODELS:
             v["elevenlabs_model"] = str(patch["elevenlabs_model"]).strip()
@@ -7515,6 +7541,7 @@ async def skill_toggle(slug: str = Form(...), enabled: str = Form(...), brain: s
         else:
             if mirror_slug.is_dir():
                 shutil.rmtree(mirror_slug)       # tắt → gỡ mirror để native không còn nạp
+            await asyncio.to_thread(_improvement_suspend_skill, brain, slug)
             # Gọi lại mirror_skills NGAY ở đây, không chỉ chờ lượt gọi tự nhiên kế tiếp (CRITICAL 1
             # đã vá): rename ở trên vừa đổi cây <root>/skills nên chữ ký của nó đã đổi, và lệnh này
             # ép cache ghi nhận đúng chữ ký-đã-tắt NGAY LẬP TỨC. Thiếu dòng này: `rename` giữ nguyên
@@ -7614,6 +7641,8 @@ async def delete_skill(slug: str = Form(...), brain: str = Form("brain")):
                 found = True
             except Exception as e:
                 return JSONResponse({"error": str(e)}, status_code=500)
+    if found:
+        await asyncio.to_thread(_improvement_suspend_skill, brain, slug)
     return {"ok": True} if found else JSONResponse({"error": localefmt.chu("Không tìm thấy skill", "Skill not found")}, status_code=404)
 
 
@@ -9948,7 +9977,9 @@ _VERDICT_YES_RE = re.compile(r"(\bĐẠT\b|\bPASS(ED)?\b)", re.IGNORECASE)
 
 def _workflow_verdict(v_out: str, v_error: str = "") -> tuple[bool, str, str]:
     """(passed, reason, fixes) from a verify agent's answer. Anything unclear is a FAIL."""
-    if v_error and not (v_out or "").strip():
+    # Error first: a verify agent that errored cannot certify anything, even when the engine
+    # streamed a readable "pass" before failing (partial output + error used to be accepted).
+    if v_error:
         return False, f"Agent kiểm chứng lỗi, không kết luận được: {v_error[:200]}", ""
     text = v_out or ""
     vm = re.search(r"\{.*\}", text, re.DOTALL)
@@ -9987,7 +10018,7 @@ async def _run_workflow_step(node, prompt, mk, agent_sysprompt, sink, router=Non
     `log_run(slug, task, out)`: ghi nhật ký lượt chạy vào memory/agents/<slug>/runs/.
     Trước 0.35.3 chỉ runner cũ ghi - bật canary graph là nhật ký lặng lẽ biến mất.
     """
-    agent_name, sysprompt, agent_model, agent_prov = agent_sysprompt(node.agent)
+    agent_name, sysprompt, agent_model, agent_prov = agent_sysprompt(node.agent, "workflow")
     # Studio định vị chỗ đổ chữ bằng CHỈ SỐ bước, không phải id node. Thiếu `i` thì
     # event vẫn phát ra nhưng giao diện lặng lẽ vứt đi - người xem thấy bước chạy và
     # bước xong mà không thấy chữ nào.
@@ -10038,7 +10069,7 @@ async def _run_workflow_step(node, prompt, mk, agent_sysprompt, sink, router=Non
             return {"output": "", "error": loi_het_luot, "agent_name": agent_name}
         if not node.verify_agent:
             break
-        v_name, v_body, v_model, v_prov = agent_sysprompt(node.verify_agent)
+        v_name, v_body, v_model, v_prov = agent_sysprompt(node.verify_agent, "workflow")
         await sink({"type": "step_verify", "i": index, "node": node.id,
                     "agent": v_name, "attempt": attempt})
         v_sys = (
@@ -10179,7 +10210,10 @@ def _workflow_agent_helpers(brain, tools, mode=None):
                 print(f"[agent engine] {prov}: {type(e).__name__}: {e}", file=__import__('sys').stderr)
         return c
 
-    def _agent_sysprompt(aslug):
+    def _agent_sysprompt(aslug, surface=None, agent_key=None, session_created_at=None, skill_served=False):
+        """`surface` (dm, team, kanban, workflow): where this prompt runs, known by the host. Only with it can an
+        owner-applied procedure overlay (M5) be added; `agent_key`/`session_created_at` narrow it (see
+        _agent_procedure_block)."""
         ameta, abody = _read_md(_agents_dir(brain) / f"{aslug}.md")
         amem = _agent_memory(brain, aslug)
         # Khối bộ nhớ + luật tự bồi đắp chèn VÔ ĐIỀU KIỆN (kể cả khi amem rỗng): điều
@@ -10207,6 +10241,7 @@ def _workflow_agent_helpers(brain, tools, mode=None):
               "bị tự xoá. CHỈ dùng cho lời chủ dặn; bài học bạn tự rút ra thì vẫn là JAVIS_LESSON. "
               "Luật đã có trong mục đó thì đừng phát lại.\n"
             + _AGENT_TOOLKIT_BLOCK
+            + (_agent_procedure_block(brain, aslug, surface, agent_key, session_created_at, skill_served) if surface else "")
             + "\nLàm việc trong vault. Tập trung hoàn thành nhiệm vụ, trả kết quả rõ ràng, ngắn gọn."
         )
         return (ameta.get("name", aslug), sysprompt,
@@ -10272,7 +10307,7 @@ _AGENT_BA_LOI = ("Ba lối đúng: làm xong ngay trong lượt và trả kết 
                  "làm được lối nào thì nói thẳng là chưa làm.")
 
 
-def _agent_chat_prompt(brain, slug, channel="dashboard") -> str:
+def _agent_chat_prompt(brain, slug, channel="dashboard", conv_sid="", skill_served=False) -> str:
     """System prompt khi CHỦ chat trực tiếp với một trợ lý ở trang Cộng sự.
 
     Là ĐÚNG prompt mà workflow dùng cho trợ lý đó (vai, thân file, kỹ năng, bộ nhớ riêng, luật
@@ -10288,7 +10323,11 @@ def _agent_chat_prompt(brain, slug, channel="dashboard") -> str:
     if not (_agents_dir(brain) / f"{slug}.md").exists():
         raise FileNotFoundError(slug)
     _mk, _agent_sysprompt, _log, _learn = _workflow_agent_helpers(brain, None)
-    _name, sysprompt, _model, _prov = _agent_sysprompt(slug)
+    pin = _dm_session_pin(conv_sid)
+    # A conversation keeps the procedure it began with (M5, I10): it dates from its pin, else its session row.
+    # `skill_served`: only the dashboard turn on an in-process API engine reads the skill overlay (M6 bundles).
+    _name, sysprompt, _model, _prov = _agent_sysprompt(slug, "dm", (pin or {}).get("agent_key"),
+                                                       _dm_session_started(conv_sid, pin), skill_served)
     # Cộng hưởng theo quyền của LƯỢT (ngữ cảnh lượt do host gắn): trợ lý đang bật thì có dòng gợi ý và câu ba lối;
     # tắt, hay không có lượt, thì prompt y như trước A1.
     if _resonance_turn_enabled(brain):
@@ -10301,6 +10340,111 @@ def _agent_chat_prompt(brain, slug, channel="dashboard") -> str:
             + f"\n\n# Kênh: bạn đang trò chuyện trực tiếp với chủ {where}. "
             "Trả lời như đang nói chuyện, theo ngôn ngữ chủ đang dùng; "
             "không cần báo cáo dạng nhiệm vụ trừ khi được giao việc cụ thể.")
+
+
+def _dm_session_pin(conv_sid):
+    """The session -> agent pin of a private chat, or None (no session yet, no identity store, any error)."""
+    if not conv_sid:
+        return None
+    try:
+        if _RESONANCE_STORE is None and not (Path(cfgmod.STATE_DIR) / "resonance.sqlite3").is_file():
+            return None
+        return _resonance_store().session_pin(conv_sid)
+    except Exception as _e:  # noqa: BLE001
+        print(f"[dm session pin] {type(_e).__name__}: {_e}", file=sys.stderr)
+        return None
+
+
+def _dm_session_started(conv_sid, pin=None):
+    """When a private chat began: its agent pin, else its session row; None for a session not stored yet."""
+    if pin and pin.get("created_at"):
+        return pin["created_at"]
+    if not conv_sid:
+        return None
+    try:
+        row = get_store().get_session(conv_sid)
+        return float(row["created_at"]) if row and row.get("created_at") else None
+    except Exception as _e:  # noqa: BLE001
+        print(f"[dm session start] {type(_e).__name__}: {_e}", file=sys.stderr)
+        return None
+
+
+def _agent_overlay(brain, slug, surface, agent_key=None, session_created_at=None, skill_served=False) -> tuple:
+    """M5: (overlay id, prompt block) of this assistant's owner-applied procedure on this surface, or ("", "").
+
+    The key is the caller's (session pin, team member, Kanban job) or the slug's live identity; never registered here.
+    Any failure keeps the canonical prompt: an overlay is an improvement, never a reason for a turn to fail."""
+    try:
+        import improvement_agent
+        root = _brain_key(brain)
+        path = _agent_md_path(root, slug)
+        key = agent_key or (_agent_jobs_key(root, slug) if path is not None else None)
+        if path is None or not key:
+            return "", ""
+        mem = _brain_memory_dir(brain) / "agents" / slug / "MEMORY.md"
+        return improvement_agent.effective_overlay(
+            root, key, surface, agent_text=path.read_text(encoding="utf-8"),
+            memory_text=mem.read_text(encoding="utf-8") if mem.is_file() else "", session_created_at=session_created_at,
+            skill_served=skill_served, on_drift=lambda: _improvement_agents().reconcile(resonance_store.Principal(
+                "owner", "owner", str(Path(root).resolve(strict=True)))))
+    except Exception as _e:  # noqa: BLE001
+        print(f"[agent procedure] {slug}: {type(_e).__name__}: {_e}", file=sys.stderr)
+        return "", ""
+
+
+def _agent_procedure_block(brain, slug, surface, agent_key=None, session_created_at=None, skill_served=False) -> str:
+    return _agent_overlay(brain, slug, surface, agent_key, session_created_at, skill_served)[1]
+
+
+def _stage_learned_procedure(brain, slug, text, source="learn"):
+    """learn.py seam (M5, spec 8.3): procedure id when the assistant has an active overlay, else None (live write as
+    before). A store failure for an enrolled assistant refuses rather than writing live."""
+    try:
+        if _improvement_read_store() is None:
+            return None
+        principal = resonance_store.Principal("owner", "owner", str(Path(_brain_root(brain)).resolve(strict=True)))
+        service = _improvement_agents()
+        if not service.enrolled(principal, slug):
+            return None
+    except Exception as _e:  # noqa: BLE001 - enrollment unknown: the overlay cannot be served either
+        print(f"[agent procedure stage] {slug}: {type(_e).__name__}: {_e}", file=sys.stderr)
+        return None
+    try:
+        staged = service.stage_learned(principal, slug, text, source=source)
+    except ValueError:
+        raise
+    except Exception as _e:  # noqa: BLE001 - enrolled but the candidate could not be stored: never write live
+        print(f"[agent procedure stage] {slug}: {type(_e).__name__}: {_e}", file=sys.stderr)
+        raise ValueError("agent_procedure_unavailable") from None
+    return staged["procedure_id"] if staged else None
+
+
+def _improvement_agents():
+    import improvement_agent
+    return improvement_agent.AgentProcedures(_improvement_write_store(), agent_key=_improvement_agent_key,
+                                             read_agent=_improvement_read_agent)
+
+
+def _agent_review_proposals(agent_key):
+    """Open self-review ideas of one assistant (agent_review proposals): drafts for the owner's procedure text."""
+    try:
+        store = _pulse_store()
+        return agent_review.open_proposals(store, agent_key) if store is not None and agent_key else []
+    except Exception as _e:  # noqa: BLE001
+        print(f"[agent review proposals] {type(_e).__name__}: {_e}", file=sys.stderr)
+        return []
+
+
+def _improvement_agent_key(root, slug, register):
+    return (_agent_jobs_key(root, slug, register=register) or "") if _agent_md_path(root, slug) is not None else ""
+
+
+def _improvement_read_agent(root, slug):
+    path = _agent_md_path(root, slug)
+    if path is None:
+        raise FileNotFoundError("agent_unavailable")
+    mem = _brain_memory_dir(root) / "agents" / slug / "MEMORY.md"
+    return path.read_text(encoding="utf-8"), (mem.read_text(encoding="utf-8") if mem.is_file() else "")
 
 
 def _agent_builder_block(brain) -> str:
@@ -10347,7 +10491,8 @@ def _agent_turn_system_prompt(brain, slug, conv_sid, channel="dashboard") -> str
     reaction gần đây của chủ cho ĐÚNG trợ lý này (T2), và bài học phạm vi chat riêng + chung (T3 phần L).
 
     `channel` as in `_agent_chat_prompt`: the CLI agent turn (`_cli_agent_prompt`) uses this same composition."""
-    return (_agent_chat_prompt(brain, slug, channel) + _session_block(conv_sid) + _dm_feedback_prompt(brain, slug, conv_sid)
+    return (_agent_chat_prompt(brain, slug, channel, conv_sid) + _session_block(conv_sid)
+            + _dm_feedback_prompt(brain, slug, conv_sid)
             + _dm_lessons_prompt(brain, slug, conv_sid))
 
 
@@ -10401,10 +10546,13 @@ def _ket_luot_agent(brain, slug, user_message, final_text, conv_sid="") -> str:
     if lessons:
         key = _dm_agent_key(brain, slug, conv_sid, register=True)
         if key:
+            # M5 (spec 15.2): a lesson learned while a procedure overlay shaped this conversation names it.
+            overlay_id = _agent_overlay(brain, slug, "dm", key, _dm_session_started(conv_sid, _dm_session_pin(conv_sid)))[0]
             try:
                 agent_lessons.record_self_lessons(_resonance_store(), agent_key=key, context_ref=f"dm:{key}",
                                                   lessons_=lessons,
-                                                  source_refs=[f"session:{conv_sid}"] if conv_sid else [])
+                                                  source_refs=([f"session:{conv_sid}"] if conv_sid else [])
+                                                  + ([f"overlay:{overlay_id}"] if overlay_id else []))
             except Exception as _e:  # noqa: BLE001
                 print(f"[dm lessons] {slug}: {type(_e).__name__}: {_e}", file=sys.stderr)
             memory_control.note_change(_brain_memory_dir(brain))   # 0.190.0: "em sẽ nhớ" is backed by a lesson
@@ -10628,7 +10776,7 @@ async def _execute_workflow_raw(brain, slug, input="", tools=None, session_id=""
         verify_slug = (step.get("verify_agent") or "").strip()
         max_retries = int(step.get("max_retries", 1) or 0)
         step_extra = workflow_graph.step_tools(step)
-        agent_name, sysprompt, agent_model, agent_prov = _agent_sysprompt(agent_slug)
+        agent_name, sysprompt, agent_model, agent_prov = _agent_sysprompt(agent_slug, "workflow")
         task_f = task.replace("{{input}}", input or "").replace("{{prev}}", prev or "")
         yield {"type": "step_start", "i": i, "agent": agent_name, "task": task_f}
 
@@ -10666,7 +10814,7 @@ async def _execute_workflow_raw(brain, slug, input="", tools=None, session_id=""
                 break
 
             # --- KIỂM CHỨNG bằng agent KHÁC (giả định kết quả SAI) ---
-            v_name, v_body, v_model, v_prov = _agent_sysprompt(verify_slug)
+            v_name, v_body, v_model, v_prov = _agent_sysprompt(verify_slug, "workflow")
             yield {"type": "step_verify", "i": i, "agent": v_name, "attempt": attempt}
             v_sys = (
                 v_body + "\n\nVAI TRÒ KIỂM CHỨNG: Bạn là người ĐÁNH GIÁ độc lập. "
@@ -11600,6 +11748,7 @@ learn_feature = learn_mod.register(app, learn_mod.LearnDeps(
     sessions_store=get_store(),
     state_dir=cfgmod.STATE_DIR,
     readonly_tools=READONLY_TOOLS,
+    stage_agent_procedure=lambda brain, slug, text: _stage_learned_procedure(brain, slug, text),
 ))
 
 
@@ -12892,6 +13041,7 @@ async def plugins_list(brain: str = Query("brain")):
     root = _brain_root(brain)
     items = plugins_host.describe(root)
     return {"ok": True, "user_gate": plugins_host._env_user_enabled(),
+            "zip_max_mb": plugin_zip_routes.MAX_UPLOAD // 1024 // 1024,
             "global_dir": str(plugins_host.global_plugins_dir()),
             "vault_dir": str(plugins_host.vault_plugins_dir(root) or ""), "plugins": items}
 
@@ -13814,7 +13964,16 @@ _AUTOSTART_APPROVED_ON = bytes([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 def _autostart_command() -> str:
-    """Lệnh chạy khi đăng nhập Windows: wscript chạy start-javis.vbs ẩn (kill cũ + chạy nền)."""
+    """Lệnh chạy khi đăng nhập Windows: wscript chạy start-javis.vbs ẩn (kill cũ + chạy nền).
+
+    0.306.0: thêm /open để server lên xong thì mở luôn dashboard (chủ repo 24/10/2026: "cài khởi động cùng trình
+    duyệt"). Lệnh cũ không có /open vẫn chạy được nên KHÔNG tính là đường dẫn cũ, xem _autostart_legacy_command.
+    """
+    return _autostart_legacy_command() + " /open"
+
+
+def _autostart_legacy_command() -> str:
+    """Lệnh trước 0.306.0 (chỉ chạy nền, không mở trình duyệt). Vẫn hợp lệ, bật lại là lên bản có /open."""
     vbs = str(PROJECT_ROOT / "start-javis.vbs")
     return f'wscript.exe //nologo "{vbs}"'
 
@@ -13892,7 +14051,8 @@ def _autostart_status() -> dict:
                 val, _ = winreg.QueryValueEx(k, _AUTOSTART_NAME)
             st["enabled"] = bool(val)
             st["command"] = val
-            st["stale"] = bool(val) and val.strip() != expected
+            st["stale"] = bool(val) and val.strip() not in (expected, _autostart_legacy_command())
+            st["opens_browser"] = bool(val) and val.strip() == expected
         except FileNotFoundError:
             pass
         if st["enabled"]:
@@ -14012,7 +14172,7 @@ def _parse_announcements(raw: str):
         if expires and expires[:10] < today:
             continue
         kind = text(row.get("kind"), 24).lower()
-        if kind not in ("community", "marketing"):
+        if kind not in ("community", "marketing", "security"):
             kind = "community"
         priority = text(row.get("priority"), 16).lower()
         if priority not in ("high", "normal", "low"):
@@ -14289,9 +14449,17 @@ async def _notifications_data():
 
     changelog_task = asyncio.create_task(changelog_index())
     announcements_task = asyncio.create_task(_load_community_announcements())
-    changelog, (announcements, announcement_error) = await asyncio.gather(
-        changelog_task, announcements_task
+    node_task = asyncio.create_task(asyncio.to_thread(node_security.node_version))
+    changelog, (announcements, announcement_error), node_version = await asyncio.gather(
+        changelog_task, announcements_task, node_task
     )
+    # The broadcast in ANNOUNCEMENTS.json is for installs too old to run this check; here the
+    # machine's real Node.js decides, so a patched machine is not told to patch.
+    announcements = [a for a in announcements
+                     if not str(a.get("id") or "").startswith(node_security.ADVISORY_ID)]
+    node_notice = node_security.notice(node_version, deploy_info.deploy_mode())
+    if node_notice:
+        announcements.append(node_notice)
 
     releases = []
     for rel in (changelog.get("releases") or [])[:30]:
@@ -15039,6 +15207,7 @@ async def voice_options(brains: int = 1):
                            "default_model": p["default_model"]}
                           for pid, p in voice_brain.BRAIN_PROVIDERS.items() if pid],
         "tts": {"provider": v.get("tts_provider") or "edge",
+                "edge_voice": v.get("edge_voice") or "",
                 "openai_voice": v.get("openai_tts_voice") or "alloy",
                 "openai_key_set": bool(m.get("openai_api_key")),
                 "elevenlabs_voice": v.get("elevenlabs_voice") or "",
@@ -15838,7 +16007,8 @@ async def websocket_endpoint(ws: WebSocket):
 
     try:
         async def _do_turn(conv_sid, user_message, brain, turn_tag, runtime_trace=None,
-                           has_attachments=False, resume_attempt=0, user_mid=0, user_text=None):
+                           has_attachments=False, resume_attempt=0, user_mid=0, user_text=None,
+                           _task_skills=None, _turn_token=None):
             ws = _SendProxy(conv_sid, runtime_trace)  # các nhánh engine bên dưới dùng ws proxy này
             # 0.190.0: what the brain's memory looks like before the turn, for the "Đã nhớ · Hoàn tác" line and the
             # empty-claim check after it (memory_receipt).
@@ -15871,6 +16041,16 @@ async def websocket_endpoint(ws: WebSocket):
                     _note_pin_limit(lim.engine or engine_hint, float(lim.reset_epoch or 0))
                     frame["limit"] = {"engine": lim.engine, "scope": lim.scope,
                                       "reset_epoch": float(lim.reset_epoch or 0)}
+                # 0.329.0: the plan usage ring turns red. Grok and Antigravity print no fixed sentence for
+                # it, so plain quota words in their error count too (only for those two engines).
+                try:
+                    import plan_limits
+                    if noi:
+                        plan_limits.ghi_het(engine_hint, float(lim.reset_epoch or 0))
+                    elif engine_hint in ("grok-cli", "antigravity-cli") and plan_limits.la_het_han_muc(raw):
+                        plan_limits.ghi_het(engine_hint)
+                except Exception:  # noqa: BLE001 - a meter must never break a turn
+                    pass
                 return json.dumps(frame)
             # NGÔN NGỮ chốt MỘT LẦN cho cả lượt, ngay đây. Chốt sớm và chốt một chỗ là để câu
             # trả lời, giọng đọc và các cổng chặn không bao giờ hiểu khác nhau trong cùng một
@@ -15951,25 +16131,28 @@ async def websocket_endpoint(ws: WebSocket):
                 _judge_dm_owner_message(brain, _persona[1], conv_sid)
             # Dựng prompt cũ theo nhu cầu. Fast Path không đọc/nạp memory hoặc lịch sử cũ.
             sysprompt = None
+            _legacy_prompts = {}
 
-            def _legacy_system_prompt():
-                nonlocal sysprompt
-                if sysprompt is None:
+            def _legacy_system_prompt(skill_served=False):
+                # `skill_served`: the in-process API branch passes True; subscription engines read native skills.
+                if skill_served not in _legacy_prompts:
                     if _persona and _persona[0] == "agent":
                         # T2/T3: cùng cách ghép với _agent_turn_system_prompt (prompt trợ lý, khối phiên, khối phản
                         # hồi, bài học phạm vi chat riêng + chung).
-                        sysprompt = (_agent_chat_prompt(brain, _persona[1]) + _session_block(conv_sid)
-                                     + _dm_feedback_prompt(brain, _persona[1], conv_sid)
-                                     + _dm_lessons_prompt(brain, _persona[1], conv_sid))
+                        _legacy_prompts[skill_served] = (
+                            _agent_chat_prompt(brain, _persona[1], conv_sid=conv_sid, skill_served=skill_served)
+                            + _session_block(conv_sid)
+                            + _dm_feedback_prompt(brain, _persona[1], conv_sid)
+                            + _dm_lessons_prompt(brain, _persona[1], conv_sid))
                     else:
-                        sysprompt = build_system_prompt(
+                        _legacy_prompts[skill_served] = build_system_prompt(
                             brain, lang=_lang_qd, project_id=_row0.get("project_id") or "",
                             session_id=conv_sid or ""
                         ) + channel_context.build_channel_block(
                             "dashboard", {"session_id": conv_sid}, telegram_running=bool(_TG_BOT),
                             port=_javis_port(), brain_root=_brain_root(brain),
                         ) + _khoi_coding(_row0, brain)
-                return sysprompt
+                return _legacy_prompts[skill_served]
 
             async def _subscription_system_prompt(route_provider, route_model, route_kind):
                 """System prompt cho engine chạy bằng GÓI THUÊ BAO (Claude Code, Codex).
@@ -16602,11 +16785,19 @@ async def websocket_endpoint(ws: WebSocket):
                     }))
                 else:
                     # ===== API/OAuth: Phase 8 sources canary, fallback độc lập về legacy =====
+                    if _task_skills is not None:
+                        await _task_skills.start(
+                            _cfg_all, provider_kind=kind, tool_provider=prov in _API_TOOL_PROVIDERS,
+                            hub_enabled=_hub_enabled(), api_key=api_key, root=_brain_root(brain),
+                            turn_token=_turn_token, runtime=_CONTEXT_RUNTIME, trace=runtime_trace,
+                            assets_factory=_improvement_write_store,
+                        )
                     def _phase8_base(include_memory: bool, include_skills: bool) -> str:
                         # The project's INSTRUCTIONS ride along, as on Telegram and the CLI
                         # (`_nen_goc`): they are a behaviour contract, its file list is not.
                         return build_adaptive_source_prompt(
-                            brain, include_memory=include_memory, include_skills=include_skills
+                            brain, include_memory=include_memory, include_skills=include_skills,
+                            routing_overlays=kind == "api",
                         ) + (_project_block(_row0.get("project_id") or "", chi_huong_dan=True)
                              if _row0.get("project_id") else ""
                         ) + _javis_core_block(conv_sid or "") + channel_context.build_channel_block(
@@ -16650,7 +16841,7 @@ async def websocket_endpoint(ws: WebSocket):
                     else:
                         sysprompt = (_phase8_plan.system_prompt
                                      if _phase8_plan.action == "use" and not _persona
-                                     else _legacy_system_prompt())
+                                     else _legacy_system_prompt(skill_served=True))
                         label = _api_label(prov)
                         actual_model = api_model or "?"
                         _ident = (
@@ -17101,10 +17292,14 @@ async def websocket_endpoint(ws: WebSocket):
             # 0.206.0: from here on, a message the owner sends goes to this turn (steer_inbox.py).
             _steer_tok = steer_inbox.INBOX.open(conv_sid, turn_tag)
             _engine_outcome_reset(conv_sid)
+            # Local import: tests exec run_turn from its source in a namespace without this module's globals.
+            from improvement_task_skill_turn import TaskSkillTurn as _TaskSkillTurn
+            _task_skills = _TaskSkillTurn()
             try:
                 final_text = await _do_turn(
                     conv_sid, user_message, brain, turn_tag, runtime_trace, has_attachments,
                     resume_attempt=resume_attempt, user_mid=user_mid, user_text=user_text,
+                    _task_skills=_task_skills, _turn_token=_luot_token,
                 )
                 _resonance_after_turn(conv_sid, brain, user_mid, _t0_luot, runtime_trace)
                 # Phiên TRỢ LÝ mở từ một lệnh "/" gõ ở khung Trò chuyện: câu trả lời quay về
@@ -17137,6 +17332,7 @@ async def websocket_endpoint(ws: WebSocket):
                                                                           f"Processing error: {type(e).__name__}: {e}"),
                                 "session_id": conv_sid, **context_runtime.event_fields(runtime_trace)})
             finally:
+                _task_skills.close()
                 luot_dang_chay.ket_thuc(_khoa_luot)
                 _steer_left = steer_inbox.INBOX.close(conv_sid, turn_tag, _steer_tok)
                 if _steer_left:
@@ -19089,10 +19285,14 @@ async def anthropic_compat_connect(request: Request):
         live = []   # no list is normal here; the message check below decides
     if not live:
         if not typed:
-            return {"ok": False, "error": localefmt.chu(
-                "Cổng này không trả danh sách model. Gõ tên model bên bán đưa (ví dụ claude-sonnet-4-6) rồi bấm Lưu.",
-                "This gateway does not list its models. Type the model name the seller gave you "
-                "(for example claude-sonnet-4-6) and press Save.")}
+            # 0.308.0 (owner 24/10/2026: "không cần hiện tên model được không? người dùng phải được chọn chứ"): the card
+            # no longer shows the model box up front. Only a gateway with no list needs names, so this reply opens the
+            # box (need_models) with the usual Claude names to pick from (suggest), still free to type another.
+            return {"ok": False, "need_models": True, "suggest": list(_provider_def("anthropic-api")["default_models"]),
+                    "error": localefmt.chu(
+                        "Cổng này không tự báo danh sách model. Chọn hoặc gõ model bên bán cho dùng ở ô vừa hiện ra, rồi bấm Kết nối lại.",
+                        "This gateway does not list its models. Pick or type the model the seller gave you in the box "
+                        "that just appeared, then press Connect again.")}
         url = base + "/v1/messages"
         payload = {"model": typed[0], "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
         try:
@@ -21646,7 +21846,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         # không - người dùng không có cách nào biết vì sao, chỉ thấy Javis bướng. Danh sách
         # tài liệu là dữ liệu tra cứu, bỏ thì cùng lắm model phải hỏi lại.
         _n = build_adaptive_source_prompt(
-            brain, include_memory=include_memory, include_skills=include_skills)
+            brain, include_memory=include_memory, include_skills=include_skills, routing_overlays=kind == "api")
         if _pid:
             try:
                 _n += _project_block(_pid, chi_huong_dan=True)
@@ -23296,6 +23496,127 @@ async def messenger_webhook(request: Request):
     return {"ok": True, "events": n}
 
 
+# ---- Messenger setup wizard and health check (0.311.0) ----
+# The Connections page card drives these. `messenger_setup` does the Graph calls; this layer
+# stores the account and restarts the bots that use it. No response ever carries a token.
+def _ms_webhook_url(request: Request) -> str:
+    base = web_security.external_base(
+        request.url.scheme, request.url.netloc,
+        request.headers.get("x-forwarded-proto", ""), request.headers.get("x-forwarded-host", ""))
+    return base + "/messenger/webhook"
+
+
+def _ms_account_view(a: dict) -> dict:
+    bots = chatbot_store.bots_using_account(a.get("id", ""))
+    meta = a.get("meta") or {}
+    return {"id": a.get("id"), "label": a.get("label"), "page_id": a.get("external_id"),
+            "page_name": meta.get("bot_name", ""), "app_id": meta.get("app_id", ""),
+            "brain": a.get("brain", ""),
+            "bots": [{"id": b["id"], "name": b.get("name"), "enabled": bool(b.get("enabled"))} for b in bots]}
+
+
+def _ms_account_creds(account_id: str):
+    a = channel_accounts.get_account(account_id)
+    if not a or a.get("channel") != "messenger":
+        return None, None
+    return a, messenger_bot.split_credentials(channel_accounts.get_token(account_id))
+
+
+def _ms_bot_running(account_id: str, page_id: str) -> bool:
+    return bool(page_id in messenger_bot.registered()
+                or any(b.get("enabled") for b in chatbot_store.bots_using_account(account_id)))
+
+
+@app.get("/messenger/setup")
+async def messenger_setup_info(request: Request, brain: str = ""):
+    """What the wizard needs before the owner types anything: the webhook address, whether it is
+    HTTPS, the verify token, and the Messenger accounts already saved."""
+    url = _ms_webhook_url(request)
+    accs = channel_accounts.list_accounts(channel="messenger", brain=str(brain or "").strip())
+    return {"ok": True, "webhook_url": url, "https": url.startswith("https://"),
+            "verify_token": _ms_verify_token(), "accounts": [_ms_account_view(a) for a in accs]}
+
+
+@app.post("/messenger/connect")
+async def messenger_connect(request: Request):
+    """Wizard submit: Page ID, App ID, App secret and any user or Page token -> a saved Messenger
+    account with a non-expiring Page token, the app webhook registered and the Page subscribed."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    page_id = str(body.get("page_id") or "").strip()
+    res = await messenger_setup.connect(page_id, body.get("app_id"), body.get("app_secret"),
+                                        body.get("token"), _ms_webhook_url(request), _ms_verify_token())
+    if not res.get("ok"):
+        return JSONResponse({"ok": False, "error": res.get("error", ""), "step": res.get("step", "")},
+                            status_code=400)
+    secret = f"{page_id} {res['page_token']} {str(body.get('app_secret') or '').strip()}"
+    meta = {"bot_name": res.get("page_name", ""), "app_id": str(body.get("app_id") or "").strip(),
+            "webhook_url": _ms_webhook_url(request)}
+    old = channel_accounts.owner_of(page_id, "messenger")
+    if old:
+        aid = old["id"]
+        ok, loi = channel_accounts.update_account(aid, {"token": secret, "external_id": page_id,
+                                                        "meta": {**(old.get("meta") or {}), **meta}})
+        if not ok:
+            return JSONResponse({"ok": False, "error": loi}, status_code=400)
+        for b in chatbot_store.bots_using_account(aid):
+            if b.get("enabled"):
+                chatbot_runtime.start_bot(b["id"])
+    else:
+        aid, loi = channel_accounts.create_account({
+            "channel": "messenger", "token": secret, "external_id": page_id, "meta": meta,
+            "label": str(body.get("label") or "").strip() or res.get("page_name", "") or page_id,
+            "brain": str(body.get("brain") or "").strip()})
+        if loi:
+            return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    a = channel_accounts.get_account(aid) or {}
+    chk = res.get("check") or {}
+    chk.setdefault("items", []).append(messenger_setup._item(
+        "bot", True if _ms_bot_running(aid, page_id) else None, ("Có bot đang trực", "A bot is answering"), "",
+        ("Vào Chatbot, Bot, tạo hoặc bật bot cho kênh này.",
+         "Open Chatbot, Bots and create or turn on a bot for this channel.")))
+    return {"ok": True, "updated": bool(old), "account": _ms_account_view(a), "check": chk,
+            "repair_errors": res.get("repair_errors", [])}
+
+
+@app.post("/messenger/check")
+async def messenger_check(request: Request):
+    """Rerun the checklist on a saved Messenger account. `repair: true` first re-registers the
+    app webhook and re-subscribes the Page."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    aid = str(body.get("account_id") or "").strip()
+    a, cr = _ms_account_creds(aid)
+    if not a:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Không có tài khoản Messenger này",
+                                                                 "No such Messenger account")}, status_code=404)
+    meta = a.get("meta") or {}
+    url = _ms_webhook_url(request)
+    if not url.startswith("https://"):
+        url = meta.get("webhook_url", "")
+    errs = []
+    import httpx
+    async with httpx.AsyncClient(timeout=25) as c:
+        app_id = meta.get("app_id", "")
+        if not app_id:
+            info = await messenger_setup.debug_token(c, cr["access_token"])
+            app_id = info.get("app_id", "") if info.get("ok") else ""
+            if app_id:
+                channel_accounts.update_account(aid, {"meta": {**meta, "app_id": app_id}})
+        if body.get("repair") and app_id:
+            rep = await messenger_setup.repair(c, cr["page_id"], cr["access_token"], app_id,
+                                               cr["app_secret"], url, _ms_verify_token())
+            errs = rep.get("errors", [])
+        chk = await messenger_setup.run_checks(c, cr["page_id"], cr["access_token"], cr["app_secret"],
+                                               app_id, url, _ms_bot_running(aid, cr["page_id"]))
+    return {"ok": True, "account": _ms_account_view(channel_accounts.get_account(aid) or a),
+            "check": chk, "repair_errors": errs}
+
+
 def restart_telegram():
     """Bật lại bot theo cấu hình settings.telegram (tắt bot cũ nếu có)."""
     global _TG_BOT
@@ -24211,7 +24532,13 @@ async def reply_policy_forget(bot_id: str, chat_id: str = Form("")):
         return err
     if not chatbot_reply_policy_store.db_path().exists():
         return {"ok": True, "cases": 0, "lessons": 0}
-    return {"ok": True, **chatbot_reply_policy_store.forget(bot_id, chat_id)}
+    res = chatbot_reply_policy_store.forget(bot_id, chat_id)
+    try:
+        # Forgotten chat text must leave the brain folder now, not at the next mirror tick.
+        await asyncio.to_thread(learned_mirror.sync_bot, bot_id, True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[learned mirror] forget {bot_id}: {type(e).__name__}: {e}", file=sys.stderr)
+    return {"ok": True, **res}
 
 
 @app.get("/voice/brain-models")
@@ -24440,7 +24767,7 @@ import team_engine  # noqa: E402
 import team_gate  # noqa: E402
 
 
-def _team_agent_info(root, agent_key):
+def _team_agent_info(root, agent_key, surface=None):
     """Thành viên theo mã bền: slug hiện tại, tên, lời nhắc hệ thống của agent (vai, bộ nhớ, luật chủ dặn, bài học) và
     model riêng. None khi mã đã nghỉ, file mất hay chưa có sổ danh tính: bộ chạy coi như thành viên đã rời."""
     try:
@@ -24451,7 +24778,9 @@ def _team_agent_info(root, agent_key):
         return None
     if not reg or reg.get("status") != "active" or not _agent_md_path(root, reg["slug"]):
         return None
-    name, system, model, provider = _workflow_agent_helpers(root, None)[1](reg["slug"])
+    # `surface="team"` only from the team runner: pulse scans and self-review reuse this persona and are not a
+    # surface the owner can choose for a procedure overlay (M5).
+    name, system, model, provider = _workflow_agent_helpers(root, None)[1](reg["slug"], surface, agent_key)
     role, reasoning = "", AGENT_REASONING_DEFAULT
     try:
         meta, _b = _read_md(_agent_md_path(root, reg["slug"]))
@@ -24861,6 +25190,39 @@ def _agent_judge_store(create=True):
     return _AGENT_JUDGE_STORE[0]
 
 
+# ── Learned-knowledge mirror (owner request 2026-10-25): what bots and agents learned also lives in the brain folder
+#    (`Javis/learned/`), so a copied, moved or GitHub-restored brain keeps it. See server/learned_mirror.py. ──
+import learned_mirror  # noqa: E402
+
+
+def _learned_resonance(create: bool):
+    """The resonance store for the mirror: never created just to read."""
+    if not create and _RESONANCE_STORE is None and not (Path(cfgmod.STATE_DIR) / "resonance.sqlite3").is_file():
+        return None
+    return _resonance_store()
+
+
+learned_mirror.configure(resonance=_learned_resonance, judge=lambda create: _agent_judge_store(create=create))
+_LEARNED_MIRROR_TASKS: set = set()
+
+
+@app.on_event("startup")
+async def _learned_mirror_loop():
+    """Export (and import on a fresh machine) the learned mirror shortly after startup, then every 10 minutes. Only
+    code, no model; a tick with nothing changed reads a few SQLite rows and writes nothing."""
+    async def _loop():
+        await asyncio.sleep(learned_mirror.FIRST_TICK_S)
+        while True:
+            try:
+                rep = await asyncio.to_thread(learned_mirror.sync_all)
+                if rep:
+                    print(f"[learned mirror] {rep}", file=sys.stderr)
+            except Exception as e:  # noqa: BLE001
+                print(f"[learned mirror] {type(e).__name__}: {e}", file=sys.stderr)
+            await asyncio.sleep(learned_mirror.TICK_S)
+    _LEARNED_MIRROR_TASKS.add(asyncio.create_task(_loop()))   # keep a reference, or the loop can be collected
+
+
 async def _agent_judge_ask(prompt: str, purpose: str = "", started=None) -> str:
     """Lượt phán xử: model việc nền người dùng chọn (trang Models), CHỈ CHỮ, thư mục trống, không MCP, cổng từ chối mọi
     công cụ (prompt chứa chữ của chat). Không tự chọn model. Engine chưa sẵn sàng thì ném `EngineUnavailable` TRƯỚC khi gọi
@@ -25249,7 +25611,8 @@ class _MandateDeps:
 _TEAM_API = team_api.register(app, team_api.TeamApiDeps(
     brain_key=lambda b: _brain_key(b), session_store=lambda: get_store(),
     task_store=lambda: tasks_feature.store, resonance_store=lambda: _resonance_store(),
-    agents_meta=_resonance_agents_meta, agent_info=_team_agent_info, engine_for=_team_engine_for,
+    agents_meta=_resonance_agents_meta, agent_info=lambda root, key: _team_agent_info(root, key, "team"),
+    engine_for=_team_engine_for,
     broadcast=lambda ev: _CHAT_RUNTIME.publish(ev), notify=_team_notify, admin=_TeamAdmin(),
     owner_name=lambda: ((cfgmod.read_settings().get("auth") or {}).get("username") or ""),
     ceiling=_team_ceiling, projector=_feedback_projector, judge=lambda: _agent_judge(),
@@ -25565,7 +25928,7 @@ def _agent_persona(root, slug, agent_key=None):
             return ""
         if not reg or reg.get("slug") != slug or reg.get("status") != "active":
             return ""
-    name, sysprompt, _model, _prov = _workflow_agent_helpers(root, None)[1](slug)
+    name, sysprompt, _model, _prov = _workflow_agent_helpers(root, None)[1](slug, "kanban", agent_key)
     return (f"# VAI CỦA VIỆC NÀY\nViệc này được giao cho trợ lý \"{name}\". Làm đúng vai dưới đây, báo kết quả bằng "
             f"giọng của trợ lý đó.\n\n{sysprompt}")
 
@@ -26628,6 +26991,118 @@ improvement_api.register(app, improvement_api.ImprovementApiDeps(
     agent_key=lambda root, slug: _agent_jobs_key(root, slug, register=True),
 ))
 
+# M2E manual activation: owner applies an authorized candidate to one assistant chat. Read time
+# resolves the pointer for in-process engines only; nothing here writes a canonical skill file.
+import improvement_activation  # noqa: E402
+import improvement_activation_api  # noqa: E402
+
+improvement_activation.configure(Path(cfgmod.STATE_DIR) / "resonance.sqlite3",
+                                 RevisionBlobs(Path(cfgmod.STATE_DIR) / "improvement"))
+def _improvement_activation_agent(root, slug):
+    # Only an assistant that has its file in this brain gets (or keeps) an identity here.
+    if not skill_router.valid_file_slug(slug) or not (_agents_dir(root) / f"{slug}.md").is_file():
+        return ""
+    return _agent_jobs_key(root, slug, register=True) or ""
+
+
+def _improvement_read_team(root, team_id):
+    """(team, active members) of this brain for an M7 pin; another brain's or an unknown team is unavailable."""
+    if not _TEAM_API.exists():
+        raise PermissionError("team_unavailable")
+    teams = _TEAM_API.teams()
+    team = teams.get(team_id)
+    if not team or team.get("brain_id") != root or team.get("status") != "active":
+        raise PermissionError("team_unavailable")
+    return team, teams.members(team_id)
+
+
+def _improvement_team_contract(root, team_id, task_id):
+    """The named job's acceptance criteria (team_acceptance), the contract both arms are judged against."""
+    import team_acceptance
+    row = team_acceptance.AcceptanceStore(_TEAM_API.teams().path).get(task_id)
+    if not row or row.get("team_id") != team_id:
+        raise PermissionError("team_task_unavailable")
+    return __import__("improvement_store")._hash({k: row.get(k) for k in ("criteria", "expected_outputs", "fix_rounds")})
+
+
+def _improvement_team_member(root, agent_key):
+    """What the team runner really uses for one member (M7 pin): agent file and owner-rule hashes, the procedure
+    overlay on the team surface, each granted skill's content hash, and the provider/model `_team_engine_for`
+    would pick (main-model fallback included). The whole prompt is not hashed: it carries lessons that grow."""
+    import improvement_agent
+    import improvement_store
+    info = _team_agent_info(root, agent_key)
+    path = _agent_md_path(root, (info or {}).get("slug") or "") if info else None
+    if not info or path is None:
+        return None
+    agent_text = path.read_text(encoding="utf-8")
+    mem = _brain_memory_dir(root) / "agents" / info["slug"] / "MEMORY.md"
+    meta, _body = _read_md(path)
+    skills = {}
+    for name in (meta or {}).get("skills") or []:
+        asset = skill_router.read_skill_asset(Path(root), str(name))
+        skills[str(name)] = asset.content_hash if asset else ""
+    settings = cfgmod.read_settings() or {}
+    spec = team_engine.choose_spec(info.get("model") or "", info.get("model_provider") or "", _effective_main(settings),
+                                   _agent_model_provider, lambda sp: aux_engine.availability(sp, settings))
+    return {"slug": info["slug"], "agent_hash": improvement_store._hash(agent_text),
+            "owner_rules_hash": improvement_agent.owner_rules_hash(agent_text, mem.read_text(encoding="utf-8")
+                                                                   if mem.is_file() else ""),
+            "procedure": _agent_overlay(root, info["slug"], "team", agent_key)[0], "skills": skills,
+            "provider": spec.get("provider") or "", "model": spec.get("model") or "", "reasoning": info.get("reasoning") or ""}
+
+
+def _improvement_activations():
+    return improvement_activation.Activations(_improvement_write_store(), agent_key=_improvement_activation_agent)
+
+
+def _improvement_canaries():
+    import improvement_canary
+    return improvement_canary.Canaries(_improvement_activations())
+
+
+def _improvement_after_report(principal, report_id):
+    # M3: a qualified final opens canaries only in scopes the owner granted; otherwise nothing happens.
+    return _improvement_canaries().auto_apply_for_report(principal, report_id)
+
+
+def _improvement_suspend_skill(brain, slug):
+    """A disabled or deleted skill invalidates its applied overlays now, so re-enabling never revives them."""
+    try:
+        root = str(Path(_brain_root(brain)).resolve(strict=True))
+        if _improvement_read_store() is not None:
+            _improvement_activations().suspend_source(resonance_store.Principal("owner", "owner", root), slug)
+    except Exception as error:  # noqa: BLE001 - bookkeeping must never fail the skill toggle
+        print(f"[improvement activation] suspend {slug}: {type(error).__name__}: {error}", file=sys.stderr)
+
+
+improvement_activation_api.register(app, improvement_activation_api.ActivationApiDeps(
+    activations=_improvement_activations,
+    read_store=_improvement_read_store,
+    owner_session=_doi_phien_that,
+    canaries=_improvement_canaries,
+    routing=lambda: __import__("improvement_routing").Routing(_improvement_write_store(), registry=_CAPABILITY_REGISTRY),
+    agents=_improvement_agents,
+    bundles=lambda: __import__("improvement_bundle").Bundles(
+        _improvement_write_store(), activations=_improvement_activations(), procedures=_improvement_agents()),
+    team_trials=lambda: __import__("improvement_team").TeamTrials(
+        _improvement_write_store(), read_team=_improvement_read_team,
+        member_info=_improvement_team_member, contract=_improvement_team_contract),
+    recipe_transfers=lambda: __import__("improvement_team").RecipeTransfers(_improvement_write_store()),
+    governance=lambda: __import__("improvement_library").Governance(
+        _improvement_write_store(), activations=_improvement_activations(), procedures=_improvement_agents(),
+        routing=__import__("improvement_routing").Routing(_improvement_write_store(), registry=_CAPABILITY_REGISTRY),
+        bundles=__import__("improvement_bundle").Bundles(
+            _improvement_write_store(), activations=_improvement_activations(), procedures=_improvement_agents()),
+        canaries=_improvement_canaries()),
+    imports=lambda: __import__("improvement_library").Imports(_improvement_write_store()),
+    export=lambda principal, ids: __import__("improvement_library").export_procedures(
+        _improvement_write_store(), principal, ids, version=_read_version()),
+    review_proposals=_agent_review_proposals,
+    resolve_brain=lambda value: improvement_api.strict_brain(value,
+        default_root=Path(BRAINS_DIR) / "Brain Default", brains_root=Path(BRAINS_DIR)),
+))
+
 
 # Explicit owner trials are lazy; importing routes does not start or recover work.
 import improvement_trial_api  # noqa: E402
@@ -26772,8 +27247,90 @@ import improvement_experiment_api  # noqa: E402
 
 improvement_experiment_api.register(app, improvement_experiment_api.ExperimentApiDeps(
     read_store=_improvement_read_store,
+    write_store=_improvement_write_store,
     resolve_brain=lambda value: improvement_api.strict_brain(value,
         default_root=Path(BRAINS_DIR) / "Brain Default", brains_root=Path(BRAINS_DIR)),
     owner_session=_doi_phien_that,
     service=_improvement_experiment_service,
+    after_report=_improvement_after_report,
 ))
+
+
+# Plugins page "Install from .zip" (owner request 2026-10-25). Same auth rule as the pack routes
+# (it brings foreign code onto the machine), see server/routes/plugin_zip.py. Registered LAST so
+# route_table.json only grows at the end instead of renumbering every later route.
+import routes.plugin_zip as plugin_zip_routes   # noqa: E402
+
+
+def _after_plugin_install(brain: str) -> None:
+    """The refresh /plugins/toggle does: hub route cache, then the operations index."""
+    mcp_hub.invalidate_cache()
+    try:
+        rebuild_javis_index(brain)
+    except Exception as e:      # noqa: BLE001
+        print(f"[plugin-zip] index rebuild: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+plugin_zip_routes.register(app, plugin_zip_routes.PluginZipDeps(
+    co_phien=lambda r: cfgmod.valid_session(r.cookies.get("javis_session", "")),
+    brain_root=lambda b: _brain_root(b),
+    after_install=_after_plugin_install,
+))
+
+
+# Invitation to star Javis on GitHub (0.324.0, owner request 2026-10-25), see server/star_nudge.py.
+# Registered LAST so route_table.json only grows at the end.
+import routes.star_nudge as star_nudge_routes   # noqa: E402
+
+star_nudge_routes.register(app, star_nudge_routes.StarNudgeDeps(
+    read_settings=cfgmod.read_settings,
+    update_settings=cfgmod.update_settings,
+    read_sql=lambda sql, params=(): get_store()._read(sql, params),
+    state_dir=Path(cfgmod.STATE_DIR),
+    version=_app_version,
+))
+
+
+# Usage page, hourly view (0.329.0): last 24 hours, the 5-hour window over time, busy hours of the
+# last 7 days. Registered LAST so route_table.json only grows at the end.
+@app.get("/usage/theo-gio")
+async def usage_theo_gio():
+    """Ba goc nhin theo gio cua trang Muc dung (usage_index.theo_gio) kem MOC so sanh cua so 5 gio:
+    tran nguoi dung tu khai, khong thi muc cao nhat tung cham trong 60 ngay (giong /usage/tong-quan)."""
+    d = await asyncio.to_thread(usage_index.theo_gio, 5.0)
+    mcfg = cfgmod.read_settings().get("model", {}) or {}
+    tran = int(mcfg.get("tran_5h") or 0)
+    dinh = {}
+    if not tran:
+        try:
+            dinh = await asyncio.to_thread(usage_index.dinh_cua_so, 5.0)
+        except Exception:  # noqa: BLE001
+            dinh = {}
+    d["moc"] = {"tokens": tran or int(dinh.get("tokens") or 0), "loai": "tran" if tran else "dinh",
+                "luc": dinh.get("hour") or ""}
+    return d
+
+
+@app.get("/plan-limits")
+async def plan_limits_get(goi: int = 0):
+    """0.329.0: the composer ring. The 5-hour and weekly meters of each brain that runs on a plan
+    (Claude Code on its signed-in session, ChatGPT through Codex), as the CLIs last reported them.
+    Grok Build and Antigravity report no meter, so theirs only turns red once a turn was refused.
+    `goi=1` (the popover opening) also names each plan: Claude from `claude auth status`, ChatGPT
+    from the sign-in Javis holds, Grok from its own auth file. Antigravity keeps no plan name."""
+    import plan_limits
+    await asyncio.to_thread(plan_limits.quet_codex)
+    d = await asyncio.to_thread(plan_limits.doc)
+    # On an API key a brain bills per token: no plan, so no ring for it.
+    grok_k = await asyncio.to_thread(grok_cli.auth_status)
+    co_goi = {"anthropic-cli": not claude_auth.env_cho_cli(), "openai-oauth": True,
+              "grok-cli": grok_k.get("method") != "xai-api-key", "antigravity-cli": True}
+    ten = {}
+    if goi:
+        cl = await asyncio.to_thread(claude_auth_status)
+        oa = (cfgmod.read_settings().get("model", {}) or {}).get("openai_oauth") or {}
+        ten = {"claude": plan_limits.ten_goi(cl.get("goi") or ""),
+               "codex": plan_limits.ten_goi((d.get("codex") or {}).get("goi") or oa.get("plan") or ""),
+               "grok": plan_limits.ten_goi(grok_k.get("plan") or ""), "agy": ""}
+    return {"claude": d.get("claude"), "codex": d.get("codex"), "grok": d.get("grok"), "agy": d.get("agy"),
+            "plan": co_goi, "ten_goi": ten, "nguong": {"canh_bao": plan_limits.CANH_BAO, "sat": plan_limits.SAT}}

@@ -577,6 +577,15 @@ async function napCaiDatGiong() {
       fetch("/voice/call").then(r => r.json()).catch(() => null),
     ]);
     const v = (s && s.voice) || {};
+    // 0.298.0: the Edge voice saved on the server wins over the one this browser remembered. It used to live
+    // only in localStorage, so a voice picked on the laptop never reached the phone, which kept speaking with
+    // its old voice however many times the owner saved (report 23/10/2026).
+    const vs = document.getElementById("voiceSel");
+    if (vs && v.edge_voice && v.edge_voice !== vs.value
+        && Array.from(vs.options).some(o => o.value === v.edge_voice)) {
+      vs.value = v.edge_voice;
+      vs.dispatchEvent(new Event("change"));
+    }
     const upload = !!(ear && ear.kind === "upload");
     if (call && call.voice_mode) _callInfo = call;
     const mode = (call && call.voice_mode) || v.mode || "standard";
@@ -1265,6 +1274,7 @@ function handleMessage(data) {
         else window.JavisInbox.refresh();
       }
     } catch (e) {}
+    try { if (window.JavisStar) window.JavisStar.moment("work"); } catch (e) {}   // việc nền vừa trả kết quả
     return;
   }
   if (data.type === "status") {
@@ -1358,6 +1368,11 @@ function handleMessage(data) {
       // Có câu trả lời thật thì linh vật vui một nhịp. Đang đọc thành tiếng thì nó tự đợi đọc
       // xong mới nhảy (pet.js giữ cờ choXong), nên gọi ngay ở đây là đủ.
       if (finalText.trim()) petReact("xong");
+      // Javis vừa làm một việc nhiều bước cho người dùng: một khoảnh khắc vui để mời tặng sao GitHub
+      // (star-nudge.js tự đợi người dùng rảnh tay, server quyết định có mời không).
+      try { if (finalText.trim() && t && ((t.buoc && t.buoc.so) || 0) >= 3 && window.JavisStar) window.JavisStar.moment("work"); } catch (e) {}
+      // Mỗi lượt xong, Claude Code / Codex vừa báo hạn mức gói mới: vòng tròn cạnh chip Effort đọc lại (plan-limit.js).
+      try { if (window.JavisPlanLimit) window.JavisPlanLimit.refresh(); } catch (e) {}
       // data.tts === false: khung "response" này KHÔNG được đọc (vd bản sửa lại sau khi bóc
       // JAVIS_LESSON của phiên trợ lý) - giống hệt cách nhánh "stream" đã tôn trọng data.tts.
       if (voice.ttsEnabled && t && data.tts !== false) {
