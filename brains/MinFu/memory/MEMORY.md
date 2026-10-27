@@ -98,3 +98,4 @@
 - [Các cluster dùng CNI Calico](facts/cluster-dung-calico-cni.md) - CNI hiện tại của các cluster là Calico, nên phương án multi-cluster phải giữ được Calico.
 - [Muốn giải thích luồng bằng sơ đồ text](facts/user-muon-giai-thich-bang-so-do-text.md) - Khi giải thích luồng mạng hoặc setup, user muốn sơ đồ text map và đi từng bước.
 - [Tiêu chí chọn cách gọi service giữa các cluster](facts/tieu-chi-chon-cach-goi-service-lien-cluster.md) - Bốn tiêu chí user đặt cho cách gọi service liên cluster: băng thông, đường truyền, dễ cấu hình, dễ trace lỗi.
+- [Muốn gc gọi trực tiếp service trên sc, không qua ingress](facts/muon-goi-service-sc-truc-tiep-tu-gc.md) - Ngày 2026-10-27 user hỏi cách gc gọi thẳng service sc thay vì đi qua ingress-nginx (mục tiêu, chưa chốt).
