@@ -85,7 +85,7 @@
 - [Kyverno đã có trên fsel-prod và fsel-local](facts/kyverno-dang-chay-tren-hai-cluster.md) - Kiểm ngày 2026-10-26 bằng kubectl chỉ đọc: fsel-prod chạy Kyverno 1.11.5, fsel-local chạy Kyverno 1.19.2.
 - [Không khôi phục .gitignore bị ghi đè](facts/khong-khoi-phuc-gitignore-bi-ghi-de.md) - Người dùng không muốn khôi phục .gitignore của repo kubeconfig-generator sau lần robocopy thiếu /XO.
 - [Sửa thẳng trong repo thì đồng bộ ngược về brain](facts/dong-bo-nguoc-repo-ve-brain.md) - Khi người dùng sửa trực tiếp trong repo kubeconfig-generator, Javis kiểm rồi đồng bộ ngược về brain, bỏ qua file secret thật.
-- [kubeconfig-generator đã push main và deploy thử fsel-local](facts/kubeconfig-generator-da-push-va-deploy-fsel-local.md) - Ngày 2026-10-26 code lên origin/main commit b06c5ac; pod fsel-local đang CrashLoopBackOff (thực tế tính đến 2026-10-26).
+- [kubeconfig-generator đã push main và deploy thử fsel-local](facts/kubeconfig-generator-da-push-va-deploy-fsel-local.md) - Ngày 2026-10-26 push b06c5ac rồi 8008407 và 5201191 lên origin/main; pod fsel-local từng CrashLoopBackOff, chưa deploy image mới (thực tế tính đến 2026-10-26).
 - [deploy/secret.yaml đã vào .gitignore trước khi push](facts/secret-yaml-da-vao-gitignore.md) - Ngày 2026-10-26 người dùng yêu cầu chặn commit secret; deploy/secret.yaml đã được ignore, không lên GitLab.
 - [Role và DB kubeconfig_generator chưa có trên Postgres fsel-local](facts/db-kubeconfig-generator-chua-tao-tren-fsel-local.md) - Kiểm ngày 2026-10-26: postgresql-0 chỉ có role postgres và DB postgres, ticket, jira; app báo password authentication failed.
 - [Thêm fsGroup và defaultMode 0440 cho volume clusters của kubeconfig-generator](facts/kubeconfig-generator-fsgroup-defaultmode.md) - Đã sửa values.yaml trong argocd-deploy-clean, chưa commit, để pod app đọc được secret kubeconfig
@@ -93,3 +93,4 @@
 - [Kubeconfig fsel-local cần tls-server-name cho IP 101.99.7.167](facts/tls-server-name-fsel-local.md) - Secret fsel-local.yaml thiếu tls-server-name 10.10.0.182 nên app không đọc được label namespace (thực tế tính đến 2026-10-26).
 - [Chọn giao diện Dark Console và Card/Wizard cho kubeconfig-generator](facts/chon-giao-dien-kubeconfig-generator.md) - Ngày 2026-10-26 user chọn kết hợp kiểu 2 (Dark Console) và kiểu 4 (Card và Wizard) cho giao diện.
 - [Bản preview giao diện kubeconfig-generator trong workspace](facts/preview-giao-dien-kubeconfig-generator.md) - Bản xem trước 6 trang giao diện nằm tại workspace/kubeconfig-generator-preview, dùng dữ liệu giả.
+- [Kế hoạch tách gateway và service sang cluster riêng](facts/ke-hoach-tach-gateway-va-service-nhieu-cluster.md) - Mục tiêu tách gateway và service sang cluster riêng ở các NCC cloud trong nước, gọi nhau qua mạng nội bộ.
