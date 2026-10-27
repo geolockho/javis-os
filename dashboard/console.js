@@ -70,10 +70,6 @@
   // RAIL_GROUPS, không theo tên nhóm: tên là chữ hiện ra, đã nằm ở từ điển (nav.group.*).
   const GICON = {
     bo_nao: ic("brain"),
-    // Giữ "file-code" như trước khi có mục Coding. 0.63.1 từng đổi sang "wrench" để nhường
-    // icon cho mục con, nhưng 0.63.4 mục con đã sang "code-xml" nên không còn trùng nữa, mà
-    // cờ lê thì nói "sửa chữa, cài đặt" chứ không nói "mã nguồn". Chủ dự án đòi trả lại.
-    code: ic("file-code"),
     nang_luc: ic("lightbulb"),
     viec: ic("clipboard-check"),
     ket_noi: ic("link"),
@@ -121,15 +117,12 @@
     // đứng thành một tầng riêng ngang hàng với Bộ não là thừa một bậc. Hai mục dồn xuống
     // "Bộ não" và đứng đầu nhóm, vì đó là hai trang được mở nhiều nhất.
     { id: "bo_nao", get label() { return t("nav.group.bo_nao"); },      icon: GICON.bo_nao,      ids: ["home", "chat", "files", "learn"] },
-    // "Code" là NHÓM riêng, không phải một mục nhét vào "Bộ não". Đây là một KHU VỰC làm việc
-    // sẽ dày lên (Terminal hôm nay, các công cụ lập trình khác sau này), chứ không phải một
-    // chức năng của Second Brain - chủ repo nói rõ điều đó khi thấy bản đầu xếp nhầm.
-    // Thêm chức năng Code mới = thêm 1 mục vào RAIL_ITEMS + 1 id vào đây + 1 dòng trong
-    // CHUC_NANG của dashboard/code-term.js.
-    { id: "code", get label() { return t("nav.group.code"); },        icon: GICON.code,        ids: ["terminal", "coding"] },
     // 0.61.0: Chatbot gộp vào trang Hội thoại (tab thứ ba); id "chatbots" giữ làm bí danh
     // (lệnh nói "mở chatbot", bookmark cũ) và được navigateTo đổi hướng sang tab đó.
-    { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON.nang_luc,    ids: ["workspace", "teams", "conversations", "skills", "plugins"] },
+    // 0.347.0: the "Code" group is gone (owner, 27/10/2026): every chat now works in a folder and
+    // can code, so a separate Coding area is redundant. Terminal lives here; Coding stays a real
+    // page (old links, voice commands) but is hidden from the rail, see RAIL_AN.
+    { id: "nang_luc", get label() { return t("nav.group.nang_luc"); },    icon: GICON.nang_luc,    ids: ["workspace", "teams", "conversations", "skills", "plugins", "terminal"] },
     { id: "viec", get label() { return t("nav.group.viec"); },        icon: GICON.viec,        ids: ["kanban", "selfimprove", "webhooks"] },
     { id: "ket_noi", get label() { return t("nav.group.ket_noi"); },     icon: GICON.ket_noi,     ids: ["mcp", "packs", "channels", "logins", "models"] },
     { id: "he_thong", get label() { return t("nav.group.he_thong"); },    icon: GICON.he_thong,    ids: ["settings", "share", "account"], foot: true },
@@ -149,7 +142,9 @@
   // "chatbots" (0.61.0): trang Chatbot gộp vào trang Hội thoại làm tab thứ ba. Id còn đó để
   // lệnh nói / bookmark cũ đi tới đúng tab, nhưng không còn là một mục trên thanh bên.
   // Các id cũ vẫn dùng được qua lệnh UI và lối tắt, nhưng mở tab trong Cài đặt.
-  const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs"]);
+  // "coding" (0.347.0): coding happens in any chat with a folder attached, so the Coding page left
+  // the rail with the Code group; its id still opens it.
+  const RAIL_AN = new Set(["chatbots", "usage", "pet", "logs", "coding"]);
   // Trả về [{label, foot, items:[...]}], bỏ id không tồn tại. Mục nào chưa xếp nhóm → dồn vào "Khác".
   function railGroups() {
     const seen = new Set();
@@ -2972,6 +2967,7 @@
         </div>
       </div>
 
+      <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("improve.auto_title"))}${infoBtn()}</h3>${infoBody(esc(window.t("cs.ln_chat_note")))}<div id="lnChat">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_review_head"))}</h3><div id="lnReview">${esc(window.t("common.loading"))}</div></div>
       <div class="si-log"><h3 style="font-size:15px;color:var(--text)">${esc(window.t("cs.ln_log_head"))}</h3><div id="lnLog">${esc(window.t("common.loading"))}</div></div>
     </div>`;
@@ -3042,6 +3038,37 @@
       loadAll();
     };
 
+    // Learning from chat (0.341.0): what Javis changed on its own; undo, or apply in "Đề xuất" mode.
+    async function loadChat() {
+      const box = el.querySelector("#lnChat");
+      let d = {}; try { d = await (await fetch(`/auto-learning?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
+      if (!d.ok) { box.innerHTML = ""; return; }
+      const st = d.stats || {}, open = Object.values(st.mistakes || {}).reduce((a, b) => a + b, 0);
+      const head = `<div class="dim" style="color:var(--text3)">${esc(window.t("improve.auto_stats").replace("{p}", st.pending || 0).replace("{m}", open))}</div>`;
+      const rows = (d.history || []).slice(0, 10);
+      if (!rows.length) { box.innerHTML = head + `<div class="dim" style="color:var(--text3)">${esc(window.t("improve.auto_empty"))}</div>`; return; }
+      const KIND = {skill: window.t("improve.auto_kind_skill"), agent: window.t("improve.auto_kind_agent"),
+                    workflow: window.t("improve.auto_kind_workflow")};
+      const STATE = {undone: window.t("improve.auto_undone"), applied: window.t("improve.auto_applied"),
+                     proposed: window.t("improve.auto_proposed"), running: window.t("improve.auto_running"),
+                     failed: window.t("improve.auto_failed"), skipped: window.t("improve.auto_skipped"),
+                     kept: window.t("improve.auto_kept")};
+      box.innerHTML = head + rows.map(r => {
+        const what = (KIND[r.kind] || r.kind) + " " + r.slug + (r.kind === "workflow" ? " #" + (r.step + 1) : "");
+        const state = r.undone_at ? "undone" : r.applied ? "applied" : r.proposed ? "proposed" : r.state === "running" ? "running"
+          : r.state === "failed" ? "failed" : r.state === "skipped" ? "skipped" : "kept";
+        const act = r.proposed ? `<button class="s-btn-ghost" data-al-apply="${esc(r.id)}">${esc(window.t("improve.auto_apply"))}</button>`
+          : (r.applied && !r.undone_at) ? `<button class="s-btn-ghost" data-al-undo="${esc(r.id)}">${esc(window.t("improve.auto_undo"))}</button>` : "";
+        return `<div class="le">${esc(new Date(r.started_at * 1000).toLocaleString())} · <b>${esc(what)}</b> · ${esc(STATE[state])} ${act}</div>`;
+      }).join("");
+      const post = async (id, verb) => {
+        await fetch(`/auto-learning/${encodeURIComponent(id)}/${verb}?brain=${encodeURIComponent(fbrain())}`, {method: "POST",
+          headers: {"Content-Type": "application/json"}, body: JSON.stringify({event_key: `ln-${verb}-${id}`})});
+        loadChat();
+      };
+      box.querySelectorAll("[data-al-apply]").forEach(b => b.onclick = () => post(b.dataset.alApply, "apply"));
+      box.querySelectorAll("[data-al-undo]").forEach(b => b.onclick = () => post(b.dataset.alUndo, "undo"));
+    }
     async function loadMetrics() {
       let m = {}; try { m = await (await fetch(`/learn/metrics?brain=${encodeURIComponent(fbrain())}`)).json(); } catch (e) { }
       el.querySelector("#lnMetrics").innerHTML =
@@ -3125,7 +3152,7 @@
       el.querySelector("#bkStatus").innerHTML = `${esc(window.t("cs.bk_last"))} ${esc(when)}${s.last_status ? " · " + esc(s.last_status) : ""}${brainsNote}${gitNote}`;
     }
 
-    function loadAll() { loadMetrics(); loadReview(); loadLog(); loadBackup(); }
+    function loadAll() { loadMetrics(); loadChat(); loadReview(); loadLog(); loadBackup(); }
     loadAll();
   }
 
@@ -6109,12 +6136,16 @@
       // Cả hai khối đều NẰM TRONG DOM, chỉ ẩn đi - phần dây nối bên dưới tìm theo id và
       // chạy một lần cho cả hai, nên đổi tab không phải vẽ lại hay nối lại gì cả.
       + '<div id="mcpTabDaNoi"' + (_mcpTab === "danoi" ? "" : " hidden") + '>'
-      + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.cn_connected_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.cn_account_n", { so: conns.length })) + '</span>' + infoBtn() + '</h3>'
+      + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.cn_connected_head")) + ' <span style="opacity:.5" id="connCount" data-n="' + conns.length + '">' + esc(window.t("cs.cn_account_n", { so: conns.length })) + '</span>' + infoBtn() + '</h3>'
       + infoBody(esc(window.t("cs.cn_intro")))
       + (conns.length > 3 ? '<input class="js-input conn-search" id="connQ" type="search" placeholder="' + esc(window.t("cs.cn_conn_search_ph")) + '">' : "")
       + '<div class="gcard-meta" style="max-width:740px">'
       + '<label style="cursor:pointer"><input type="checkbox" id="mcpStrict" ' + (d.strict ? "checked" : "") + '> ' + esc(window.t("cs.cn_strict")) + '</label></div>'
-      + '<div class="prov-list" id="connList" style="margin-top:12px">' + (connectedHtml || '<div class="mp-empty">' + esc(window.t("cs.cn_empty_a")) + ' <b>' + esc(window.t("cs.cn_tab_sanco")) + '</b> ' + esc(window.t("cs.cn_empty_b")) + '</div>') + '</div><div class="mp-empty" id="connNone" hidden>' + esc(window.t("cs.cn_conn_search_none")) + '</div></div>'
+      + '<div class="prov-list" id="connList" style="margin-top:12px">' + (connectedHtml || '<div class="mp-empty">' + esc(window.t("cs.cn_empty_a")) + ' <b>' + esc(window.t("cs.cn_tab_sanco")) + '</b> ' + esc(window.t("cs.cn_empty_b")) + '</div>') + '</div>'
+      // Connected Facebook Pages (messenger-connect.js), one card in this same list, drawn only once a Page is
+      // connected. 0.332.0: it used to be a section of its own further down, with the form open in the page.
+      + '<div class="prov-list" id="mcpMessenger"></div>'
+      + '<div class="mp-empty" id="connNone" hidden>' + esc(window.t("cs.cn_conn_search_none")) + '</div></div>'
       // Lối đi tiếp, đặt ngay dưới danh sách. Không có nó thì tab này là ngõ cụt với
       // người chưa đấu gì: họ nhìn một ô trống mà không biết bước kế tiếp ở đâu.
       + '<div class="conn-guide" style="border:1px dashed var(--border);border-radius:12px;'
@@ -6122,8 +6153,6 @@
       + '<span style="flex:1;min-width:240px">' + esc(window.t("cs.cn_more_services")) + '</span>'
       + '<button class="mp-btn" id="mcpDiSanCo">' + esc(window.t("cs.cn_tab_sanco")) + '</button>'
       + '<button class="mp-btn primary" id="mcpDiKho">Javis Store</button></div>'
-      // Facebook Messenger setup card (0.301.0): drawn by messenger-connect.js into this slot.
-      + '<div id="mcpMessenger"></div>'
       + '<details class="cview-section amb-details" id="ambWrap"><summary><h3 style="display:inline">◆ ' + esc(window.t("cs.cn_amb_head")) + ' <span style="opacity:.5">' + esc(window.t("cs.cn_amb_hint")) + '</span></h3></summary>'
       + '<div class="gcard-meta" style="max-width:740px;margin-top:10px">' + esc(window.t("cs.cn_amb_desc_a")) + ' <code>codex mcp</code>' + esc(window.t("cs.cn_amb_desc_b")) + '</div>'
       + '<div class="prov-list" id="mcpAmbient" style="margin-top:12px"><div class="mp-empty">' + esc(window.t("cs.cn_amb_click")) + '</div></div>'
@@ -6133,7 +6162,12 @@
       + '<div class="cview-section"><h3>◆ ' + esc(window.t("cs.cn_tab_sanco")) + '</h3>'
       + '<div class="cat-tools"><input class="js-input" id="catQ" placeholder="' + esc(window.t("cs.cn_search_ph")) + '" style="max-width:220px">'
       + '<span class="cat-filter"><button class="cat-chip on" data-catf="">' + esc(window.t("studio.all")) + '</button>' + cats.map(x => '<button class="cat-chip" data-catf="' + esc(x) + '">' + esc(nhanDanhMuc(x)) + '</button>').join("") + '</span></div>'
-      + '<div class="cat-grid" id="catGrid">' + catalogCard(byId.custom) + groupCards(cat, conns) + catSolo(cat).map(catalogCard).join("") + '</div></div>'
+      + '<div class="cat-grid" id="catGrid">' + catalogCard(byId.custom) + groupCards(cat, conns)
+      // Facebook Messenger is set up by its own form (messenger-connect.js), but it sits in this grid like every
+      // other service (0.332.0), filed under the same category as Zalo so the category chips find it.
+      + (window.JavisMessenger && window.JavisMessenger.catCard
+        ? window.JavisMessenger.catCard((cat.find(c => c.id === "zalo") || {}).category || "") : "")
+      + catSolo(cat).map(catalogCard).join("") + '</div></div>'
       // Hai khu kết nối sẵn của CLI: GẬP mặc định (dân thường không cần thấy) + LAZY:
       // chỉ gọi /mcp/ambient (chậm - phải health check) khi người dùng thật sự mở ra.
       + '</div>';
@@ -6155,7 +6189,12 @@
       { nhan: window.t("cs.cn_tab_sanco"), chon: _mcpTab === "sanco", bam: () => doiTab("sanco") },
     ]);
     if (tabKho) el.insertBefore(tabKho, el.firstChild);
+    // messenger-connect.js opens its form in this page's shared connection dialog.
+    window.JavisConnModal = { open: connModal, head: mHead, close: closeConnModal };
     if (window.JavisMessenger) window.JavisMessenger.mount(document.getElementById("mcpMessenger"));
+    el.querySelectorAll("#catGrid [data-msc-open]").forEach(b => b.onclick = () => {
+      if (window.JavisMessenger && window.JavisMessenger.openForm) window.JavisMessenger.openForm(null);
+    });
     const nutSanCo = document.getElementById("mcpDiSanCo");
     if (nutSanCo) nutSanCo.onclick = () => doiTab("sanco");
     // Từ banner mồ côi sang thẳng gói cần cài, ô tìm điền sẵn id connector. Thả người dùng vào
@@ -9703,8 +9742,13 @@
     }
     // .pdf: trình duyệt tự đọc được, nên xem NGAY tại chỗ thay vì mời tải về. Popup cũ của trang
     // Tệp tin có sẵn khung xem này; bỏ popup mà không mang theo là mất một thứ đang chạy tốt.
+    // 0.332.0 (owner, phone): Safari on an iPhone grows a PDF iframe to the whole document, so scrolling
+    // through it carried the toolbar (and its close button) off the top with no way back. The PDF now
+    // scrolls inside its own box, and on a phone a round close button floats over it (.pdf-float-close).
     if (VT_FRAME_EXTS.includes(ext)) {
-      body.innerHTML = `<iframe class="ne-frame" src="${_vtRaw(rel)}"></iframe>`;
+      body.innerHTML = `<div class="ne-pdf"><iframe class="ne-frame" src="${_vtRaw(rel)}"></iframe></div>` +
+        `<button type="button" class="pdf-float-close" title="${esc(window.t("cs.ne_close"))}" aria-label="${esc(window.t("cs.ne_close"))}">${X_ICON}</button>`;
+      body.querySelector(".pdf-float-close").onclick = closeNote;
       _neCommonBtns(actions, rel, it); _vtMarkActive(null); return;
     }
     if (VT_TEXT_EXTS.includes(ext)) {

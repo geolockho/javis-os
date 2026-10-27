@@ -80,6 +80,7 @@ import grok_cli          # bộ não thứ 11: Grok Build CLI (`grok`) - gói Su
 import totp            # xác thực 2 lớp (TOTP) cho cổng đăng nhập - thuần toán, không đụng cấu hình
 import claude_auth     # gói Claude Code xác thực bằng gì: phiên subscription hay API key
 import aux_engine   # engine việc nền: Claude / Codex / API rẻ
+import model_routing   # 0.350.0: provider order, per-card model/effort, several accounts per provider
 import mcp_store
 import mcp_client
 import mcp_catalog
@@ -505,7 +506,12 @@ SYSTEM_PROMPT = CLAUDE_MD_PATH.read_text(encoding="utf-8") if CLAUDE_MD_PATH.exi
 # chính test đó canh sự khớp: sửa một bên mà quên bên kia là đỏ. Đó là cái chặn thật - muốn
 # nâng trần thì phải sửa HAI chỗ và phải viết ra lý do ở cả hai, đủ ma sát để người sửa dừng
 # lại nghĩ thay vì gõ số mới cho xong.
-PROMPT_KERNEL_MAX_CHARS = 33_600
+#
+# 0.345.0: lowered from 33,600 to 29,200. The plugin, capability-building, attached-file and
+# agent/workflow sections were condensed (their templates and details already live in the
+# javis-builder skill and the tool descriptions), saving about 1,850 tokens on every turn of every
+# engine. The cap moves down with it so the saving is not quietly refilled; same ~600 spare chars.
+PROMPT_KERNEL_MAX_CHARS = 29_200
 
 # Bộ nhớ dài hạn - lưu TRONG vault đang chọn để đi theo vault
 MEMORY_SEED = (
@@ -1772,6 +1778,55 @@ PROVIDER_DEFS = [   # thứ tự = thứ tự hiển thị card ở trang Models
 ]
 
 _PROVIDER_KEY_FIELDS = tuple(p["key_field"] for p in PROVIDER_DEFS if p.get("key_field"))
+# Providers addressed by an endpoint, not by an account: one key at most, no account list (0.350.0).
+_ROUTING_SINGLE_KEY = ("openai-compat", "anthropic-compat", "ollama-local")
+
+
+def _routing_key_fields() -> dict:
+    """{provider: old key field} of the API cards that hold a list of keys (model_routing)."""
+    return {p["id"]: p["key_field"] for p in PROVIDER_DEFS
+            if p.get("key_field") and p["id"] not in _ROUTING_SINGLE_KEY}
+
+
+def _routing_defaults() -> dict:
+    """Each provider's starting config (spec 2.4.2): plan and CLI cards run the provider's own default model with no
+    reasoning parameter; an API card runs the first model this app ships for it (OpenRouter: the free auto-pick)."""
+    out = {}
+    for p in PROVIDER_DEFS:
+        model = ""
+        if p["kind"] == "api" and p["id"] != "openrouter":
+            model = (p.get("default_models") or [""])[0]
+        out[p["id"]] = {"model": model, "reasoning": "off"}
+    return out
+
+
+def _routing_connected_ids(cfg) -> list:
+    """Providers counted as signed in, in PROVIDER_DEFS order. Same flags the Models page shows; a plan card whose
+    binary is missing does not count (it could not run a turn)."""
+    try:
+        return [p["id"] for p in _providers_view(cfg) if p.get("configured") and p.get("cli_found") is not False]
+    except Exception as e:  # noqa: BLE001 - a broken check must not stop the server from starting
+        print(f"[routing] connected providers: {type(e).__name__}: {e}", file=sys.stderr)
+        return []
+
+
+def _routing_telegram_chat_keys(cfg) -> list:
+    """Telegram chats the owner talks in: configured ids plus every chat the bot remembers (not customer bots)."""
+    keys = [str(x) for x in tg_parse_ids((cfg.get("telegram") or {}).get("chat_id", ""))]
+    for k in list(_TG_SID_MAP.keys()):
+        if not str(k).startswith("bot:") and "@" not in str(k):
+            keys.append(str(k))
+    return keys
+
+
+def _routing_migrate(cfg) -> bool:
+    """One-time move of the settings to the 0.350.0 layout (model_routing.migrate). True when it changed cfg."""
+    m = cfg.setdefault("model", {})
+    if int(m.get("routing_version") or 0) >= model_routing.ROUTING_VERSION:
+        return False
+    return model_routing.migrate(
+        m, connected_ids=_routing_connected_ids(cfg), defaults=_routing_defaults(),
+        key_fields=_routing_key_fields(), telegram_chat_keys=_routing_telegram_chat_keys(cfg))
 
 
 def _provider_def(pid):
@@ -1901,14 +1956,10 @@ def _set_telegram_model(cfg, provider, model):
     cfg["model"]["telegram"] = {"provider": provider, "model": model or ""}
 
 
-def _tg_dat_model(cfg, provider, model):
-    """Lệnh đổi model gõ TỪ Telegram ghi vào đâu: đang ghim thì vào ô Telegram, chưa ghim thì
-    vào model chính như trước (và web đổi theo - đó là hành vi cũ, giữ nguyên để ai không ghim
-    không thấy gì khác)."""
-    if _tg_ghim(cfg.get("model") or {}):
-        _set_telegram_model(cfg, provider, model)
-    else:
-        _set_main_model(cfg, provider, model)
+def _tg_dat_model(cfg, provider, model, chat_key):
+    """A model chosen FROM Telegram pins that Telegram chat only (0.350.0, spec 2.5): it no longer changes MAIN or the
+    web, and other Telegram chats keep following MAIN."""
+    model_routing.set_telegram_pin(cfg["model"], chat_key, provider, model)
 
 
 def _set_main_model(cfg, provider, model):
@@ -1922,6 +1973,9 @@ def _set_main_model(cfg, provider, model):
         usage_saving.ghi_moc("model", f"{provider}/{model}",
                              f"{_cu.get('provider') or ''}/{_cu.get('model') or ''}",
                              f"Đổi bộ não sang {model or provider}")
+    # 0.350.0: MAIN is the top card of the usage order. Choosing a provider here (composer chip, Telegram
+    # fallback paths, disconnect handlers) moves its card to the top; the others keep their order.
+    model_routing.promote(m, provider, model)
     m["main"] = {"provider": provider, "model": model}
     if provider == "openrouter":
         m["engine"] = "openrouter"; m["openrouter_model"] = model
@@ -1949,6 +2003,29 @@ def _set_main_model(cfg, provider, model):
         m["engine"] = "anthropic-compat"
     else:  # anthropic-cli
         m["engine"] = "cli"; m["claude_model"] = model
+
+def _sync_legacy_engine(m) -> None:
+    """After the usage order or MAIN's card changed: rewrite the old engine fields from MAIN (0.350.0)."""
+    main = m.get("main") or {}
+    if main.get("provider") and _provider_def(main["provider"]):
+        _set_main_model({"model": m}, main["provider"], main.get("model") or "")
+
+
+def _routing_key_saved(m, key_field) -> None:
+    """A key typed into a card's old single key box (connect, change key): it becomes account 1 of that card, and a
+    newly connected card joins the END of the usage order (spec 2.1.5)."""
+    d = next((p for p in PROVIDER_DEFS if p.get("key_field") == key_field), None)
+    if not d:
+        return
+    if d["id"] not in _ROUTING_SINGLE_KEY:
+        cur = model_routing.accounts(m, d["id"], key_field)
+        if cur and cur[0]["key"] != m[key_field]:
+            cur[0] = dict(cur[0], key=m[key_field], enabled=True)
+        elif not cur:
+            cur = [{"id": model_routing.new_account_id(), "label": "Key 1", "enabled": True, "key": m[key_field]}]
+        model_routing.save_accounts(m, d["id"], cur, key_field)
+    model_routing.add_to_order(m, d["id"])
+
 
 def _aux_model():
     """Model việc nền khi provider là Claude. '' = không đổi (mặc định CLI).
@@ -2222,6 +2299,12 @@ def _resonance_after_turn(conv_sid, brain, user_mid, t0, runtime_trace):
 # không có nghĩa cả lượt đã xong: lượt có thể bị huỷ ở bước lưu sau đó. Huỷ hay lỗi thắng final trước đó.
 _TURN_ENGINE: dict = {}
 
+# Sent in the same Claude Code thread when a chat turn ended cleanly with no text at all (0.332.0). Model prompt:
+# Vietnamese, like the other Javis notes to the model.
+EMPTY_ANSWER_NUDGE = ("[Javis] Lượt vừa rồi bạn kết thúc mà không viết chữ nào cho người dùng, nên họ chỉ thấy một "
+                      "bong bóng trống. Hãy trả lời tin nhắn cuối cùng của họ ngay bây giờ (kể cả khi chỉ là một câu "
+                      "ngắn). Việc lượt trước đã làm bằng công cụ là ĐÃ xong, đừng làm lại.")
+
 
 def _engine_outcome_reset(conv_sid) -> None:
     _TURN_ENGINE[str(conv_sid)] = {"final": None, "errors": [], "exception": "", "turn": ""}
@@ -2481,19 +2564,59 @@ def _provider_key(mcfg, d):
         if not (mcfg.get("anthropic_compat_base") or "").strip():
             return ""
         return (mcfg.get("anthropic_compat_key") or "").strip() or "none"
-    return mcfg.get(d["key_field"], "") if d.get("key_field") else ""
+    if not d.get("key_field"):
+        return ""
+    # 0.350.0: several keys per provider, used top to bottom; a key put to rest after a quota error is skipped.
+    acc = model_routing.active_account(mcfg, d["id"], d["key_field"])
+    return acc["key"] if acc else (mcfg.get(d["key_field"], "") or "")
+
+
+def _route_ready(mcfg, prov) -> bool:
+    """Whether a card can take a chat turn right now: an API card needs a key that is not resting, a plan card must
+    not be known to be out of quota. Unknown means yes: the turn itself reports the provider's own error."""
+    d = _provider_def(prov)
+    if not d:
+        return False
+    if d.get("kind") == "api":
+        if d.get("key_field") and d["id"] not in _ROUTING_SINGLE_KEY:
+            return bool(model_routing.usable_accounts(mcfg, prov, d["key_field"]))
+        return bool(_provider_key(mcfg, d))
+    return not _pin_limited_until(prov)
 
 
 def _chat_provider(mcfg):
-    """Provider dùng cho chat (id, kind, key, model) - từ model chính hiệu lực."""
+    """Provider dùng cho chat (id, kind, key, model).
+
+    0.350.0 (docs/dev/2026-10-model-routing-spec.md): MAIN is the top card of the usage order. When MAIN cannot run
+    right now (every key resting, the plan out of quota) the turn starts on the next card that can, with that card's
+    own model. Nothing saved changes: the next turn tries MAIN again."""
     em = _effective_main({"model": mcfg})
     prov, model = em["provider"], em["model"]
+    if not _route_ready(mcfg, prov):
+        # Only cards still signed in can take over (the stored order keeps a card that lost its login until the
+        # Models page saves again). Computed here only, MAIN being unable to run is the rare path.
+        try:
+            signed_in = set(_routing_connected_ids(cfgmod.read_settings()))
+        except Exception:  # noqa: BLE001
+            signed_in = None
+        for cand in model_routing.order(mcfg)[1:]:
+            if (signed_in is None or cand in signed_in) and _route_ready(mcfg, cand):
+                prov, model = cand, model_routing.profile(mcfg, cand)["model"]
+                break
     d = _provider_def(prov) or {}
     kind = d.get("kind", "cli")
     key = _provider_key(mcfg, d)
     if prov == "openrouter":
         model = model or mcfg.get("openrouter_model")
     return prov, kind, key, model
+
+
+def _chat_reasoning(mcfg, prov) -> str:
+    """Effort of the card a chat turn runs on (0.350.0: effort belongs to each card, MAIN's mirrors `reasoning`)."""
+    if prov == model_routing.main_provider(mcfg):
+        return _reasoning_level(mcfg)
+    r = model_routing.profile(mcfg, prov).get("reasoning")
+    return r if r in engine.REASONING_LEVELS else "off"
 
 
 # Provider mà AGENT chạy THẬT được. Không phải mọi provider ở trang Models: aux_engine chỉ
@@ -2574,8 +2697,12 @@ def _chat_provider_for_session(mcfg, row):
     return pprov, kind, key, model
 
 
-def _tg_ghim(mcfg) -> dict:
-    """{'provider','model'} đang GHIM cho kênh Telegram, hoặc {} nếu đang theo model chính."""
+def _tg_ghim(mcfg, chat_key="") -> dict:
+    """{'provider','model'} pinned for ONE Telegram chat (0.350.0), or {} when it follows MAIN. Settings not yet moved
+    to 0.350.0 still carry the old shared Telegram pin, which then applies to every chat."""
+    pin = model_routing.telegram_pin(mcfg, chat_key) if chat_key else {}
+    if pin:
+        return pin
     tg = (mcfg or {}).get("telegram") or {}
     return {"provider": tg["provider"], "model": tg.get("model") or ""} if tg.get("provider") else {}
 
@@ -2621,13 +2748,13 @@ def _chat_provider_bot(mcfg, bot):
                                              "pinned_model": g["model"]})
 
 
-def _chat_provider_kenh(mcfg, channel):
-    """Provider cho một lượt theo KÊNH: Telegram có ghim riêng thì theo ghim, còn lại theo
-    model chính. Dùng lại đúng luật rơi-về của ghim phiên web (`_chat_provider_for_session`):
+def _chat_provider_kenh(mcfg, channel, chat_key=""):
+    """Provider cho một lượt theo KÊNH: a Telegram chat with its own pin (set by /model inside it) runs that pin, every
+    other turn follows MAIN. Dùng lại đúng luật rơi-về của ghim phiên web (`_chat_provider_for_session`):
     provider đã gỡ hay key đã bị xoá thì lui về model chính chứ không chết lượt chat."""
     if channel != "telegram":
         return _chat_provider(mcfg)
-    g = _tg_ghim(mcfg)
+    g = _tg_ghim(mcfg, chat_key)
     if not g:
         return _chat_provider(mcfg)
     return _chat_provider_for_session(mcfg, {"pinned_provider": g["provider"],
@@ -2758,6 +2885,11 @@ def _claude_sub_stream(model, messages, reasoning="off", *, brain=None, tag="cha
                         tag=tag, allowed_tools=CLAUDE_SUB_KHONG_TOOL,
                         model=_claude_api_model(model) or None)
     cli.system_prompt_raw = bool(tiet_kiem)
+    # 0.345.0: no tool may run here (CLAUDE_SUB_KHONG_TOOL), yet Claude Code still sent every tool
+    # schema and the skill list: measured 27,665 input tokens for "chào em" on the fast path. "*"
+    # takes them all out of the request, tools added by future Claude Code versions included
+    # (measured: 183 input tokens). This path is chat only, so nothing is lost.
+    cli.disallowed_tools = ["*"]
     return _claude_sub_doc(cli, _claude_kem_anh(messages, _cli_do_sau(cli, reasoning, prompt)), model)
 
 
@@ -3941,6 +4073,21 @@ def _cli_think(reasoning, message):
     return f"{message}\n\n(Suy nghĩ kỹ trước khi trả lời - {kw})"
 
 
+def _gio_luot_noi_mach(cli, prompt, lang: str = ""):
+    """Gắn giờ gửi tin vào đầu prompt khi lượt này NỐI LẠI phiên Claude Code (`cli.session_id` có giá trị).
+
+    Claude Code giữ system prompt của lượt đầu phiên khi --resume, nên câu đồng hồ trong system prompt đông cứng
+    (xem context_compiler.dong_ho_ngan). Phiên MỚI không gắn: system prompt của nó vừa dựng, giờ trong đó đúng.
+    Lỗi gì cũng trả nguyên prompt: thiếu dòng giờ không được làm hỏng lượt chat.
+    """
+    if not getattr(cli, "session_id", None) or not isinstance(prompt, str):
+        return prompt
+    try:
+        return context_compiler.dong_ho_ngan(lang=lang or lang_mod.detect(prompt)[0]) + "\n" + prompt
+    except Exception:  # noqa: BLE001
+        return prompt
+
+
 def _cli_do_sau(cli, reasoning, message):
     """Đặt độ sâu suy nghĩ cho engine Claude Code, rồi trả prompt để gửi đi.
 
@@ -4034,9 +4181,11 @@ def _cli_do_sau_khac(cli, mod, reasoning, message):
 
 def _cli_fast(cli):
     """Fast mode for Claude Code (0.164.0): `settings='{"fastMode": true}'` on the SDK options
-    when this turn has the bolt on and the model supports it (Opus 5.5, Opus 5, Opus 4.8)."""
+    when this turn has the bolt on and the model supports it (Opus 5.5, Opus 5, Opus 4.8).
+    0.345.0: keeps the repo CLAUDE.md excluded (claude_cli.javis_claude_settings)."""
     try:
-        cli.fast_settings = fast_mode.claude_sdk_settings(getattr(cli, "model", "") or "", fast_mode.current())
+        cli.fast_settings = claude_cli.javis_claude_settings(
+            fast_mode.claude_sdk_settings(getattr(cli, "model", "") or "", fast_mode.current()))
     except Exception:  # noqa: BLE001 - an engine without this attribute just runs at the normal tier
         pass
 
@@ -4279,9 +4428,13 @@ async def oauth_openai_browser_finish(request: Request):
 @app.post("/oauth/openai/disconnect")
 def oauth_openai_disconnect():
     cfg = cfgmod.read_settings()
-    if _effective_main(cfg).get("provider") == "openai-oauth":   # đang là MAIN → về Claude Code CLI
+    # 0.350.0: the card leaves the usage order; the next card becomes MAIN when it was MAIN.
+    model_routing.drop_from_order(cfg["model"], "openai-oauth")
+    if _effective_main(cfg).get("provider") == "openai-oauth":   # đang là MAIN (thẻ duy nhất) → về Claude Code CLI
         _set_main_model(cfg, "anthropic-cli", cfg["model"].get("claude_model") or "opus")
-        cfgmod.write_settings(cfg)
+    else:
+        _sync_legacy_engine(cfg["model"])
+    cfgmod.write_settings(cfg)
     openai_oauth.disconnect()
     try:
         connect_health.probe_engines()   # ngắt chủ động → đèn đổi ngay theo Main Model mới
@@ -4341,6 +4494,21 @@ async def _cap_nhat_claude(ly_do: str) -> dict:
 async def claude_update_now():
     """Nút "Cập nhật Claude Code" trên trang Models: chạy ngay, không chờ vòng hằng ngày."""
     return await _cap_nhat_claude("tay")
+
+
+@app.on_event("startup")
+async def _routing_migrate_on_start():
+    """0.350.0: move the settings to the usage-order layout once (docs/dev/2026-10-model-routing-spec.md, part 4)."""
+    def _run():
+        with cfgmod._SETTINGS_LOCK:
+            cfg = cfgmod.read_settings()
+            if _routing_migrate(cfg):
+                cfgmod.write_settings(cfg)
+                print("[routing] settings moved to the 0.350.0 usage order", file=sys.stderr)
+    try:
+        await asyncio.to_thread(_run)
+    except Exception as e:  # noqa: BLE001 - routing still works on the old fields until the next start
+        print(f"[routing] migration failed: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 @app.on_event("startup")
@@ -4486,7 +4654,20 @@ async def grok_logout():
     Khác thẻ `agy` - ở đó không có nút Ngắt vì token nằm trong keyring không đụng tới được.
     Grok có lệnh đăng xuất chính chủ nên nút này làm đúng việc nó hứa.
     """
-    return await asyncio.to_thread(grok_cli.logout)
+    out = await asyncio.to_thread(grok_cli.logout)
+    # 0.350.0: the card leaves the usage order (the next card becomes MAIN when it was MAIN).
+    try:
+        def _drop():
+            with cfgmod._SETTINGS_LOCK:
+                cfg = cfgmod.read_settings()
+                if "grok-cli" in model_routing.stored_order(cfg["model"]):
+                    model_routing.drop_from_order(cfg["model"], "grok-cli")
+                    _sync_legacy_engine(cfg["model"])
+                    cfgmod.write_settings(cfg)
+        await asyncio.to_thread(_drop)
+    except Exception as e:  # noqa: BLE001 - the logout itself already happened
+        print(f"[routing] grok logout: {type(e).__name__}: {e}", file=sys.stderr)
+    return out
 
 
 @app.post("/grok/check")
@@ -5188,6 +5369,14 @@ def settings_get():
         k = cfg["model"].get(kf, "")
         safe["model"][kf] = ("••••" + k[-4:]) if k else ""
         safe["model"][kf + "_set"] = bool(k)
+    # 0.350.0: account keys never leave the server. The Models page gets each card's accounts with the last 4 characters.
+    safe["model"].pop("account_keys", None)
+    safe["model"]["accounts"] = {
+        pid: [{"id": a["id"], "label": a["label"], "enabled": a["enabled"],
+               "key": ("••••" + a["key"][-4:]) if a["key"] else "",
+               "resting_until": model_routing.resting_until(pid, a["id"])}
+              for a in model_routing.accounts(cfg["model"], pid, kf)]
+        for pid, kf in _routing_key_fields().items() if model_routing.accounts(cfg["model"], pid, kf)}
     o = cfg["model"].get("openai_oauth") or {}
     safe["model"]["openai_oauth"] = {   # che token, chỉ lộ trạng thái
         "connected": bool(o.get("access_token") or o.get("refresh_token")),
@@ -5266,6 +5455,7 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         for kf in _PROVIDER_KEY_FIELDS:
             if patch.get(kf) and not str(patch[kf]).startswith("••••"):
                 m[kf] = str(patch[kf]).strip()
+                _routing_key_saved(m, kf)
         if "openai_compat_base" in patch:
             new_base = str(patch["openai_compat_base"] or "").strip().rstrip("/")
             if new_base != (m.get("openai_compat_base") or "") and not (
@@ -5288,6 +5478,10 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             d = _provider_def(patch["clear_key"])
             if d and d.get("key_field"):
                 m[d["key_field"]] = ""
+                # 0.350.0: every key of the card goes, and the card leaves the usage order (the next card becomes MAIN).
+                if d["id"] not in _ROUTING_SINGLE_KEY:
+                    model_routing.save_accounts(m, d["id"], [], d["key_field"])
+                model_routing.drop_from_order(m, d["id"])
                 if patch["clear_key"] == "openai-compat":
                     m["openai_compat_base"] = ""
                     _PROV_MODELS_CACHE.pop("openai-compat", None)
@@ -5307,10 +5501,14 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         if "auxiliary" in patch:   # model phụ cho việc nền (provider + model)
             aux_patch = patch["auxiliary"] or {}
             aux = m.setdefault("auxiliary", {})
-            aux["model"] = aux_patch.get("model", "")
-            # Thiếu provider (client cũ) = Claude, đúng hành vi trước khi mở nhiều provider.
-            prov = aux_patch.get("provider") or aux_engine.CLAUDE
-            aux["provider"] = prov if _provider_def(prov) else aux_engine.CLAUDE
+            if "model" in aux_patch or "provider" in aux_patch:
+                aux["model"] = aux_patch.get("model", "")
+                # Thiếu provider (client cũ) = Claude, đúng hành vi trước khi mở nhiều provider.
+                prov = aux_patch.get("provider") or aux_engine.CLAUDE
+                aux["provider"] = prov if _provider_def(prov) else aux_engine.CLAUDE
+            if "reasoning" in aux_patch:   # 0.350.0: the background model keeps its own effort
+                r = aux_patch["reasoning"]
+                aux["reasoning"] = r if r in engine.REASONING_LEVELS else "off"
         if "telegram" in patch:   # model riêng cho kênh Telegram; provider rỗng = theo model chính
             tg_patch = patch["telegram"] or {}
             tg = m.setdefault("telegram", {})
@@ -5323,6 +5521,49 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
         if "reasoning" in patch:
             r = patch["reasoning"]
             m["reasoning"] = r if r in engine.REASONING_LEVELS else "off"
+            # 0.350.0: the composer's effort chip is MAIN's card effort.
+            model_routing.set_profile(m, model_routing.main_provider(m), reasoning=m["reasoning"])
+        # 0.350.0 Models page: usage order, one card's model/effort, one card's accounts or keys.
+        if isinstance(patch.get("order"), list):
+            ids = [p for p in patch["order"] if _provider_def(str(p or ""))]
+            if ids:
+                model_routing.set_order(m, ids)
+                _sync_legacy_engine(m)
+        if isinstance(patch.get("profile"), dict):
+            pp = patch["profile"]
+            pid = str(pp.get("provider") or "")
+            if _provider_def(pid):
+                r = pp.get("reasoning")
+                model_routing.set_profile(m, pid, model=pp.get("model") if "model" in pp else None,
+                                          reasoning=(r if r in engine.REASONING_LEVELS else "off") if "reasoning" in pp else None)
+                if model_routing.main_provider(m) == pid:
+                    _sync_legacy_engine(m)
+        if isinstance(patch.get("accounts"), dict):
+            pa = patch["accounts"]
+            pid = str(pa.get("provider") or "")
+            kf = _routing_key_fields().get(pid)
+            if kf and isinstance(pa.get("items"), list):
+                items = []
+                cur = {a["id"]: a for a in model_routing.accounts(m, pid, kf)}
+                for it in pa["items"]:
+                    if not isinstance(it, dict):
+                        continue
+                    aid = str(it.get("id") or "") or model_routing.new_account_id()
+                    key = str(it.get("key") or "").strip()
+                    if key.startswith("••••"):
+                        key = ""
+                    if not key and aid not in cur:
+                        continue                      # a new account needs its key
+                    items.append({"id": aid, "label": str(it.get("label") or ""),
+                                  "enabled": it.get("enabled") is not False, "key": key or cur.get(aid, {}).get("key", "")})
+                if pa["items"] and not items:
+                    items = None                      # nothing valid in a non-empty list: never wipe the card for that
+                if items is not None:
+                    model_routing.save_accounts(m, pid, items, kf)
+                if items:
+                    model_routing.add_to_order(m, pid)
+                elif items is not None:
+                    model_routing.drop_from_order(m, pid)
         # Fast mode (composer bolt, 0.153.0). This POST drops unknown keys, so it needs its own branch.
         if "fast" in patch:
             m["fast"] = patch["fast"] is True
@@ -10921,6 +11162,11 @@ async def _ghi_lich_su(gen, *, brain, slug, name, input, source, session_id, run
             elif t == "done":
                 ket = "done"
                 st.ket_thuc(rid, "done", output=str(ev.get("result") or ""))
+                try:  # 0.341.0: a finished run is a workflow episode for automatic learning
+                    await asyncio.to_thread(_auto_learner().observe_workflow, _brain_key(brain), slug, rid,
+                                            input or "", str(ev.get("result") or ""), session_id or "", source or "")
+                except Exception as _e:  # noqa: BLE001
+                    print(f"[auto-learning workflow] {type(_e).__name__}: {_e}", file=sys.stderr)
             yield ev
     finally:
         if ket is None:
@@ -13194,6 +13440,10 @@ async def _start_scheduler():
                 #      chạy ở tác vụ riêng sau khi giữ chỗ sổ lượt chung.
                 if not _PULSE_TICK_BUSY[0]:
                     asyncio.create_task(_pulse_tick())
+                # 3b5) Automatic learning from chat (0.341.0): judging and learning runs in a worker thread, own busy
+                #      flag; hard daily caps live in auto_learning.
+                if not _AUTO_LEARNING_BUSY[0]:
+                    asyncio.create_task(_auto_learning_tick())
                 # 3c) Ngân sách token + báo cáo tuần. Nhịp RIÊNG 10 phút chứ không theo 30s:
                 #     mỗi lượt kiểm là một truy vấn sqlite cả tháng, chạy 30 giây một lần thì
                 #     chính cái đồng hồ đo tiền lại thành thứ tốn tài nguyên nhất.
@@ -13684,6 +13934,13 @@ async def _latest_remote_version(cur: str = ""):
 
 @app.get("/version")
 async def version_info():
+    # Store packs with a newer version (0.340.0): checked when the owner opens the dashboard (this call draws its
+    # version label), at most once per six hours, in the background. No timer runs it, see pack_updates.
+    try:
+        import pack_updates
+        asyncio.create_task(pack_updates.on_open())
+    except Exception as pue:
+        print(f"[pack updates] {type(pue).__name__}: {pue}", file=sys.stderr)
     cur = _read_version()
     latest, err = await _latest_remote_version(cur)
     mode = _deploy_mode()
@@ -15846,7 +16103,7 @@ async def _luot_quy_trinh(store, conv_sid, user_message, brain, slug, emit, resu
         loi = kq["loi"] or {}
         text = workflow_chat.tin_loi(loi.get("i"), loi.get("agent", ""), loi.get("content", ""))
     await emit({"type": "stream", "content": text})
-    await _persist_turn(store, conv_sid, brain, user_message, text)
+    await _persist_turn(store, conv_sid, brain, user_message, text, turn_started=t0)
     return text
 
 
@@ -15895,6 +16152,12 @@ async def _persist_turn(store, conv_sid, brain, user_message, final_text, turn_s
         await learn_feature.enqueue(brain, conv_sid, user_message, clean)
     except Exception as _e:
         print(f"[learn enqueue hook] {_e}", file=__import__('sys').stderr)
+    try:  # 0.341.0: automatic learning records the turn; judging happens later, off the reply path
+        _row = store.get_session(conv_sid) or {}
+        await asyncio.to_thread(_auto_learner().observe_turn, _brain_key(brain), conv_sid, _row.get("channel") or "",
+                                user_message, clean, _answer_mid, turn_started)
+    except Exception as _e:  # noqa: BLE001
+        print(f"[auto-learning observe] {type(_e).__name__}: {_e}", file=sys.stderr)
     return _answer_mid
 
 
@@ -16079,7 +16342,7 @@ async def websocket_endpoint(ws: WebSocket):
                         f"Assistant '{_persona[1]}' is no longer in this brain. Open the Partners page to pick another one.")}))
                 return ""
             prov, kind, api_key, api_model = _chat_provider_for_session(mcfg, _row0)
-            reasoning = _reasoning_level(mcfg)
+            reasoning = _chat_reasoning(mcfg, prov)   # 0.350.0: effort of the card this turn runs on
             if _persona and _persona[0] == "agent":
                 # 0.193.0: an assistant's chat thinks at the assistant's own level (default medium).
                 try:
@@ -16101,6 +16364,7 @@ async def websocket_endpoint(ws: WebSocket):
                     api_model or mcfg.get("claude_model") or "mặc định", kind,
                 )
             _ctx_in = 0        # token VÀO của lượt này, để khung chat nói được nó tốn bao nhiêu
+            _ctx_cache = 0     # phần của _ctx_in chỉ đọc lại từ cache (0.345.0, Claude Code + Codex)
             # cwd = THƯ MỤC BRAIN, không phải gốc project (0.55.58). Trước đó nhánh này là chỗ
             # DUY NHẤT trong bốn engine chat còn chạy cwd=CLAUDE_CWD (/app trong Docker) - Codex,
             # Antigravity, Grok và mọi workflow/loop/lint đều đã cwd=brain. Hậu quả chủ repo báo
@@ -16241,7 +16505,7 @@ async def websocket_endpoint(ws: WebSocket):
                     "type": "response", "content": final_text,
                     "engine": "javis_schedule", "model": "gateway",
                     "session_id": conv_sid,
-                    **_ctx_frame(runtime_trace, _ctx_in),
+                    **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                 }))
             elif _codex_fast_plan is not None and kind in ("oauth", "cli"):
                 steer_inbox.INBOX.set_live(conv_sid, False)   # 0.206.0: one model call, no step to read at
@@ -16316,7 +16580,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "grok-cli",
                         "model": actual_model or "", "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
                 else:
                     _k_mach = (_row0.get("grok_session_id") or "").strip()
                     if _k_mach and compaction.nen_mach_thue_bao(
@@ -16382,7 +16646,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "grok-cli",
                         "model": actual_model or "", "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
             elif prov == "antigravity-cli":
                 steer_inbox.INBOX.set_live(conv_sid, False)   # 0.206.0: one-shot CLI, messages wait for the end
                 # ===== Gói Google qua ANTIGRAVITY CLI (`agy`) - tool native + MCP hub =====
@@ -16408,7 +16672,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "antigravity-cli",
                         "model": actual_model or "", "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
                 else:
                     _a_cur = _cli_do_sau_khac(acli, antigravity_cli, reasoning, user_message)
                     _a_raw = [{"role": _m["role"], "content": _m["content"]}
@@ -16445,7 +16709,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "antigravity-cli",
                         "model": actual_model or "", "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
             elif prov == "openai-oauth":
                 if not codex_steer.enabled():
                     # 0.206.0: `codex exec` is one-shot, messages wait for the end. Since 0.213.0 the chat engine runs
@@ -16532,7 +16796,7 @@ async def websocket_endpoint(ws: WebSocket):
                         # được lưu, người dùng chỉ thấy "Lỗi xử lý". Đây là hàm con DUY NHẤT
                         # đụng vào _ctx_in; hai nhánh engine kia cộng thẳng trong _do_turn nên
                         # không dính.
-                        nonlocal final_text, _ctx_in
+                        nonlocal final_text, _ctx_in, _ctx_cache
                         resume_failed = False
                         # Đo theo từng invocation thật: nhánh khôi phục thread có thể gọi lần hai.
                         _CONTEXT_RUNTIME.observe_payload(
@@ -16568,6 +16832,7 @@ async def websocket_endpoint(ws: WebSocket):
                                 if ev.get("session_id"):
                                     store.set_codex_thread_id(conv_sid, ev["session_id"])
                                 _ctx_in += int(ev.get("tokens_in", 0) or 0)
+                                _ctx_cache += int(ev.get("tokens_cache_read", 0) or 0)
                                 usage_store.record("codex", actual_model, ev.get("tokens_in", 0), ev.get("tokens_out", 0))
                                 _CONTEXT_RUNTIME.record_usage(
                                     runtime_trace, ev.get("tokens_in", 0), ev.get("tokens_out", 0))
@@ -16612,7 +16877,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "engine": "codex",
                         "model": actual_model, "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in)}))
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
             elif (kind == "api" and api_key) or kind == "oauth":
                 orchestrator_plan = None
                 readonly_plan = None
@@ -16675,7 +16940,7 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text,
                         "engine": "javis-gateway", "model": api_model or "?",
                         "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in),
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                     }))
                 elif kind == "api" and api_key and not _persona:
                     # Mọi exception trong prepare của canary phải rơi tiếp xuống nhánh
@@ -16741,7 +17006,7 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text,
                         "engine": "javis-gateway", "model": api_model or "?",
                         "session_id": conv_sid, "task_id": runtime_trace.task_id,
-                        **_ctx_frame(runtime_trace, _ctx_in),
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                     }))
                 elif readonly_plan and readonly_plan.action == "execute":
                     used_fast_path = True
@@ -16761,7 +17026,7 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text,
                         "engine": "javis-gateway", "model": api_model or "?",
                         "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in),
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                     }))
                 elif fast_plan and fast_plan.action == "execute":
                     used_fast_path = True
@@ -16781,7 +17046,7 @@ async def websocket_endpoint(ws: WebSocket):
                         "type": "response", "content": final_text,
                         "engine": "javis-gateway", "model": api_model or "?",
                         "session_id": conv_sid,
-                        **_ctx_frame(runtime_trace, _ctx_in),
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                     }))
                 else:
                     # ===== API/OAuth: Phase 8 sources canary, fallback độc lập về legacy =====
@@ -16836,7 +17101,7 @@ async def websocket_endpoint(ws: WebSocket):
                             "type": "response", "content": final_text,
                             "engine": "javis-gateway", "model": api_model or "?",
                             "session_id": conv_sid,
-                            **_ctx_frame(runtime_trace, _ctx_in),
+                            **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                         }))
                     else:
                         sysprompt = (_phase8_plan.system_prompt
@@ -16955,7 +17220,7 @@ async def websocket_endpoint(ws: WebSocket):
                         await ws.send_text(json.dumps({
                             "type": "response", "content": final_text, "engine": prov,
                             "model": actual_model, "session_id": conv_sid,
-                            **_ctx_frame(runtime_trace, _ctx_in),
+                            **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                         }))
             else:
                 # ===== PROVIDER anthropic-cli - qua Claude Code, đầy đủ MCP / skill / session =====
@@ -16999,7 +17264,7 @@ async def websocket_endpoint(ws: WebSocket):
                 _streamed = ""      # phần đã stream - phương án dự phòng khi luồng đứt trước 'final'
                 _cli_sid = None
                 _cost = None
-                _cli_prompt = _cli_do_sau(cli, reasoning, user_message)
+                _cli_prompt = _gio_luot_noi_mach(cli, _cli_do_sau(cli, reasoning, user_message), _lang_qd.lang)
                 _cli_fast(cli)
                 if not cli.session_id:
                     # Bỏ --resume là Claude Code mất sạch mạch cũ. Mở mạch mới mà không mang
@@ -17031,15 +17296,18 @@ async def websocket_endpoint(ws: WebSocket):
                 )
                 _t0_cli = time.time()
                 _da_ghi: list = []      # đường dẫn moi từ tham số tool trong lượt (Write/Edit/Bash...)
+                _cli_err = False        # the engine reported an error this turn (already shown to the user)
 
                 async def _consume_claude(prompt, suppress_resume_error=False):
                     """Một lần gọi `claude`. Trả True nếu mạch cũ không còn (resume trượt)."""
-                    nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in
+                    nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in, _ctx_cache, _cli_err
                     resume_failed = False
                     async for event in cli.query(prompt):
                         etype = event["type"]
                         if etype in ("tool_call", "tool_result"):
                             _resonance_note_write(conv_sid, user_mid, brain, event)
+                            if etype == "tool_call":
+                                await asyncio.to_thread(_auto_learning_note_tool, brain, conv_sid, event)
                         elif etype in ("final", "error"):
                             _engine_outcome_note(conv_sid, event)
                         if etype == "tool_call":
@@ -17071,6 +17339,7 @@ async def websocket_endpoint(ws: WebSocket):
                                 except Exception:
                                     pass
                             _ctx_in += int(event.get("tokens_in", 0) or 0)
+                            _ctx_cache += int(event.get("tokens_cache_read", 0) or 0)
                             usage_store.record("cli", cli.model or mcfg.get("claude_model") or "mặc định",
                                                event.get("tokens_in", 0), event.get("tokens_out", 0), event.get("cost_usd") or 0)
                             _CONTEXT_RUNTIME.record_usage(
@@ -17080,6 +17349,7 @@ async def websocket_endpoint(ws: WebSocket):
                                 resume_failed = True
                                 if suppress_resume_error:
                                     continue      # sẽ mồi lại ngay dưới, không bắn câu lỗi ra
+                            _cli_err = True
                             # Hết lượt gói Claude thì Claude Code in nguyên văn câu tiếng Anh (có khi
                             # là dạng máy "…reached|<epoch>"). Dịch sang câu nói được TRƯỚC khi đẩy
                             # ra khung chat; cuối lượt lưu câu đó và hẹn tự chạy lại (xem _limit_state).
@@ -17107,6 +17377,14 @@ async def websocket_endpoint(ws: WebSocket):
                                  if _m["role"] in ("user", "assistant") and _m.get("content")]
                     await _consume_claude(compaction.bootstrap_prompt(
                         _cli_raw2, _cli_prompt, summary=_row0.get("compact_summary") or ""))
+                if not (final_text or _streamed) and _cli_sid and not _cli_err and not _limit_state.get("notice"):
+                    # Claude Code ended the turn cleanly without writing a single word (owner report 26/10/2026: a
+                    # plain question answered with "(không có nội dung trả về)"). The model sometimes stops after its
+                    # thinking alone. Ask once more in the same thread, which already holds the question and any
+                    # work this turn did, instead of leaving the owner an empty bubble to resend.
+                    print(f"[claude] {conv_sid}: turn ended with no text, asking once more", file=sys.stderr)
+                    cli.session_id = _cli_sid
+                    await _consume_claude(EMPTY_ANSWER_NUDGE)
                 # Khung `response` PHẢI nằm NGOÀI vòng lặp. Trước đây nó nằm trong nhánh
                 # `final`, nên luồng đứt trước khi có `final` (engine chết, mạng rớt) là client
                 # không nhận `response` nào cả và bong bóng chat treo mãi - trong khi phần chữ
@@ -17135,7 +17413,7 @@ async def websocket_endpoint(ws: WebSocket):
                     "type": "response", "content": final_text, "session_id": conv_sid,
                     "cli_session_id": _cli_sid, "cost_usd": _cost, "engine": "cli",
                     "model": (cli.model or mcfg.get("claude_model") or "mặc định"),
-                    **_ctx_frame(runtime_trace, _ctx_in)}))
+                    **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache)}))
 
             # Token VÀO của lượt vừa xong. Với engine gói thuê bao đây là DẤU HIỆU DUY NHẤT
             # cho biết mạch hội thoại của chúng đã phình tới đâu: Claude Code và Codex tự quản
@@ -17187,7 +17465,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({
                         "type": "response", "content": final_text, "session_id": conv_sid,
                         "tts": False,
-                        **_ctx_frame(runtime_trace, _ctx_in),
+                        **_ctx_frame(runtime_trace, _ctx_in, _ctx_cache),
                     }))
 
             # Lưu lượt assistant: kho phiên + title + log Memory + hàng đợi tự học.
@@ -19527,7 +19805,7 @@ async def runtime_diagnostics(hours: float = Query(24.0), limit: int = Query(200
             "vi_sao": _vi_sao_chua_di_tat(snapshot.get("tasks") or [])}
 
 
-def _ctx_frame(trace, tokens_in) -> dict:
+def _ctx_frame(trace, tokens_in, tokens_cache=0) -> dict:
     """Cho khung chat biết lượt vừa rồi đi đường nào và tốn bao nhiêu token vào.
 
     Vì sao cần: trước đây không có cách nào biết một lượt đã đi đường tiết kiệm hay lặng lẽ
@@ -19540,8 +19818,14 @@ def _ctx_frame(trace, tokens_in) -> dict:
         path = str(getattr(trace, "execution_path", "") or "")
     except Exception:  # noqa: BLE001 - phần hiển thị, không được phá lượt chat
         path = ""
-    return {"ctx_path": path if path and path != "unassigned" else "legacy",
-            "ctx_in": max(0, int(tokens_in or 0))}
+    tin = max(0, int(tokens_in or 0))
+    out = {"ctx_path": path if path and path != "unassigned" else "legacy", "ctx_in": tin}
+    # 0.345.0: phần đọc lại từ cache. `ctx_in` là TỔNG mọi vòng gọi model trong lượt, gồm cả phần cache rẻ hơn nhiều,
+    # nên một câu chào trên Claude Code hiện "60k token" và người dùng tưởng mình vừa tiêu 60k token mới.
+    ca = max(0, min(int(tokens_cache or 0), tin))
+    if ca:
+        out["ctx_cache"] = ca
+    return out
 
 
 async def _uoc_tinh_tiet_kiem(brain: str = "brain") -> dict:
@@ -21026,7 +21310,7 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
     # "Default").
     prov, kind, api_key, api_model = (_chat_provider_bot(mcfg, bot) if bot
                                       else _chat_provider_bot(mcfg, {"agent": agent}) if agent
-                                      else _chat_provider_kenh(mcfg, channel))
+                                      else _chat_provider_kenh(mcfg, channel, str(chat_id)))
     # Nhãn engine phải do VỎ quyết định rồi truyền xuống lõi: hai bên tự suy ra độc lập là
     # có ngày phiên bị dán nhãn 'cli' trong khi lượt thật chạy qua OpenRouter.
     engine_label = ("codex" if prov == "openai-oauth"
@@ -21719,7 +22003,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
     trả CHUỖI khi là thông báo lỗi (vỏ `_tg_answer` dựa vào đó để biết lượt nào đáng lưu)."""
     sess["last"] = text
     sess["sent"] = set()    # lượt mới → reset dedupe (endpoint /telegram/send-file add vào đây)
-    reasoning = _reasoning_level(mcfg)
+    reasoning = _chat_reasoning(mcfg, prov)   # 0.350.0: effort of the card this turn runs on
     # The bolt is the owner's: customer chatbots answering strangers never inherit it.
     fast_mode.use(mcfg.get("fast") is True and not bot)
     runtime_trace = context_runtime.current_trace()
@@ -22259,7 +22543,7 @@ async def _tg_answer_engine(text, meta, progress, *, chat_id, sess, brain, mcfg,
         _streamed = ""   # phần đã stream - phương án dự phòng khi luồng đứt trước 'final'
         loi = []
         _pinged = False
-        _cli_prompt = _cli_do_sau(cli, reasoning, text)
+        _cli_prompt = _gio_luot_noi_mach(cli, _cli_do_sau(cli, reasoning, text))
         _cli_fast(cli)
         if not getattr(cli, "session_id", None):
             # Chưa có mạch native (phiên mới, hoặc vừa restart nên object engine dựng lại từ
@@ -22541,26 +22825,28 @@ def _tg_model_list_text(pid):
     return f"⚙️ {_tg_prov_label(pid)} - chọn model ({n}):{tip}"
 
 
-def _tg_model_hieu_luc():
-    """(provider, model, đang_ghim) mà kênh Telegram THẬT SỰ chạy. Điện thoại không có banner
+def _tg_model_hieu_luc(chat_key=""):
+    """(provider, model, đang_ghim) mà MỘT cuộc trò chuyện Telegram THẬT SỰ chạy. Điện thoại không có banner
     như web, nên chỗ nào hiện model cho Telegram cũng phải nói được nó là ghim hay theo chính."""
     m = cfgmod.read_settings().get("model", {})
-    g = _tg_ghim(m)
+    g = _tg_ghim(m, chat_key)
     if g and _provider_def(g["provider"]):
         return g["provider"], (g["model"] or "mặc định"), True
     prov, cur = _model_current()
     return prov, cur, False
 
 
-def _model_header():
-    prov, cur, ghim = _tg_model_hieu_luc()
-    return ("⚙️ Cấu hình model\n"
-            f"Hiện tại: {cur}\n"
-            f"Provider: {_tg_prov_label(prov)}\n"
-            + ("📌 Telegram đang GHIM riêng (web đổi không ảnh hưởng). /model theo để bỏ ghim.\n\n"
+def _model_header(chat_key=""):
+    prov, cur, ghim = _tg_model_hieu_luc(chat_key)
+    return (localefmt.chu("⚙️ Cấu hình model\n", "⚙️ Model settings\n")
+            + localefmt.chu(f"Hiện tại: {cur}\n", f"Current: {cur}\n")
+            + f"Provider: {_tg_prov_label(prov)}\n"
+            + (localefmt.chu("📌 Cuộc trò chuyện này đang GHIM riêng (web đổi không ảnh hưởng). /model theo để bỏ ghim.\n\n",
+                             "📌 This chat has its own pin (web changes do not affect it). /model theo removes it.\n\n")
                if ghim else
-               "🔗 Telegram đang theo model chính. /model ghim để khoá riêng cho Telegram.\n\n")
-            + "Chọn provider (chỉ hiện provider đã kết nối):")
+               localefmt.chu("🔗 Cuộc trò chuyện này đang theo model chính. Chọn một model bên dưới là ghim riêng cho nó.\n\n",
+                             "🔗 This chat follows the main model. Picking a model below pins it to this chat only.\n\n"))
+            + localefmt.chu("Chọn provider (chỉ hiện provider đã kết nối):", "Pick a provider (connected ones only):"))
 
 
 # ---- Menu chọn brain cho PHIÊN Telegram (inline keyboard, giống menu model) ----
@@ -22613,7 +22899,7 @@ async def _tg_callback(data, chat=None):
     if data == "noop":
         return None   # nút chỉ-hiển-thị (số trang) - answer callback cho tắt spinner, không sửa tin
     if data in ("mp:back", "model"):
-        return {"text": _model_header(), "reply_markup": await _model_provider_kb()}
+        return {"text": _model_header(chat_key), "reply_markup": await _model_provider_kb()}
     if data.startswith("mp:"):
         pid = data.split(":", 1)[1]
         if pid not in dict(_tg_providers()):
@@ -22647,7 +22933,7 @@ async def _tg_callback(data, chat=None):
             return {"alert": f"{_tg_prov_label(pid)} chưa kết nối - vào dashboard trang Models"}
         if pid == "anthropic-cli":
             mdl = mdl.lower()   # alias opus/sonnet/haiku/fable
-        _tg_dat_model(s, pid, mdl); cfgmod.write_settings(s)
+        _tg_dat_model(s, pid, mdl, chat_key); cfgmod.write_settings(s)
         note = {"anthropic-cli": "Claude Code - đầy đủ MCP/skill",
                 "openai-oauth": "ChatGPT qua Codex CLI - có MCP",
                 "openrouter": "OpenRouter - chat + MCP đa-model",
@@ -22682,47 +22968,54 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
         return {"reply": "🔄 Đã reset hội thoại (chỉ phiên của bạn)."}
     if cmd in ("cli", "claude"):
         s = cfgmod.read_settings()
-        _tg_dat_model(s, "anthropic-cli", (s["model"].get("main") or {}).get("model") or s["model"].get("claude_model") or "opus")
+        _tg_dat_model(s, "anthropic-cli", (s["model"].get("main") or {}).get("model") or s["model"].get("claude_model") or "opus", chat_key)
         cfgmod.write_settings(s)
         return {"reply": "✅ Provider: Anthropic (Claude Code) - đầy đủ MCP, hỏi POS/Ads/vault được."}
     if cmd in ("or", "openrouter"):
         s = cfgmod.read_settings()
         if not s["model"].get("openrouter_key"):
             return {"reply": "⚠ Chưa có OpenRouter key - đặt trong Models trên dashboard trước."}
-        _tg_dat_model(s, "openrouter", s["model"].get("openrouter_model")); cfgmod.write_settings(s)
+        _tg_dat_model(s, "openrouter", s["model"].get("openrouter_model"), chat_key); cfgmod.write_settings(s)
         return {"reply": f"✅ Provider: OpenRouter ({s['model'].get('openrouter_model')}) - chat + MCP đa-model."}
     if cmd in ("help", "menu", "start"):
         return {"reply": await _tg_help_text(brain)}
     if cmd == "skills":
         return {"reply": await _tg_skills_text(brain)}
     if cmd == "status":
-        prov, model, ghim = _tg_model_hieu_luc()
+        prov, model, ghim = _tg_model_hieu_luc(chat_key)
         busy = _tg_chat_busy(chat_key)
         bname = brain_label.display(_brain_root(brain))
         return {"reply": ("📊 Trạng thái Javis\n"
                           f"Provider: {prov}\n"
                           f"Model: {model}"
-                          + (" (📌 ghim riêng cho Telegram)" if ghim else " (theo model chính)") + "\n"
+                          + (localefmt.chu(" (📌 ghim riêng cho cuộc trò chuyện này)", " (📌 pinned to this chat)")
+                             if ghim else localefmt.chu(" (theo model chính)", " (follows the main model)")) + "\n"
                           f"Brain: {bname} (đổi bằng /brain)\n"
                           f"Phiên: {chat_key} (ngữ cảnh riêng)\n"
                           f"Đang xử lý: {'có (gửi /stop để dừng)' if busy else 'rảnh'}")}
     if cmd == "model":
         s = cfgmod.read_settings(); m = s["model"]
         a = arg.strip()
-        # /model ghim: khoá Telegram vào model ĐANG DÙNG, từ đó web đổi gì cũng mặc.
-        # /model theo: bỏ ghim, Telegram lại đi theo model chính.
+        # 0.350.0: every pin belongs to THIS chat only. /model ghim: pin the model this chat runs now, so web changes no
+        # longer move it. /model theo: drop the pin, this chat follows MAIN again.
         if a.lower() in ("ghim", "pin"):
-            em = _effective_main(s)
-            _set_telegram_model(s, em["provider"], em["model"]); cfgmod.write_settings(s)
-            return {"reply": (f"📌 Đã ghim Telegram vào {_tg_prov_label(em['provider'])}: "
-                              f"{em['model'] or 'mặc định'}.\nĐổi model trên web không còn kéo "
-                              "Telegram theo. Gõ /model <tên> để đổi riêng cho Telegram, "
-                              "/model theo để bỏ ghim.")}
+            prov_now, model_now, _g = _tg_model_hieu_luc(chat_key)
+            model_now = "" if model_now == "mặc định" else model_now
+            _tg_dat_model(s, prov_now, model_now, chat_key); cfgmod.write_settings(s)
+            return {"reply": localefmt.chu(
+                f"📌 Đã ghim cuộc trò chuyện này vào {_tg_prov_label(prov_now)}: {model_now or 'mặc định'}.\n"
+                "Đổi model trên web không còn kéo cuộc trò chuyện này theo. /model theo để bỏ ghim.",
+                f"📌 This chat is pinned to {_tg_prov_label(prov_now)}: {model_now or 'default'}.\n"
+                "Changing the model on the web no longer moves this chat. /model theo removes the pin.")}
         if a.lower() in ("theo", "bo-ghim", "unpin"):
-            _set_telegram_model(s, "", ""); cfgmod.write_settings(s)
+            _tg_dat_model(s, "", "", chat_key)
+            if (s["model"].get("telegram") or {}).get("provider"):
+                s["model"]["telegram"] = {"provider": "", "model": ""}   # old shared pin (settings not yet moved)
+            cfgmod.write_settings(s)
             em = _effective_main(s)
-            return {"reply": (f"🔗 Đã bỏ ghim. Telegram theo model chính: "
-                              f"{_tg_prov_label(em['provider'])} {em['model'] or 'mặc định'}.")}
+            return {"reply": localefmt.chu(
+                f"🔗 Đã bỏ ghim. Cuộc trò chuyện này theo model chính: {_tg_prov_label(em['provider'])} {em['model'] or 'mặc định'}.",
+                f"🔗 Pin removed. This chat follows the main model: {_tg_prov_label(em['provider'])} {em['model'] or 'default'}.")}
         if a:
             # HỎI DANH SÁCH THẬT TRƯỚC, đoán sau. Mấy luật đoán bên dưới ra đời khi Telegram chỉ
             # biết 3 provider, và giờ chúng gán nhầm một cách im lặng: gõ tên model của
@@ -22730,7 +23023,7 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
             # CLAUDE, lượt chat sau mới báo lỗi mà chẳng ai hiểu vì sao.
             _pid, _ung_vien = await _tg_provider_cho_model(a, m)
             if _pid:
-                _tg_dat_model(s, _pid, a); cfgmod.write_settings(s)
+                _tg_dat_model(s, _pid, a, chat_key); cfgmod.write_settings(s)
                 return {"reply": f"✅ {_tg_prov_label(_pid)}: {a}."}
             if len(_ung_vien) > 1:
                 _ten = ", ".join(_tg_prov_label(p) for p in _ung_vien)
@@ -22739,17 +23032,17 @@ async def _tg_command(cmd, arg, chat=None, meta=None):
             # Không provider nào khai model này (danh sách hỏng, hoặc tên mới tinh) → về mấy
             # luật đoán cũ: id chứa "/" = OpenRouter; gpt*/*-codex = ChatGPT; còn lại = Claude.
             if "/" in a:
-                _tg_dat_model(s, "openrouter", a); cfgmod.write_settings(s)
+                _tg_dat_model(s, "openrouter", a, chat_key); cfgmod.write_settings(s)
                 return {"reply": f"✅ OpenRouter model: {a}."}
             if _is_codex_model(a):
                 if not _tg_prov_ready("openai-oauth", m):
                     return {"reply": "⚠ Chưa kết nối ChatGPT (OpenAI OAuth) - nối ở dashboard trang Models trước."}
-                _tg_dat_model(s, "openai-oauth", a); cfgmod.write_settings(s)
+                _tg_dat_model(s, "openai-oauth", a, chat_key); cfgmod.write_settings(s)
                 return {"reply": f"✅ ChatGPT (Codex) model: {a}."}
-            _tg_dat_model(s, "anthropic-cli", a.lower()); cfgmod.write_settings(s)
+            _tg_dat_model(s, "anthropic-cli", a.lower(), chat_key); cfgmod.write_settings(s)
             return {"reply": f"✅ Model Claude: {a.lower()}. Nếu CLI chưa hỗ trợ tên này, query sẽ báo lỗi."}
         # Không tham số → mở menu nút bấm (chọn provider → chọn model, phân trang)
-        return {"reply": _model_header(), "reply_markup": await _model_provider_kb()}
+        return {"reply": _model_header(chat_key), "reply_markup": await _model_provider_kb()}
     if cmd == "usage":
         try:
             _or = await _openrouter_credits(cfgmod.read_settings().get("model", {}) or {})
@@ -24385,6 +24678,63 @@ async def sessions_compact(session_id: str):
     res["provider"] = prov
     res["model"] = api_model or ""
     return res
+
+
+_DONG_TEP_CUOI = re.compile(r"(?:\s*\n\U0001F4CE [^\n]*)+\s*$")
+
+
+def _tim_tin_tua_lai(msgs, text: str, nth: int = 0):
+    """The stored user message the Rewind button points at: counted from the END, the (nth+1)-th user message whose
+    typed text equals `text` (whitespace folded). The bubble only knows the typed text; the stored content may carry
+    the context blocks the dashboard puts in front (`share_render.chu_nguoi_go`, the same rule as the bubble's
+    chuNguoiGo) and the attachment lines a message sent mid-turn gets at the end. Equality, not "contains": "ok" must
+    not match a later "ok làm đi", because the dashboard counts `nth` by equality."""
+    gon = lambda s: " ".join(str(s or "").split())
+    can = gon(text)
+    if not can:
+        return None
+    for m in reversed(msgs):
+        if m.get("role") != "user":
+            continue
+        if gon(_DONG_TEP_CUOI.sub("", share_render.chu_nguoi_go(m.get("content") or ""))) != can:
+            continue
+        if nth <= 0:
+            return m
+        nth -= 1
+    return None
+
+
+@app.post("/sessions/{session_id}/rewind")
+async def sessions_rewind(session_id: str, text: str = Form(...), nth: int = Form(0)):
+    """Rewind button under a question in the chat (0.349.0): delete that question and everything after it, so the
+    conversation continues from just before it. The dashboard then puts the question back in the composer.
+
+    The engines' native threads still hold the deleted turns, so they are dropped like `/compact` drops them: the next
+    turn opens a fresh thread seeded from the remaining transcript. A compaction summary that covers deleted turns is
+    dropped too. Refused while the chat is answering, like `/compact`.
+    """
+    st = get_store()
+    if not st.get_session(session_id):
+        return JSONResponse({"error": localefmt.chu("phiên không tồn tại", "session does not exist")}, status_code=404)
+    if _CHAT_RUNTIME.get_job(session_id):
+        return JSONResponse({"error": localefmt.chu("phiên đang trả lời", "session is still answering"),
+                             "ly_do": "dang_chay"}, status_code=409)
+    tin = _tim_tin_tua_lai(st.get_messages(session_id), text, max(0, int(nth or 0)))
+    if not tin:
+        return JSONResponse({"error": localefmt.chu("không tìm thấy câu này trong hội thoại đã lưu",
+                                                    "this message is not in the saved conversation"),
+                             "ly_do": "khong_thay"}, status_code=404)
+    da_xoa = st.rewind_from(session_id, int(tin["id"]))
+    con = [m for m in st.get_messages(session_id)
+           if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()]
+    sess = st.get_session(session_id) or {}
+    if int(sess.get("compact_count") or 0) > len(con):
+        st.set_compact(session_id, "", 0)
+    mach = st.clear_native_threads(session_id)
+    st.mark_thread_rotated(session_id)
+    st.set_last_input_tokens(session_id, 0)
+    limit_resume.REGISTRY.cancel(session_id)   # a pending quota rerun would answer the deleted question
+    return {"ok": True, "deleted": da_xoa, "remaining": st.count_messages(session_id), "threads": mach}
 
 
 @app.get("/slash/status")
@@ -27052,6 +27402,302 @@ def _improvement_team_member(root, agent_key):
             "provider": spec.get("provider") or "", "model": spec.get("model") or "", "reasoning": info.get("reasoning") or ""}
 
 
+def _improvement_text_call(system, prompt, tag, spec=None):
+    """One text-only answer from the brain's selected engine (or `spec`): empty folder, no MCP, every tool refused (the
+    same sandbox as judges and text-only team turns). Works for every provider the user already set up."""
+    settings = cfgmod.read_settings() or {}
+    spec = spec or team_engine.choose_spec("", "", _effective_main(settings), _agent_model_provider,
+                                           lambda sp: aux_engine.availability(sp, settings))
+    base = _reply_policy_sandbox_engine(system, tag, cwd_name="improvement_loop_cwd")
+    eng = team_engine.build(spec, base, tag, settings)
+    prompt = _team_reasoning(eng, (settings.get("model") or {}).get("reasoning") or AGENT_REASONING_DEFAULT, prompt)
+
+    async def run():
+        outcome = team_runner.TextOnlyOutcome()
+        async for ev in eng.query(prompt):
+            outcome.note(ev)
+        res = outcome.result()
+        return str(res.get("text") if isinstance(res, dict) else res or "")
+
+    async def bounded():
+        try:
+            return await asyncio.wait_for(run(), timeout=300)  # a hung engine must not hold the run forever
+        except asyncio.TimeoutError:
+            await asyncio.to_thread(claude_cli.cancel_all, tag)
+            raise
+    return asyncio.run(bounded())
+
+
+def _improvement_loop_engines(root):
+    """(solve, improve) for one self-learning run on the brain's selected engine, text only. Raises before any run
+    when that engine cannot answer text-only (e.g. Grok Build, Antigravity), so no fake verdict is reported."""
+    settings = cfgmod.read_settings() or {}
+    spec = team_engine.choose_spec("", "", _effective_main(settings), _agent_model_provider,
+                                   lambda sp: aux_engine.availability(sp, settings))
+    try:
+        team_engine.build(spec, _reply_policy_sandbox_engine("probe", "improvement-loop-probe",
+                                                             cwd_name="improvement_loop_cwd"), "improvement-loop-probe", settings)
+    except team_engine.TeamEngineUnavailable as error:
+        raise PermissionError(f"engine_unavailable: {error.reason}") from None
+    def solve(skill, prompt):
+        system = ("You are a Javis assistant. Follow the skill below exactly.\n\n<skill>\n" + skill +
+                  "\n</skill>\n\nAnswer only in the format the skill asks for.")
+        return _improvement_text_call(system, prompt, "improvement-loop-solve-" + __import__("secrets").token_hex(4))
+
+    def improve(instructions):
+        return _improvement_text_call("You improve skills for the Javis assistant. Keep the skill's language and "
+                                      "style.", instructions, "improvement-loop-improve-" + __import__("secrets").token_hex(4))
+    return solve, improve
+
+
+def _improvement_skill_protected(root, slug):
+    """System and pack skills belong to their maintainers: a run may read them but never applies to them."""
+    import improvement_assets
+    import system_sync
+    if system_sync.is_system_skill(slug):
+        return True
+    try:
+        improvement_assets.capture_source(Path(root), "skill", slug, pack_state_dir=Path(cfgmod.STATE_DIR) / "packs-state")
+    except Exception:  # noqa: BLE001 - unknown ownership is treated as not ours
+        return True
+    return False
+
+
+_IMPROVEMENT_LOOP_RUNS = [None]
+_IMPROVEMENT_LOOP_RUNS_LOCK = __import__("threading").Lock()
+
+
+def _improvement_loop_runs():
+    with _IMPROVEMENT_LOOP_RUNS_LOCK:  # one service, one lock: two first requests cannot start two runs
+        if _IMPROVEMENT_LOOP_RUNS[0] is None:
+            import improvement_loop_runs
+            _IMPROVEMENT_LOOP_RUNS[0] = improvement_loop_runs.LoopRuns(
+                Path(cfgmod.STATE_DIR), engines=_improvement_loop_engines, protected=_improvement_skill_protected)
+        return _IMPROVEMENT_LOOP_RUNS[0]
+
+
+# -- Automatic learning from chat (0.341.0): skills, agents and workflows learn from real mistakes ------------------
+
+_AUTO_LEARNER = [None]
+_AUTO_LEARNER_LOCK = __import__("threading").Lock()
+_AUTO_LEARNING_BUSY = [False]
+
+
+def _auto_learning_policy_on(root):
+    """Learning follows the brain's improvement policy: mode "off" stops it. No schema yet means the default (on)."""
+    try:
+        store = _improvement_read_store()
+        if store is None:
+            return True
+        principal = resonance_store.Principal("owner", "owner", str(Path(root).resolve(strict=True)))
+        return store.get_policy(principal).get("mode") != "off"
+    except Exception as _e:  # noqa: BLE001 - unknown policy: do not learn
+        print(f"[auto-learning policy] {type(_e).__name__}: {_e}", file=sys.stderr)
+        return False
+
+
+def _auto_learning_spec():
+    """Learning runs on the brain's selected engine. When that engine has no text-only path (Grok Build, Antigravity),
+    it falls back to the background model the Models page sets for "tự học", so nobody has to change anything."""
+    settings = cfgmod.read_settings() or {}
+    main = _effective_main(settings)
+    if team_engine.text_only_supported(main.get("provider")):
+        return None  # _improvement_text_call's own choice: the main engine
+    background = aux_engine.read_spec(settings)
+    if team_engine.text_only_supported(background.get("provider")) and aux_engine.availability(background, settings)[0]:
+        return {"provider": background["provider"], "model": background.get("model") or "", "source": "aux", "note": ""}
+    return None
+
+
+def _auto_learning_background_spec():
+    """Judging, writing cases, grading and writing revisions run on the background model ("Mô hình nền", the one
+    the Models page sets for loops, Kanban and learning); when it cannot run text-only, on the learning engine."""
+    settings = cfgmod.read_settings() or {}
+    background = aux_engine.read_spec(settings)
+    if team_engine.text_only_supported(background.get("provider")) and aux_engine.availability(background, settings)[0]:
+        return {"provider": background["provider"], "model": background.get("model") or "", "source": "aux", "note": ""}
+    return _auto_learning_spec()
+
+
+def _auto_learning_engine_ready(root):
+    spec = _auto_learning_spec()
+    if spec is None:
+        _improvement_loop_engines(root)  # raises engine_unavailable when the main engine cannot run text-only
+        return
+    settings = cfgmod.read_settings() or {}
+    try:
+        team_engine.build(spec, _reply_policy_sandbox_engine("probe", "auto-learning-probe", cwd_name="improvement_loop_cwd"),
+                          "auto-learning-probe", settings)
+    except team_engine.TeamEngineUnavailable as error:
+        raise PermissionError(f"engine_unavailable: {error.reason}") from None
+
+
+def _auto_learning_settings(root):
+    """The "Tự học" page drives learning from chat: on/off, write mode, and the Skill/Agent/Workflow switches."""
+    cfg = learn_feature.read_config()
+    caps = cfg.get("capabilities") or {}
+    return {"enabled": bool(cfg.get("enabled")), "mode": str(cfg.get("mode") or "auto"),
+            "kinds": {kind for kind in ("skill", "agent", "workflow") if caps.get(kind)}}
+
+
+def _auto_learning_principal(root):
+    return resonance_store.Principal("owner", "owner", str(Path(root).resolve(strict=True)))
+
+
+def _auto_learning_agent_procedure(root, slug):
+    """The assistant's active learned/owner procedure: text, overlay id, generation; {} when none."""
+    service = _improvement_agents()
+    principal = _auto_learning_principal(root)
+    key = service.key(principal, slug)
+    if not key:
+        return {}
+    active = [o for o in service.overlays(principal, agent_key=key) if o["state"] == "active"]
+    if not active:
+        return {}
+    overlay = active[0]
+    row = service.procedure(principal, overlay["procedure_id"])
+    if row is None:
+        import auto_learning
+        raise auto_learning.ConflictError("agent_procedure_unreadable")
+    return {"text": row["text"], "overlay_id": overlay["overlay_id"],
+            "procedure_id": overlay["procedure_id"], "generation": overlay["generation"], "surfaces": overlay["surfaces"]}
+
+
+def _auto_learning_swap(root, slug, out_overlay, in_procedure, surfaces, tag):
+    """Revert `out_overlay` (may be {}) and apply `in_procedure` on `surfaces`; if the apply fails, the reverted overlay's
+    procedure is put back so the assistant never ends up with nothing. Returns the new overlay."""
+    import auto_learning
+    import improvement_agent
+    service, principal = _improvement_agents(), _auto_learning_principal(root)
+    # Revert has no policy gate but apply has, and a procedure written for older owner rules cannot be applied:
+    # check both before touching anything, so the assistant never loses its procedure halfway.
+    if not _auto_learning_policy_on(root):
+        raise PermissionError("improvement_disabled")
+    rules = improvement_agent.owner_rules_hash(*_improvement_read_agent(root, slug))
+    for procedure_id in [in_procedure] + ([out_overlay["procedure_id"]] if out_overlay else []):
+        row = service.procedure(principal, procedure_id)
+        if row is None or row["owner_rules_hash"] != rules:
+            raise auto_learning.ConflictError("agent_owner_rules_changed")
+    if out_overlay:
+        service.revert(principal, out_overlay["overlay_id"], expected_generation=out_overlay["generation"],
+                       event_key=f"auto-learn-revert-{tag}")
+    try:
+        return service.apply(principal, in_procedure, surfaces, owner_confirmed=True, event_key=f"auto-learn-apply-{tag}")
+    except Exception:
+        if out_overlay:
+            service.apply(principal, out_overlay["procedure_id"], out_overlay["surfaces"], owner_confirmed=True,
+                          event_key=f"auto-learn-putback-{tag}")
+        raise
+
+
+def _auto_learning_agent_apply(root, slug, text, started_from):
+    """Learned procedure goes live as the assistant's overlay, on the surfaces the current one had (all when none);
+    the current one is reverted first and remembered for undo. If the owner changed the procedure while the run
+    worked, nothing is applied. The owner authorised automatic learning (26/10/2026), so it is applied as confirmed."""
+    import auto_learning
+    import improvement_agent
+    previous = _auto_learning_agent_procedure(root, slug)
+    if previous.get("overlay_id") != (started_from or {}).get("overlay_id") or \
+            previous.get("generation") != (started_from or {}).get("generation"):
+        raise auto_learning.ConflictError("target_changed")
+    tag = __import__("secrets").token_hex(8)
+    staged = _improvement_agents().stage(_auto_learning_principal(root), slug, text, source="learn",
+                                         event_key=f"auto-learn-stage-{tag}")
+    surfaces = previous.get("surfaces") or sorted(improvement_agent.SURFACES)
+    overlay = _auto_learning_swap(root, slug, previous, staged["procedure_id"], surfaces, tag)
+    return {"slug": slug, "overlay_id": overlay["overlay_id"], "procedure_id": staged["procedure_id"],
+            "surfaces": surfaces, "previous": previous.get("procedure_id"), "previous_surfaces": previous.get("surfaces")}
+
+
+def _auto_learning_agent_undo(root, info):
+    """Back to the procedure before the learned one (or none). If restoring fails, the learned one stays live."""
+    import auto_learning
+    current = _auto_learning_agent_procedure(root, info["slug"])
+    if current.get("overlay_id") != info["overlay_id"]:
+        raise auto_learning.ConflictError("changed_since")
+    tag = __import__("secrets").token_hex(8)
+    if info.get("previous"):
+        _auto_learning_swap(root, info["slug"], current, info["previous"], info.get("previous_surfaces") or current["surfaces"], tag)
+    else:
+        _improvement_agents().revert(_auto_learning_principal(root), info["overlay_id"],
+                                     expected_generation=current["generation"], event_key=f"auto-learn-undo-{tag}")
+
+
+def _auto_learning_reaction(session_id, message_id):
+    try:
+        row = get_store().dm_reaction_of(session_id, int(message_id))
+    except Exception:  # noqa: BLE001
+        return ""
+    if not row:
+        return ""
+    reasons = row.get("reasons") or []
+    return f"{row.get('value', '')} " + (", ".join(str(r) for r in reasons) if reasons else "") + (
+        f" ({row.get('comment')})" if row.get("comment") else "")
+
+
+def _auto_learning_workflow_run(run_id):
+    import workflow_runs
+    row = workflow_runs.get_store().lay(run_id) if run_id else None
+    if not row:
+        return None
+    steps = row.get("steps") if isinstance(row.get("steps"), list) else json.loads(row.get("steps_json") or "[]")
+    return {**row, "steps": steps}
+
+
+def _auto_learner():
+    with _AUTO_LEARNER_LOCK:
+        if _AUTO_LEARNER[0] is None:
+            import auto_learning
+            state = Path(cfgmod.STATE_DIR) / "improvement"
+            host = auto_learning.Host(
+                text_call=lambda system, prompt: _improvement_text_call(
+                    system, prompt, "auto-learning-" + __import__("secrets").token_hex(4), _auto_learning_spec()),
+                background_call=lambda system, prompt: _improvement_text_call(
+                    system, prompt, "auto-learning-bg-" + __import__("secrets").token_hex(4),
+                    _auto_learning_background_spec()),
+                engine_ready=_auto_learning_engine_ready,
+                policy_on=_auto_learning_policy_on,
+                skill_protected=_improvement_skill_protected,
+                workflows_dir=_workflows_dir,
+                agent_text=lambda root, slug: (lambda p: p.read_text(encoding="utf-8") if p is not None else "")(
+                    _agent_md_path(root, slug)),
+                agent_procedure=_auto_learning_agent_procedure,
+                agent_apply=_auto_learning_agent_apply,
+                agent_undo=_auto_learning_agent_undo,
+                reaction=_auto_learning_reaction,
+                workflow_run=_auto_learning_workflow_run,
+                backups=state / "auto-learning-backups",
+                settings=_auto_learning_settings)
+            _AUTO_LEARNER[0] = auto_learning.AutoLearner(auto_learning.Store(state / "auto_learning.sqlite3"), host)
+            auto_learning.SKILL_USE_HOOK[0] = lambda root, session_id, slug: _AUTO_LEARNER[0].note_skill_use(
+                _brain_key(root), session_id, slug)
+        return _AUTO_LEARNER[0]
+
+
+def _auto_learning_note_tool(brain, conv_sid, event):
+    """Claude Code loads skills natively (Skill tool, or reading SKILL.md): those loads never reach the hub."""
+    try:
+        import auto_learning
+        slug = auto_learning.skill_from_tool(event.get("name") or "", event.get("input") or {})
+        if slug:
+            _auto_learner().note_skill_use(_brain_key(brain), conv_sid, slug)
+    except Exception as _e:  # noqa: BLE001 - learning never breaks a turn
+        print(f"[auto-learning note] {type(_e).__name__}: {_e}", file=sys.stderr)
+
+
+async def _auto_learning_tick():
+    """Scheduler: one unit of learning work (judge a few turns, or one learning run) in a worker thread."""
+    if _AUTO_LEARNING_BUSY[0] or os.environ.get("JAVIS_AUTO_LEARNING_PAUSED") == "1":
+        return
+    _AUTO_LEARNING_BUSY[0] = True
+    try:
+        await asyncio.to_thread(_auto_learner().step)
+    except Exception as _e:  # noqa: BLE001
+        print(f"[auto-learning tick] {type(_e).__name__}: {_e}", file=sys.stderr)
+    finally:
+        _AUTO_LEARNING_BUSY[0] = False
+
+
 def _improvement_activations():
     return improvement_activation.Activations(_improvement_write_store(), agent_key=_improvement_activation_agent)
 
@@ -27096,6 +27742,8 @@ improvement_activation_api.register(app, improvement_activation_api.ActivationAp
             _improvement_write_store(), activations=_improvement_activations(), procedures=_improvement_agents()),
         canaries=_improvement_canaries()),
     imports=lambda: __import__("improvement_library").Imports(_improvement_write_store()),
+    loop_runs=_improvement_loop_runs,
+    auto_learning=_auto_learner,
     export=lambda principal, ids: __import__("improvement_library").export_procedures(
         _improvement_write_store(), principal, ids, version=_read_version()),
     review_proposals=_agent_review_proposals,
