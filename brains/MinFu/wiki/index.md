@@ -45,3 +45,4 @@ Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `req
 - [[Lỗi No scopes requested khi cài Slack app]] - Slack báo "Invalid permissions requested / No scopes requested" khi cài app, khi
 - [[Cấp kubeconfig theo namespace có duyệt admin]] - Cấp quyền kubeconfig cho dev nên dựa trên danh sách namespace được phép (whiteli
 - [[Cookie secret của oauth2-proxy phải đúng 16, 24 hoặc 32 byte]] - oauth2-proxy từ chối `cookie_secret` không đúng độ dài và in thông báo `cookie_s
+- [[Gọi API xuyên cluster qua gateway HTTPS mTLS]] - Khi hai cluster Kubernetes nằm ở nhà cung cấp cloud khác nhau, không nên giả địn

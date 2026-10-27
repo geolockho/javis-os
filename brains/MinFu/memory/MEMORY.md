@@ -95,3 +95,4 @@
 - [Bản preview giao diện kubeconfig-generator trong workspace](facts/preview-giao-dien-kubeconfig-generator.md) - Bản xem trước 6 trang giao diện nằm tại workspace/kubeconfig-generator-preview, dùng dữ liệu giả.
 - [Kế hoạch tách gateway và service sang cluster riêng](facts/ke-hoach-tach-gateway-va-service-nhieu-cluster.md) - Mục tiêu tách gateway và service sang cluster riêng ở các NCC cloud trong nước, gọi nhau qua mạng nội bộ.
 - [Đang dùng ingress-nginx, chưa dùng Gateway API được](facts/dung-ingress-nginx-chua-gateway-api.md) - Ngày 2026-10-27 user nói tạm thời chưa dùng Gateway API, vẫn chạy ingress-nginx ở cluster hiện tại.
+- [Các cluster dùng CNI Calico](facts/cluster-dung-calico-cni.md) - CNI hiện tại của các cluster là Calico, nên phương án multi-cluster phải giữ được Calico.

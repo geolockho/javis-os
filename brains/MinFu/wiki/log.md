@@ -132,3 +132,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Cookie secret của oauth2-proxy phải đúng 16, 24 hoặc 32 byte]]
+
+## [2026-10-27] ingest | tự học từ chat
+
+Đã tạo:
+- [[Gọi API xuyên cluster qua gateway HTTPS mTLS]]
