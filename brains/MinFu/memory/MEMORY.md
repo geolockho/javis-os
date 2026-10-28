@@ -115,3 +115,4 @@
 - [Báo cáo tài nguyên fsel-prod 2 tiếng và cuối ngày qua Prometheus](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-10-28.md) - Ngày 2026-10-28 đã dựng skill bao-cao-tai-nguyen-k8s-prometheus, agent tl-toi-uu-tai-nguyen-k8s, lịch 2h và 23:30 gửi Slack C0C8RMMB7AN; chưa chạy thử qua lịch.
 - [Nguồn dữ liệu báo cáo tài nguyên fsel-prod](facts/nguon-du-lieu-bao-cao-tai-nguyen-fsel-prod.md) - Prometheus prod và thư mục values ArgoCD dùng cho báo cáo tài nguyên fsel-prod
 - [User đi xe VinFast VF5 (xe điện)](facts/xe-vinfast-vf5-cua-user.md) - User dùng xe điện VinFast VF5 khi đi đường dài, cần tính điểm sạc và thời gian sạc.
+- [Bảng báo cáo tài nguyên fsel-prod: chữ to hơn, sắp tăng dần theo tỉ lệ dùng/request](facts/uu-tien-bang-bao-cao-tai-nguyen-theo-ti-le-dung.md) - Người dùng muốn bảng báo cáo tài nguyên sắp tăng dần theo tỉ lệ usage/request và chữ to hơn một cỡ.
