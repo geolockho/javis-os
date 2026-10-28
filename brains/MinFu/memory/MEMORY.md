@@ -105,3 +105,5 @@
 - [Manifest gc → sc tách thư mục theo bậc 0, 1, 2 trong workspace](facts/manifest-gc-sc-tach-thu-muc-theo-bac.md) - workspace/gc-sc-gateway/ chia bac-0 (dùng ngay), bac-1 và bac-2 (nâng sau), mỗi bậc có gc/, sc/ và README
 - [Cluster dùng cert-manager tự cấp cert cho tls.hosts của Ingress](facts/cert-manager-tu-cap-cert-tls-hosts.md) - User khẳng định cert-manager tự sinh cert cho tls.hosts; annotation issuer trên từng cluster chưa kiểm
 - [Tự nạp cert public cho Ingress edge trên gc](facts/tu-nap-cert-public-ingress-edge-gc.md) - Bỏ annotation cert-manager khỏi Ingress edge trên gc, tự nạp Secret api-example-com-tls
+- [Đang so sánh giá cloud với FPT Cloud hiện tại](facts/so-sanh-gia-cloud-dang-dung-fpt.md) - User đang dùng FPT Cloud và muốn so giá với Viettel, OMZ, VNG (mục tiêu: có bảng để cân nhắc chi phí).
+- [Muốn xem bảng mẫu và chốt điểm trước khi dựng Excel](facts/xem-bang-mau-truoc-khi-dung-excel.md) - Với bảng so sánh giá, user muốn Javis đưa bảng mẫu và hỏi lại các điểm chưa rõ trước khi làm file.
