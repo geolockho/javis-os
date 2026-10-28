@@ -108,3 +108,5 @@
 - [Đang so sánh giá cloud với FPT Cloud hiện tại](facts/so-sanh-gia-cloud-dang-dung-fpt.md) - User đang dùng FPT Cloud và muốn so giá với Viettel, OMZ, VNG (mục tiêu: có bảng để cân nhắc chi phí).
 - [Muốn xem bảng mẫu và chốt điểm trước khi dựng Excel](facts/xem-bang-mau-truoc-khi-dung-excel.md) - Với bảng so sánh giá, user muốn Javis đưa bảng mẫu và hỏi lại các điểm chưa rõ trước khi làm file.
 - [Vị trí hiện tại của T là DevOps Middle](facts/vi-tri-devops-middle.md) - Ngày 2026-10-28 T tự xưng DevOps Middle khi nhờ điền form đánh giá công việc.
+- [Lỗi CSRF kubeconfig-generator đã sửa và push 2 commit lên main](facts/sua-csrf-kubeconfig-generator-da-push.md) - Ngày 2026-10-28 push 659168b (sửa CSRF) và facc6f9 (README dùng team-a), chưa deploy, test chưa chạy.
+- [Role view cấp cho dev qua kubeconfig-generator chỉ đọc, không xem được Secret](facts/role-view-dev-kubeconfig-chi-doc.md) - Role view của dev chỉ get/list/watch trong namespace có label; ConfigMap và pods/log đọc được, Secret thì không.
