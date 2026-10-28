@@ -110,3 +110,4 @@
 - [Vị trí hiện tại của T là DevOps Middle](facts/vi-tri-devops-middle.md) - Ngày 2026-10-28 T tự xưng DevOps Middle khi nhờ điền form đánh giá công việc.
 - [Lỗi CSRF kubeconfig-generator đã sửa và push 2 commit lên main](facts/sua-csrf-kubeconfig-generator-da-push.md) - Ngày 2026-10-28 push 659168b (sửa CSRF) và facc6f9 (README dùng team-a), chưa deploy, test chưa chạy.
 - [Role view cấp cho dev qua kubeconfig-generator chỉ đọc, không xem được Secret](facts/role-view-dev-kubeconfig-chi-doc.md) - Role view của dev chỉ get/list/watch trong namespace có label; ConfigMap và pods/log đọc được, Secret thì không.
+- [Node fsel-prod có label node_role=appnodes-prod2](facts/fsel-prod-node-label-appnodes-prod2.md) - Ảnh thống kê CPU/RAM khớp 2 node appnodes-prod2 (48C96G và 64C128G), 3 node appnodes-prod không nằm trong ảnh.
