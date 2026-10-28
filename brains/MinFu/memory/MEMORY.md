@@ -104,3 +104,4 @@
 - [Chốt bắt đầu gc → sc ở bậc 0, bậc 1 và 2 để nâng sau](facts/chon-bac-0-gc-sc-truoc.md) - Ngày 2026-10-28 user chọn bậc 0 (HTTP thường, whitelist IP) cho gc → sc, bậc 1 và 2 viết sẵn để nâng cấp sau
 - [Manifest gc → sc tách thư mục theo bậc 0, 1, 2 trong workspace](facts/manifest-gc-sc-tach-thu-muc-theo-bac.md) - workspace/gc-sc-gateway/ chia bac-0 (dùng ngay), bac-1 và bac-2 (nâng sau), mỗi bậc có gc/, sc/ và README
 - [Cluster dùng cert-manager tự cấp cert cho tls.hosts của Ingress](facts/cert-manager-tu-cap-cert-tls-hosts.md) - User khẳng định cert-manager tự sinh cert cho tls.hosts; annotation issuer trên từng cluster chưa kiểm
+- [Tự nạp cert public cho Ingress edge trên gc](facts/tu-nap-cert-public-ingress-edge-gc.md) - Bỏ annotation cert-manager khỏi Ingress edge trên gc, tự nạp Secret api-example-com-tls
