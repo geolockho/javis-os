@@ -107,3 +107,4 @@
 - [Tự nạp cert public cho Ingress edge trên gc](facts/tu-nap-cert-public-ingress-edge-gc.md) - Bỏ annotation cert-manager khỏi Ingress edge trên gc, tự nạp Secret api-example-com-tls
 - [Đang so sánh giá cloud với FPT Cloud hiện tại](facts/so-sanh-gia-cloud-dang-dung-fpt.md) - User đang dùng FPT Cloud và muốn so giá với Viettel, OMZ, VNG (mục tiêu: có bảng để cân nhắc chi phí).
 - [Muốn xem bảng mẫu và chốt điểm trước khi dựng Excel](facts/xem-bang-mau-truoc-khi-dung-excel.md) - Với bảng so sánh giá, user muốn Javis đưa bảng mẫu và hỏi lại các điểm chưa rõ trước khi làm file.
+- [Vị trí hiện tại của T là DevOps Middle](facts/vi-tri-devops-middle.md) - Ngày 2026-10-28 T tự xưng DevOps Middle khi nhờ điền form đánh giá công việc.
