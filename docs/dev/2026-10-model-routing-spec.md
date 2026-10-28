@@ -38,8 +38,9 @@ Việc nền có model riêng, cố định, không chạy theo MAIN. Trang Mode
    viền nét đứt giống trang Kết nối.
 2. **Tự xoay vòng tuần tự:** dùng tài khoản 1 tới khi hết lượt, sang 2, ... hết cả nhà thì sang
    thẻ kế. Tài khoản 1 hồi lượt thì quay lại dùng nó trước. Không chia đều từng câu.
-3. Thêm nhiều tài khoản gói thuê bao: người dùng **tự chịu rủi ro**. Form thêm hiện một dòng cảnh
-   báo khoá tài khoản, không bắt tích ô xác nhận.
+3. Thêm nhiều tài khoản gói thuê bao: người dùng **tự chịu rủi ro**. Form thêm hiện một dòng nhắc
+   giọng nhẹ nhàng (chủ repo, 0.352.0): có nguy cơ bị khoá nhưng Javis chưa ghi nhận trường hợp
+   nào, gặp thì báo nhà phát triển qua Issues. Không bắt tích ô xác nhận.
 4. Nhiều key API trong một nhà được hỗ trợ đầy đủ. Không bắt khai nhóm hạn mức: Javis thử lần
    lượt, key đang nghỉ thì bỏ qua ngay.
 5. Antigravity CLI chỉ 1 tài khoản (token trong keyring của máy), thẻ ghi rõ lý do, không có nút thêm.
@@ -167,16 +168,36 @@ Mỗi bản là một PR, CI xanh thì merge, mỗi bản một số phiên bả
    cũ, chuỗi việc nền mới (model nền → dự phòng mặc định → MAIN), luật dừng sau `tool_call`,
    nhiều key API có xoay vòng, Telegram ghim theo chat, Effort gần nhất, chip khung chat chỉ hiện
    nhà đã kết nối. Kèm test.
-2. **0.35x: giao diện trang Models** theo bản duyệt: Thứ tự dùng (kéo thả, ⇅, chip model/Effort),
-   danh sách tài khoản và key, ô Model việc nền (bảng chọn hai kiểu, mở lên trên), ẩn nhà chưa kết
-   nối, bỏ ô Telegram và ô Mức suy luận chung.
-3. **0.35x: nhiều tài khoản cho CLI.** Codex (`CODEX_HOME` riêng) và Grok (`GROK_HOME` riêng)
-   trước; Claude Code (`CLAUDE_CONFIG_DIR` riêng) sau khi kiểm chứng tách được trên macOS
-   (Keychain), Linux và Windows. Mỗi tài khoản một thư mục trong `STATE_DIR/accounts/<id>/`.
-4. **0.35x: chat tự chuyển khi hết lượt.** Lượt chat hỏng vì hết lượt trước khi có chữ hoặc công
+2. **0.351.0: giao diện trang Models** theo bản duyệt: Thứ tự dùng (kéo thả, ⇅, chip model/Effort),
+   danh sách key của thẻ API, ô Model việc nền (bảng chọn hai kiểu, mở lên trên), ẩn nhà chưa kết
+   nối, bỏ ô Telegram, ô Main Model và ô Mức suy luận chung. Server gửi kèm `model.routing` (thứ tự,
+   profile từng thẻ, model nền, thẻ chat và việc nền đang chạy) để trang không tự suy.
+   Chưa làm ở bản này: chip `Extra → High` (2.3.3) cần bảng mức suy luận của từng model, mà danh
+   sách model hiện chỉ có tên. Tới khi có bảng đó, chip hiện đúng mức đã chọn và engine tự hạ mức
+   như trước. Danh sách tài khoản cho gói (CLI) đi cùng bản 3.
+3. **0.353.0: nhiều tài khoản cho CLI** (chủ repo bảo làm cả ba cùng lúc). Codex (`CODEX_HOME`),
+   Grok (`GROK_HOME`) và Claude Code (`CLAUDE_CONFIG_DIR`), mỗi tài khoản thêm một thư mục
+   `STATE_DIR/accounts/<id>/<codex|grok|claude>/`; tài khoản 1 giữ nguyên thư mục mặc định của CLI.
+   Mã ở `server/plan_accounts.py`. Đăng nhập tài khoản thêm: ChatGPT bằng luồng device code của
+   Javis (token ghi vào `auth.json` của thư mục đó), Grok bằng `grok login --device-auth`, Claude
+   bằng `claude auth login` (link rồi dán mã). Hết lượt: tài khoản đó nghỉ (`mark_rest`), tài
+   khoản kế chạy; chỉ khi không còn tài khoản nào thì thẻ mới tính là hết lượt (`_PIN_LIMITED`).
+   Chưa đi theo tài khoản (ghi rõ trong hướng dẫn): đồng hồ hạn mức, tạo ảnh, giọng nói và các
+   đường ChatGPT không qua Codex CLI vẫn dùng tài khoản 1. Claude trên macOS giữ token trong
+   Keychain; Javis coi tài khoản là đã đăng nhập khi thấy lượt đăng nhập xong (file đánh dấu).
+4. **0.354.0: chat tự chuyển khi hết lượt.** Lượt chat hỏng vì hết lượt trước khi có chữ hoặc công
    cụ nào thì chạy lại ngay bằng đường kế tiếp, kèm một dòng "Đang dùng ChatGPT vì Claude hết lượt".
    Hỏng giữa chừng thì dừng, có nút "Chạy lại". Trước bản này, chat vẫn chọn đường còn lượt ngay
    từ đầu lượt (bản 1).
+   Cách làm: `_SendProxy` của lượt đếm chữ đã stream và công cụ đã gọi (dòng nén mạch, co ngữ cảnh
+   của Javis không tính), giữ lại khung lỗi tới cuối lượt khi chưa có gì. Cuối `_do_turn`, lỗi hết
+   lượt (gói: `_limit_frame`; API: `limit_exceeded` không phải "co nhỏ" hoặc lỗi 429/quota, key đó
+   nghỉ qua `_note_api_limit`) mà chưa có gì thì `_chat_next_route` chọn đường kế (tài khoản/key kế
+   cùng thẻ, rồi thẻ kế, bỏ thẻ đã thử), bỏ các khung đã giữ, không lưu câu báo; `run_turn` gửi khung
+   `reroute` (dòng "Đang dùng...") rồi chạy lại, tối đa 3 lần. Hỏng giữa chừng: giữ câu dở, thẻ
+   limit_resume lý do `partial` (không tự chạy, chỉ nút Chạy lại ngay). Telegram: `_tg_answer` lặp
+   lại `_tg_answer_engine` khi lõi trả câu hết lượt và chưa có dòng "⚙" nào; bot chuyên trách không
+   đổi đường. Test: `tests/python/test_chat_doi_duong.py`.
 
 ## 7. Tiêu chí nghiệm thu
 

@@ -4209,7 +4209,6 @@
     const s = await freshSettings();
     const m = s.model || {};
     const providers = m.providers || [];
-    const main = m.main || {};
     // Đã kết nối xếp LÊN ĐẦU, chưa kết nối dồn xuống dưới; trong mỗi nhóm giữ nguyên thứ tự
     // gốc của PROVIDER_DEFS (sort có tiebreak theo chỉ số nên ổn định, không phụ thuộc engine).
     // Phải hỏi /claude/status mới biết Claude Code có đăng nhập thật không: nó không có
@@ -4228,59 +4227,182 @@
     // thật nào. Quá hạn thì coi như chưa đăng nhập và VẼ TIẾP - thẻ có thể xếp thấp hơn thực
     // tế trong chốc lát, còn hơn để cả trang trắng. `refreshClaudeCard` ngay dưới vẫn hỏi lại
     // bất đồng bộ và ghi đúng trạng thái lên thẻ.
-    let claudeOn = false;
+    let claudeSt = null;
     try {
       const ac = new AbortController();
       const hen = setTimeout(() => ac.abort(), 2500);
-      try { claudeOn = !!(await (await fetch("/claude/status", { signal: ac.signal })).json()).connected; }
+      try { claudeSt = await (await fetch("/claude/status", { signal: ac.signal })).json(); }
       finally { clearTimeout(hen); }
     } catch (e) {}
+    const claudeOn = !!(claudeSt && claudeSt.connected);
     // kind "cli" nay có ba bộ não (Claude Code, Grok Build, Antigravity). Chỉ Claude mới phải
     // hỏi /claude/status; hai cái kia đã có `configured` thật từ server (đọc file đăng nhập).
     const provOn = (p) => (p.id === "anthropic-cli" ? claudeOn : !!p.configured);
     const provList = providers.map((p, i) => ({ p, i }))
       .sort((a, b) => (provOn(b.p) - provOn(a.p)) || (a.i - b.i))
       .map(x => x.p);
-    const mainP = providers.find(p => p.id === main.provider) || {};
-    const auxCfg = m.auxiliary || {};
-    const aux = auxCfg.model || "";
-    const auxProv = auxCfg.provider || "anthropic-cli";
-    // Việc nền chạy được trên MỌI provider đã đấu, không riêng Claude. Nhưng OpenRouter một
-    // mình đã vài trăm model, phơi hết ra thành chip thì tràn trang và không tìm nổi - nên ở
-    // đây chỉ hiện LỰA CHỌN HIỆN TẠI, còn việc chọn giao cho openModelPicker (có ô lọc, có
-    // cột provider, tự nạp model live) - đúng cái đang dùng cho model chính ngay phía trên.
-    const auxProvDef = providers.find(p => p.id === auxProv) || {};
-    const auxReady = auxProv === "anthropic-cli" || auxProvDef.configured;
-    // Model RIÊNG cho Telegram. provider rỗng = theo model chính (mặc định). Ghim thì đổi
-    // model trên web không kéo Telegram theo - chủ repo đổi model liên tục để thử, mỗi lần
-    // thử là điện thoại của cả nhà bị kéo theo (02/09).
-    const tgCfg = m.telegram || {};
-    const tgPinned = !!tgCfg.provider;
-    const tgProv = tgCfg.provider || main.provider;
-    const tgModel = tgPinned ? (tgCfg.model || "") : (main.model || "");
-    const tgProvDef = providers.find(p => p.id === tgProv) || {};
-    const tgReady = !tgPinned || tgProv === "anthropic-cli" || tgProvDef.configured;
-    const reasoning = m.reasoning || "off";
-    // Thang này phải KHỚP engine.REASONING_LEVELS bên server và EFFORT trong model-picker.js.
-    // Mỗi nấc kèm một dòng RẤT ngắn nói nó đánh đổi gì - đủ để chọn, không phải đọc bài.
-    const REASON = [["off", t("models.r_off"), t("models.r_off_d")], ["low", t("models.r_low"), t("models.r_low_d")],
-                    ["medium", t("models.r_med"), t("models.r_med_d")], ["high", t("models.r_high"), t("models.r_high_d")],
-                    ["xhigh", t("models.r_xhigh"), t("models.r_xhigh_d")], ["ultra", t("models.r_ultra"), t("models.r_ultra_d")]];
-    const reasonChips = REASON.map(([v, l, d]) =>
-      `<button class="seg-btn ${reasoning === v ? "sel" : ""}" data-reason="${v}" title="${esc(d)}">` +
-      `<span class="seg-lb">${esc(l)}</span><span class="seg-d">${esc(d)}</span></button>`).join("");
+    // 0.351.0 (docs/dev/2026-10-model-routing-spec.md 2.1-2.4): the page draws the usage order the server keeps.
+    // Only signed-in cards stand in it; the others wait behind "Connect another provider". The server counts Claude
+    // Code as signed in whenever the binary exists, so a definite "not signed in" from /claude/status moves it out
+    // (a timeout or an unknown answer keeps it where the server put it).
+    const R = m.routing || {};
+    MODEL_DEFAULTS = R.defaults || {};
+    const pById = (id) => providers.find(p => p.id === id);
+    const claudeP = pById("anthropic-cli") || {};
+    const claudeOut = !!(claudeSt && !claudeSt.connected && !claudeSt.unknown && !claudeSt.cli_missing
+      && !(claudeP.auth_mode === "api_key" && claudeP.auth_api_key_set));
+    const order = (R.order || []).filter(id => pById(id) && !(id === "anthropic-cli" && claudeOut));
+    const connList = order.map(pById);
+    const offList = provList.filter(p => order.indexOf(p.id) < 0);
+    const prof = (id) => (R.profiles || {})[id] || { model: "", reasoning: "off" };
+    const multiKey = R.multi_key || [];
+    const accts = m.accounts || {};
+    const bgCfg = R.background || { provider: "anthropic-cli", model: "", reasoning: "off" };
+    const bgP = pById(bgCfg.provider) || {};
+    const bgUse = R.bg_in_use || null;
+    const ui = el._ordUi || (el._ordUi = { showOff: false });
 
     const KEYFIELD = { "openrouter": "openrouter_key", "anthropic-api": "anthropic_api_key", "openai": "openai_api_key", "gemini": "gemini_api_key", "groq": "groq_api_key", "deepseek": "deepseek_api_key", "ollama": "ollama_key", "openai-compat": "openai_compat_key", "anthropic-compat": "anthropic_compat_key" };
+    // ---- Usage order cards (0.351.0). `ord` = {idx} for a card in the order, null for a card still to connect. ----
+    const effName = (v) => t((window.JavisEffortSlider && window.JavisEffortSlider.LABEL_KEY[v]) || "eff.off");
+    const ORD_GRIP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>';
+    const ORD_SWAP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M7 4L3.5 7.5M7 4l3.5 3.5M17 20V4M17 20l-3.5-3.5M17 20l3.5-3.5"/></svg>';
+    const chatLive = (p, ord) => !!ord && ord.idx > 0 && R.chat_in_use === p.id;
+    const ordGrip = (p, ord) => ord && connList.length > 1
+      ? `<button type="button" class="ord-grip" aria-label="${esc(t("models.ord_drag", { ten: p.label }))}">${ORD_GRIP}</button>` : "";
+    // `cls` "ord-badges-m": the same badges again at the end of the chip row, shown instead of the head's on a phone,
+    // where the head is too narrow for name, kind label and badge on one line (owner's screenshot, 27/10).
+    const ordBadges = (p, ord, cls) => !ord ? "" : `<div class="${cls || "ord-badges"}">${ord.idx === 0
+      ? '<span class="prov-badge">MAIN</span>'
+      : `<span class="ord-pos">${esc(t("models.ord_backup", { n: ord.idx }))}</span>`}${chatLive(p, ord)
+      ? `<span class="prov-badge ord-live">${esc(t("models.ord_live"))}</span>` : ""}</div>`;
+    const ordChips = (p, ord) => {
+      if (!ord) return "";
+      const pr = prof(p.id);
+      return `<div class="ord-chips" data-p="${esc(p.id)}">
+          <button type="button" class="mb-chip ord-mchip" data-ordpop="model" aria-expanded="false" title="${esc(t("models.change_model"))}"><span class="mb-dot"></span><span class="ord-mtxt">${esc(pr.model || defName(p.id))}</span><span class="mb-caret">▾</span></button>
+          <button type="button" class="cp-eff ord-echip" data-ordpop="eff" aria-expanded="false" title="${esc(t("eff.head"))}"><span class="ord-etxt">${esc(effName(pr.reasoning))}</span><span class="mb-caret">▾</span></button>
+          ${ordBadges(p, ord, "ord-badges-m")}
+        </div>`;
+    };
+    const cardOpen = (p, ord) => `<div class="prov-card${(ord ? ord.idx === 0 : p.is_main) ? " main" : ""}${ord ? " ord-card" : ""}${chatLive(p, ord) ? " ord-inuse" : ""}"${ord ? ` data-dnd="prov" data-p="${esc(p.id)}"` : ""}>`;
+    // The account a provider runs on now: the first one switched on and not resting (model_routing.active_account).
+    const nowS = Date.now() / 1000;
+    const acctReady = (a) => a.enabled && !(a.resting_until > nowS);
+    const acctList = (p) => {
+      const list = accts[p.id] || [];
+      const n = list.length;
+      const cur = list.find(acctReady);
+      const useChat = R.chat_in_use === p.id, useBg = !!bgUse && bgUse.provider === p.id;
+      const rows = list.map((a, i) => {
+        const isCur = !!cur && cur.id === a.id;
+        const st = !a.enabled ? t("models.acct_off") : a.resting_until > nowS
+          ? t("models.acct_rest", { gio: new Date(a.resting_until * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+          : t("models.acct_ready");
+        const cls = !a.enabled ? "off" : a.resting_until > nowS ? "rest" : "ready";
+        const pills = (isCur && useChat ? `<span class="ord-pill chat">${esc(t("models.acct_chat"))}</span>` : "")
+          + (isCur && useBg ? `<span class="ord-pill bg">${esc(t("models.acct_bg"))}</span>` : "");
+        return `<li class="ord-acct${a.enabled ? "" : " off"}${isCur && useChat ? " inuse" : isCur && useBg ? " inuse-bg" : ""}" data-dnd="acct:${esc(p.id)}" data-id="${esc(a.id)}">
+            ${n > 1 ? `<button type="button" class="ord-grip" aria-label="${esc(t("models.ord_drag", { ten: a.label }))}">${ORD_GRIP}</button>` : ""}
+            <span class="ord-num">${i + 1}</span>
+            <span class="ord-atxt"><span class="ord-aname"><span class="ord-dot ${cls}">●</span> ${esc(a.label)}</span>
+              <span class="ord-ast">${a.key ? esc(a.key) + " · " : ""}${esc(st)}</span>${pills}</span>
+            <span class="ord-actl">
+              ${n > 1 ? `<button type="button" class="ord-ib" data-acct-move="-1" ${i === 0 ? "disabled" : ""} aria-label="${esc(t("models.acct_up", { ten: a.label }))}">${ic("chevron-up")}</button>
+              <button type="button" class="ord-ib" data-acct-move="1" ${i === n - 1 ? "disabled" : ""} aria-label="${esc(t("models.acct_down", { ten: a.label }))}">${ic("chevron-down")}</button>` : ""}
+              <button type="button" class="ord-ib" data-acct-menu="1" aria-expanded="false" aria-label="${esc(t("models.acct_menu", { ten: a.label }))}">${ic("ellipsis")}</button>
+            </span>
+            <div class="ord-menu" hidden>
+              <button type="button" class="gcard-btn ghost" data-acct-act="toggle">${esc(a.enabled ? t("models.acct_disable") : t("models.acct_enable"))}</button>
+              <button type="button" class="gcard-btn ghost" data-acct-act="rekey">${esc(t("models.acct_rekey"))}</button>
+              <button type="button" class="gcard-btn ghost danger" data-acct-act="remove">${esc(t("models.acct_rm"))}</button>
+              <div class="ord-rekey" hidden><input class="js-input" type="password" autocomplete="off" placeholder="${esc(t("models.acct_key_ph"))}">
+                <button type="button" class="gcard-btn" data-acct-act="rekey-save">${esc(t("common.save"))}</button></div>
+            </div>
+          </li>`;
+      }).join("");
+      return `<ol class="ord-accts" data-p="${esc(p.id)}">${rows}</ol>
+        <button type="button" class="ord-add" data-acct-add="${esc(p.id)}">＋ ${esc(t("models.acct_add"))}</button>
+        <div class="ord-addbox" data-acct-box="${esc(p.id)}" hidden>
+          <input class="js-input" data-f="label" placeholder="${esc(t("models.acct_label_ph"))}">
+          <input class="js-input" data-f="key" type="password" autocomplete="off" placeholder="${esc(t("models.acct_key_ph"))}">
+          <div class="prov-action" style="margin-top:0"><button type="button" class="gcard-btn" data-acct-addsave="${esc(p.id)}">${esc(t("common.save"))}</button>
+            <button type="button" class="gcard-btn ghost" data-acct-addcancel="1">${esc(t("common.cancel"))}</button>
+            <span class="gcard-meta ord-addmsg"></span></div>
+        </div>`;
+    };
+    const multiPlan = R.multi_plan || [];
+    const planReady = (a) => a.enabled && a.signed_in && !(a.resting_until > nowS);
+    const ordStatus = (p) => {
+      if (multiPlan.indexOf(p.id) >= 0) {
+        const pl = accts[p.id] || [];
+        return pl.length > 1 ? " · " + t("models.pacct_keys", { ok: pl.filter(planReady).length, n: pl.length }) : "";
+      }
+      if (multiKey.indexOf(p.id) < 0) return "";
+      const list = accts[p.id] || [];
+      return " · " + t("models.ord_keys", { ok: list.filter(acctReady).length, n: list.length });
+    };
+
+    // ---- 0.353.0: several accounts on a plan card (ChatGPT, Grok, Claude Code). Account 1 is the login above. ----
+    const planAccts = (p, ord) => {
+      if (!ord || multiPlan.indexOf(p.id) < 0) return "";
+      if (p.id === "anthropic-cli" && p.auth_mode === "api_key") return "";   // Claude on an API key: no plan accounts
+      const list = accts[p.id] || [];
+      const n = list.length;
+      const cur = list.find(planReady);
+      const useChat = R.chat_in_use === p.id, useBg = !!bgUse && bgUse.provider === p.id;
+      const rows = n < 2 ? "" : list.map((a, i) => {
+        const isCur = !!cur && cur.id === a.id;
+        const name = a.label || (a.main ? t("models.pacct_main") : t("models.pacct_n", { n: i + 1 }));
+        const st = !a.enabled ? t("models.acct_off") : !a.signed_in ? t("models.pacct_out") : a.resting_until > nowS
+          ? t("models.acct_rest", { gio: new Date(a.resting_until * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+          : t("models.pacct_ok");
+        const cls = !a.enabled ? "off" : !a.signed_in ? "off" : a.resting_until > nowS ? "rest" : "ready";
+        const pills = (isCur && useChat ? `<span class="ord-pill chat">${esc(t("models.acct_chat"))}</span>` : "")
+          + (isCur && useBg ? `<span class="ord-pill bg">${esc(t("models.acct_bg"))}</span>` : "");
+        return `<li class="ord-acct${a.enabled ? "" : " off"}${isCur && useChat ? " inuse" : isCur && useBg ? " inuse-bg" : ""}" data-dnd="pacct:${esc(p.id)}" data-id="${esc(a.id)}">
+            <button type="button" class="ord-grip" aria-label="${esc(t("models.ord_drag", { ten: name }))}">${ORD_GRIP}</button>
+            <span class="ord-num">${i + 1}</span>
+            <span class="ord-atxt"><span class="ord-aname"><span class="ord-dot ${cls}">●</span> ${esc(name)}</span>
+              <span class="ord-ast">${esc(st)}</span>${pills}</span>
+            <span class="ord-actl">
+              <button type="button" class="ord-ib" data-pacct-move="-1" ${i === 0 ? "disabled" : ""} aria-label="${esc(t("models.acct_up", { ten: name }))}">${ic("chevron-up")}</button>
+              <button type="button" class="ord-ib" data-pacct-move="1" ${i === n - 1 ? "disabled" : ""} aria-label="${esc(t("models.acct_down", { ten: name }))}">${ic("chevron-down")}</button>
+              <button type="button" class="ord-ib" data-acct-menu="1" aria-expanded="false" aria-label="${esc(t("models.acct_menu", { ten: name }))}">${ic("ellipsis")}</button>
+            </span>
+            <div class="ord-menu" hidden>
+              <button type="button" class="gcard-btn ghost" data-pacct-act="toggle">${esc(a.enabled ? t("models.acct_disable") : t("models.acct_enable"))}</button>
+              ${a.main ? "" : `<button type="button" class="gcard-btn ghost" data-pacct-act="relogin">${esc(t("models.pacct_relogin"))}</button>
+              <button type="button" class="gcard-btn ghost danger" data-pacct-act="remove">${esc(t("models.acct_rm"))}</button>`}
+            </div>
+          </li>`;
+      }).join("");
+      return `<div class="ord-pacct" data-p="${esc(p.id)}">
+          ${n > 1 ? `<div class="prov-auth-title">${esc(t("models.pacct_h"))}${infoBtn()}</div>${infoBody(esc(t("models.pacct_note")))}
+          <ol class="ord-accts">${rows}</ol>` : ""}
+          <button type="button" class="ord-add" data-pacct-add="${esc(p.id)}">＋ ${esc(t("models.pacct_add"))}</button>
+          <div class="ord-addbox" data-pacct-box="${esc(p.id)}" hidden>
+            <input class="js-input" data-f="label" placeholder="${esc(t("models.pacct_label_ph"))}">
+            <div class="prov-auth-warn">${esc(t("models.pacct_warn"))}<br>${esc(t("models.pacct_warn2"))}</div>
+            <div class="ord-pstep"></div>
+            <div class="prov-action" style="margin-top:0"><button type="button" class="gcard-btn" data-pacct-go="${esc(p.id)}">${esc(t("models.pacct_get_link"))}</button>
+              <button type="button" class="gcard-btn ghost" data-pacct-cancel="1">${esc(t("common.cancel"))}</button>
+              <span class="gcard-meta ord-addmsg"></span></div>
+          </div>
+        </div>`;
+    };
+
     // withInfo: an (i) after the name; the card puts infoBody(...) right after this head.
-    const provHead = (p, on, kindLabel, statusText, withInfo) => `
-        <div class="prov-head">
+    const provHead = (p, on, kindLabel, statusText, withInfo, ord) => `
+        <div class="prov-head${ord ? " ord-head" : ""}">
+          ${ordGrip(p, ord)}
           <span class="prov-shield ${on ? "on" : ""}">${_shield(on)}</span>
           <div class="prov-info">
             <div class="prov-name">${esc(p.label)} <span class="prov-kind">${kindLabel}</span>${withInfo ? infoBtn() : ""}</div>
-            <div class="prov-status ${on ? "on" : ""}">${statusText}</div>
+            <div class="prov-status ${on ? "on" : ""}">${statusText}${ord ? esc(ordStatus(p)) : ""}</div>
           </div>
-          ${p.is_main ? '<span class="prov-badge">MAIN</span>' : ""}
-        </div>`;
+          ${ordBadges(p, ord)}
+        </div>${ordChips(p, ord)}`;
     // CLI chưa có trên máy (thẻ agy và grok). Bản Docker tự cài hai CLI này lúc khởi động (0.85.1),
     // nên trong lúc nó đang cài thì nói đúng như vậy, đừng đưa một dòng lệnh cho người cài qua
     // Hostinger không có chỗ nào để gõ. `tu_cai` rỗng = máy không tự cài (bản cài tay): giữ lệnh như cũ.
@@ -4292,7 +4414,7 @@
       const head = p.tu_cai === "failed" ? t("models.cli_auto_failed", { ten }) : t("models.cli_install");
       return `<div class="prov-steps"><div>${esc(head)}<br><code>${esc(p.cai_lenh || "")}</code></div></div>`;
     };
-    const provCard = (p) => {
+    const provCard = (p, ord) => {
       const on = p.configured;
       // Máy thiếu binary CLI thì nói TẠI ĐÂY, đừng để user đăng nhập xanh rồi vào chat mới
       // vỡ (báo cáo 16/08: người mới cài "kết nối được nhưng không sử dụng được").
@@ -4323,8 +4445,8 @@
         const st = on
           ? t("models.st_connected") + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
           : t("models.st_not_connected") + " · " + p.models.length + " model";
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          ${provHead(p, on, "Device code", st)}
+        return `${cardOpen(p, ord)}
+          ${provHead(p, on, "Device code", st, false, ord)}
           ${cliWarn("codex")}
           <div class="prov-action" style="flex-wrap:wrap">
             ${on
@@ -4333,6 +4455,7 @@
                  <button class="gcard-btn ghost" data-oauth-browser="1">${esc(t("models.via_browser"))}</button>`}
             <span id="oauthMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:220px"></span>
           </div>
+          ${on ? planAccts(p, ord) : ""}
         </div>`;
       }
       if (p.id === "grok-cli") {
@@ -4345,8 +4468,8 @@
           ? t("models.st_logged_in") + (p.account ? " · " + esc(p.account) : "")
             + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
           : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "Grok Build CLI" }));
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          ${provHead(p, on, "MCP/skill", st, true)}
+        return `${cardOpen(p, ord)}
+          ${provHead(p, on, "MCP/skill", st, true, ord)}
           ${infoBody(esc(t("models.grok_note")))}
           ${cliSetup(p, "Grok Build")}
           <div id="grokBox" class="prov-steps" style="display:none"></div>
@@ -4358,6 +4481,7 @@
                  <button class="gcard-btn ghost" data-grokcheck="1">${esc(t("qs.recheck"))}</button>`}
             <span id="grokMsg" class="gcard-meta" style="margin-left:10px;flex:1;min-width:200px">${on ? "" : esc(p.auth_error || "")}</span>
           </div>
+          ${on ? planAccts(p, ord) : ""}
         </div>`;
       }
       if (p.id === "antigravity-cli") {
@@ -4372,8 +4496,8 @@
           ? t("models.st_logged_in") + (p.auth_method ? " · " + esc(p.auth_method) : "")
             + " · " + p.models.length + " model"
           : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "Antigravity CLI" }));
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          ${provHead(p, on, "MCP/skill", st, true)}
+        return `${cardOpen(p, ord)}
+          ${provHead(p, on, "MCP/skill", st, true, ord)}
           ${infoBody(esc(t("models.agy_note")))}
           ${cliSetup(p, "Antigravity CLI")}
           ${on ? "" : `<div class="prov-steps">
@@ -4392,16 +4516,17 @@
         // phiên cũ); khác nhau ở chỗ ai trả tiền và ai chịu rủi ro. Javis cố ý không tắt cứng
         // đường subscription - chủ máy tự cân, nhưng phải cân khi đã BIẾT, nên có cảnh báo.
         const byKey = p.auth_mode === "api_key";
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          <div class="prov-head">
+        return `${cardOpen(p, ord)}
+          <div class="prov-head${ord ? " ord-head" : ""}">
+            ${ordGrip(p, ord)}
             <span class="prov-shield ${p.cli_found === false ? "" : "on"}">${_shield(p.cli_found !== false)}</span>
             <div class="prov-info">
               <div class="prov-name">${esc(p.label)} <span class="prov-kind">MCP/skill</span></div>
               <div class="prov-status" id="cliStatus">${esc(p.cli_found === false
                 ? t("models.st_no_cli", { ten: "Claude Code" }) : t("models.checking"))}</div>
             </div>
-            ${p.is_main ? '<span class="prov-badge">MAIN</span>' : ""}
-          </div>
+            ${ordBadges(p, ord)}
+          </div>${ordChips(p, ord)}
           ${cliWarn("claude")}
           <div id="cliAction"></div>
           <div class="prov-note" id="cliUpd"></div>
@@ -4417,13 +4542,14 @@
               <span><b>${esc(t("models.auth_key"))}</b>
               ${p.auth_api_key_set ? "" : ` <i>${esc(t("models.auth_key_none"))}</i>`}</span></label>
           </div>
+          ${planAccts(p, ord)}
         </div>`;
       }
       const masked = (m[KEYFIELD[p.id]] || "").slice(-4);
       if (p.id === "openai-compat") {
         // Endpoint tự khai: thứ quyết định "đã kết nối" là Base URL, key có thể bỏ trống.
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          ${provHead(p, on, "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model", true)}
+        return `${cardOpen(p, ord)}
+          ${provHead(p, on, "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model", true, ord)}
           ${infoBody(esc(t("models.oc_note")))}
           <div class="prov-action" style="flex-wrap:wrap">
             <input class="js-input" id="ocBase" inputmode="url" spellcheck="false" style="flex:1 1 100%" value="${esc(m.openai_compat_base || "")}" placeholder="${esc(t("models.oc_base_ph"))}">
@@ -4438,8 +4564,8 @@
         // 0.254.0: a gateway speaking the Anthropic Messages API. Most of them list no models, so
         // the card also takes the model names the seller gave (comma separated).
         const typed = (m.anthropic_compat_models || []).join(", ");
-        return `<div class="prov-card ${p.is_main ? "main" : ""}">
-          ${provHead(p, on, "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model", true)}
+        return `${cardOpen(p, ord)}
+          ${provHead(p, on, "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model", true, ord)}
           ${infoBody(esc(t("models.ac_note")))}
           <div class="prov-action" style="flex-wrap:wrap">
             <input class="js-input" id="acBase" inputmode="url" spellcheck="false" style="flex:1 1 100%" value="${esc(m.anthropic_compat_base || "")}" placeholder="${esc(t("models.ac_base_ph"))}">
@@ -4452,77 +4578,51 @@
           </div>
         </div>`;
       }
-      return `<div class="prov-card ${p.is_main ? "main" : ""}">
-        ${provHead(p, on, p.kind === "cli" ? "MCP/skill" : "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model")}
-        ${p.needs_key
+      return `${cardOpen(p, ord)}
+        ${provHead(p, on, p.kind === "cli" ? "MCP/skill" : "MCP Javis", (on ? t("models.st_connected") : t("models.st_not_connected")) + " · " + p.models.length + " model", false, ord)}
+        ${ord && multiKey.indexOf(p.id) >= 0 ? acctList(p) : p.needs_key
           ? `<div class="prov-action"><input class="js-input" id="pk-${p.id}" type="password" placeholder="${on ? esc(t("models.key_change_ph", { duoi: masked })) : esc(t("models.key_ph"))}"><button class="gcard-btn" data-pk="${p.id}">${on ? esc(t("models.key_change")) : esc(t("models.connect"))}</button>${on ? `<button class="gcard-btn ghost" data-disc="${p.id}">${esc(t("models.disconnect"))}</button>` : ""}</div>`
           : `<div class="prov-note">${esc(t("models.no_key_note"))}</div>`}
       </div>`;
     };
 
+    const swapRow = (i) => `<div class="ord-swap-row"><button type="button" class="ord-swap" data-swap="${i}" aria-label="${esc(t("models.ord_swap_aria", { a: connList[i - 1].label, b: connList[i].label }))}">${ORD_SWAP} ${esc(t("models.ord_swap"))}</button></div>`;
+    const bgName = bgCfg.model || defName(bgCfg.provider);
+    const useP = bgUse ? (pById(bgUse.provider) || {}) : {};
+    const bgLine = !bgUse ? `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.bg_none"))}</div>`
+      : bgUse.step !== "background" ? `<div class="aux-note">${esc(t("models.bg_using", { bg: bgName,
+          dung: (useP.label || bgUse.provider) + " · " + (bgUse.model || defName(bgUse.provider)) }))}</div>` : "";
     el.innerHTML = `
       <div class="cview-section">
-        <h3>◆ Main Model <span style="opacity:.5">${esc(t("models.h_main_sub"))}</span></h3>
-        <div class="gcard current" style="max-width:540px">
-          <div class="gcard-top"><span class="gcard-name">${esc(main.model || "-")}</span><span class="gcard-tag">${esc(mainP.label || main.provider || "")}</span></div>
-          <div class="gcard-meta">${esc(mainP.id === "grok-cli" ? t("models.main_grok")
-            : mainP.id === "antigravity-cli" ? t("models.main_agy")
-            : mainP.kind === "cli" ? t("models.main_cli")
-            : mainP.kind === "oauth" ? t("models.main_codex")
-            : mainP.kind === "api" ? t("models.main_api") : "")}</div>
-          <button class="gcard-btn" id="mdChange">${esc(t("models.change_model"))}</button>
-        </div>
-      </div>
-      <div class="cview-section">
-        <h3>◆ Providers <span style="opacity:.5">${esc(t("models.h_prov_sub"))}</span></h3>
-        <div class="prov-list">${provList.map(provCard).join("")}</div>
+        <h3>◆ ${esc(t("models.h_order"))} <span style="opacity:.5">${esc(t("models.h_order_sub"))}</span>${infoBtn()}</h3>
+        ${infoBody(esc(t("models.order_note")))}
+        <div class="prov-list ord-list">${connList.map((p, i) => (i ? swapRow(i) : "") + provCard(p, { idx: i })).join("")}</div>
+        ${connList.length ? "" : `<div class="prov-note warn">${WARN_ICON} ${esc(t("models.ord_empty"))}</div>`}
       </div>
       <div class="cview-section">
         <h3>◆ ${esc(t("models.h_aux"))} <span style="opacity:.5">${esc(t("models.h_aux_sub"))}</span>${infoBtn()}</h3>
-        ${infoBody(esc(t("models.aux_note")))}
+        ${infoBody(esc(t("models.bg_note")))}
         <div class="gcard aux-card">
-          <div class="gcard-meta">${esc(t("models.aux_meta"))}</div>
           <div class="aux-now">
             <div class="aux-now-txt">
-              <div class="aux-now-model">${aux ? esc(aux) : esc(t("models.aux_default"))}</div>
-              <div class="aux-now-prov">${aux ? esc(auxProvDef.label || auxProv) : esc(t("models.aux_default_sub"))}</div>
+              <div class="aux-now-model">${esc(bgName)}</div>
+              <div class="aux-now-prov">${esc(bgP.label || bgCfg.provider)}</div>
             </div>
-            <div class="aux-now-act">
-              ${aux ? `<button class="gcard-btn ghost" id="auxReset">${esc(t("models.aux_reset"))}</button>` : ""}
-              <button class="gcard-btn" id="auxChange">${esc(t("models.change_model"))}</button>
-            </div>
-          </div>
-          ${auxReady ? "" : `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.aux_warn"))}</div>`}
-        </div>
-      </div>
-      <div class="cview-section">
-        <h3>◆ ${esc(t("models.h_tg"))} <span style="opacity:.5">${esc(t("models.h_tg_sub"))}</span>${infoBtn()}</h3>
-        ${infoBody(`${esc(t("models.tg_meta"))}<br>${esc(t("models.tg_note"))}`)}
-        <div class="gcard aux-card" id="tgCard">
-          <div class="aux-now">
-            <div class="aux-now-txt">
-              <div class="aux-now-model">${tgPinned ? esc(tgModel || "-") : esc(t("models.tg_follow"))}</div>
-              <div class="aux-now-prov">${tgPinned ? esc(tgProvDef.label || tgProv) : esc(t("models.tg_follow_sub"))}</div>
-            </div>
-            <div class="aux-now-act">
-              ${tgPinned ? `<button class="gcard-btn ghost" id="tgReset">${esc(t("models.tg_reset"))}</button>` : ""}
-              <button class="gcard-btn" id="tgChange">${esc(tgPinned ? t("models.change_model") : t("models.tg_pin"))}</button>
+            <div class="aux-now-act ord-chips" data-p="__bg">
+              <button type="button" class="cp-eff ord-echip" data-ordpop="eff" aria-expanded="false" title="${esc(t("eff.head"))}"><span class="ord-etxt">${esc(effName(bgCfg.reasoning))}</span><span class="mb-caret">▾</span></button>
+              <button type="button" class="gcard-btn" id="auxChange" aria-expanded="false">${esc(t("models.change_model"))}</button>
             </div>
           </div>
-          ${tgReady ? "" : `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.tg_warn"))}</div>`}
+          ${order.indexOf(bgCfg.provider) < 0 ? `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.bg_not_conn"))}</div>` : ""}
+          ${bgLine}
         </div>
       </div>
-      <div class="cview-section">
-        <h3>◆ ${esc(t("models.h_reason"))} <span style="opacity:.5">${esc(t("models.h_reason_sub"))}</span>${infoBtn()}</h3>
-        ${infoBody(esc(t("models.reason_note")))}
-        <div class="gcard aux-card">
-          <div class="gcard-meta">${esc(t("models.reason_meta"))}</div>
-          <div class="seg">${reasonChips}</div>
-        </div>
-      </div>`;
+      ${offList.length ? `<div class="cview-section">
+        <button type="button" class="ord-more" id="ordMore" aria-expanded="${ui.showOff ? "true" : "false"}">＋ ${esc(t("models.ord_more", { n: offList.length }))}</button>
+        <div class="prov-list ord-off" id="ordOff" ${ui.showOff ? "" : "hidden"}>${offList.map(p => provCard(p, null)).join("")}</div>
+      </div>` : ""}`;
 
-    const chg = document.getElementById("mdChange");
-    if (chg) chg.onclick = () => openModelPicker(provList, main, () => renderModelsCloudTab(el));
+    bindOrderCards(el, { order, connList, prof, accts, bgCfg, effName, again: () => renderModelsCloudTab(el) });
     // Nguồn xác thực của gói Claude Code. Vẽ lại cả trang sau khi lưu vì cảnh báo phụ thuộc
     // cả lựa chọn này LẪN model việc nền - chỉ server mới ghép được hai thứ đó.
     el.querySelectorAll('input[name="claudeAuth"]').forEach((r) => {
@@ -4531,32 +4631,6 @@
         await saveSetting("model", { claude_auth: r.value });
         renderModelsCloudTab(el);
       };
-    });
-    const auxChg = document.getElementById("auxChange");
-    if (auxChg) auxChg.onclick = () => openModelPicker(provList, { provider: auxProv, model: aux }, () => renderModelsCloudTab(el), {
-      title: t("models.aux_title"),
-      note: t("models.aux_note2"),
-      save: (prov, mod) => saveSetting("model", { auxiliary: { provider: prov, model: mod } }),
-    });
-    const auxRst = document.getElementById("auxReset");
-    if (auxRst) auxRst.onclick = async () => {
-      await saveSetting("model", { auxiliary: { provider: "anthropic-cli", model: "" } });
-      renderModelsCloudTab(el);
-    };
-    const tgChg = document.getElementById("tgChange");
-    if (tgChg) tgChg.onclick = () => openModelPicker(provList, { provider: tgProv, model: tgModel }, () => renderModelsCloudTab(el), {
-      title: t("models.tg_title"),
-      note: t("models.tg_note2"),
-      save: (prov, mod) => saveSetting("model", { telegram: { provider: prov, model: mod } }),
-    });
-    const tgRst = document.getElementById("tgReset");
-    if (tgRst) tgRst.onclick = async () => {
-      await saveSetting("model", { telegram: { provider: "", model: "" } });
-      renderModelsCloudTab(el);
-    };
-    el.querySelectorAll("[data-reason]").forEach(b => b.onclick = async () => {
-      await saveSetting("model", { reasoning: b.dataset.reason });
-      renderModelsCloudTab(el);
     });
     el.querySelectorAll(".gcard-btn[data-pk]").forEach(b => {
       b.onclick = async () => {
@@ -4803,6 +4877,384 @@
   }
 
   // ---- Card Claude Code: status + login/logout (giống OpenAI OAuth) ----
+  // 0.351.0: what the Models page's usage order does (docs/dev/2026-10-model-routing-spec.md 2.1-2.4). Called after
+  // every draw of the tab; each change saves at once and draws the tab again from the server's answer.
+  // 0.355.0 (owner 27/10): "default" alone tells nothing, so it names the model it stands for when the server knows it.
+  let MODEL_DEFAULTS = {};
+  // A subscription CLI with nothing set picks its own model by plan, which Javis cannot read: say so instead of "default".
+  const PLAN_CLI = ["anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli"];
+  const defName = (pid) => MODEL_DEFAULTS[pid] ? t("models.mp_default_is", { m: MODEL_DEFAULTS[pid] })
+    : PLAN_CLI.indexOf(pid) >= 0 ? t("models.mp_default_cli") : t("models.mp_default");
+
+  function bindOrderCards(el, c) {
+    const MO = window.JavisModelsOrder;
+    const save = async (patch) => { await saveSetting("model", patch); c.again(); };
+    const items = (pid) => (c.accts[pid] || []).map(a => ({ id: a.id, label: a.label, enabled: !!a.enabled }));
+    // `removed` names the accounts to delete; one merely missing from `list` (a stale page) is kept by the server.
+    const saveAcc = (pid, list, removed) => save({ accounts: { provider: pid, items: list, removed: removed || [] } });
+
+    el.querySelectorAll(".ord-swap[data-swap]").forEach(b => b.onclick = () => {
+      b.disabled = true;
+      save({ order: MO.swapAt(c.order, Number(b.dataset.swap)) });
+    });
+    MO.bindDrag(el, { onDrop: (key, from, to) => {
+      if (key === "prov") save({ order: MO.move(c.order, from, to) });
+      else if (key.indexOf("acct:") === 0) saveAcc(key.slice(5), MO.move(items(key.slice(5)), from, to));
+      else if (key.indexOf("pacct:") === 0) saveAcc(key.slice(6), MO.move(items(key.slice(6)), from, to));
+    } });
+
+    // ---- the keys of an API card ----
+    el.querySelectorAll('.ord-acct[data-dnd^="acct:"]').forEach(li => {
+      const pid = li.dataset.dnd.slice(5), id = li.dataset.id;
+      const idx = () => items(pid).findIndex(a => a.id === id);
+      li.querySelectorAll("[data-acct-move]").forEach(b => b.onclick = () => {
+        const i = idx();
+        saveAcc(pid, MO.move(items(pid), i, i + Number(b.dataset.acctMove)));
+      });
+      const menu = li.querySelector(".ord-menu"), mb = li.querySelector("[data-acct-menu]");
+      mb.onclick = () => {
+        const open = menu.hidden;
+        el.querySelectorAll(".ord-menu").forEach(x => { x.hidden = true; });
+        el.querySelectorAll("[data-acct-menu]").forEach(x => x.setAttribute("aria-expanded", "false"));
+        menu.hidden = !open;
+        mb.setAttribute("aria-expanded", String(open));
+      };
+      menu.querySelector('[data-acct-act="toggle"]').onclick = () => {
+        const l = items(pid);
+        l[idx()].enabled = !l[idx()].enabled;
+        saveAcc(pid, l);
+      };
+      const rk = menu.querySelector(".ord-rekey");
+      menu.querySelector('[data-acct-act="rekey"]').onclick = () => {
+        rk.hidden = !rk.hidden;
+        if (!rk.hidden) rk.querySelector("input").focus();
+      };
+      menu.querySelector('[data-acct-act="rekey-save"]').onclick = () => {
+        const v = rk.querySelector("input").value.trim();
+        if (!v) { rk.querySelector("input").focus(); return; }
+        const l = items(pid);
+        l[idx()].key = v;
+        saveAcc(pid, l);
+      };
+      menu.querySelector('[data-acct-act="remove"]').onclick = () => {
+        const l = items(pid), i = idx();
+        if (!window.confirm(t(l.length > 1 ? "models.acct_rm_q" : "models.acct_rm_last_q", { ten: l[i].label }))) return;
+        l.splice(i, 1);
+        saveAcc(pid, l);
+      };
+    });
+    el.querySelectorAll("[data-acct-add]").forEach(b => b.onclick = () => {
+      const box = el.querySelector(`[data-acct-box="${b.dataset.acctAdd}"]`);
+      box.hidden = !box.hidden;
+      if (!box.hidden) box.querySelector('[data-f="label"]').focus();
+    });
+    el.querySelectorAll("[data-acct-addcancel]").forEach(b => b.onclick = () => { b.closest(".ord-addbox").hidden = true; });
+    el.querySelectorAll("[data-acct-addsave]").forEach(b => b.onclick = () => {
+      const pid = b.dataset.acctAddsave, box = b.closest(".ord-addbox");
+      const keyIn = box.querySelector('[data-f="key"]'), key = keyIn.value.trim();
+      if (!key) { keyIn.focus(); return; }
+      const l = items(pid);
+      l.push({ label: box.querySelector('[data-f="label"]').value.trim() || t("models.acct_n", { n: l.length + 1 }), enabled: true, key: key });
+      b.disabled = true;
+      saveAcc(pid, l);
+    });
+
+    // ---- the accounts of a plan card (0.353.0): order, on/off, sign in again, remove, add ----
+    const menuToggle = (menu, mb) => {
+      const open = menu.hidden;
+      el.querySelectorAll(".ord-menu").forEach(x => { x.hidden = true; });
+      el.querySelectorAll("[data-acct-menu]").forEach(x => x.setAttribute("aria-expanded", "false"));
+      menu.hidden = !open;
+      mb.setAttribute("aria-expanded", String(open));
+    };
+    const planBox = (pid) => el.querySelector(`[data-pacct-box="${pid}"]`);
+    const resetBox = (box) => {
+      box.querySelector(".ord-pstep").innerHTML = "";
+      box.querySelector(".ord-addmsg").textContent = "";
+      box.querySelector("[data-pacct-go]").hidden = false;
+      delete box.dataset.acc;
+      delete box.dataset.re;
+    };
+    async function planLogin(pid, box) {
+      const msg = box.querySelector(".ord-addmsg"), step = box.querySelector(".ord-pstep");
+      const go = box.querySelector("[data-pacct-go]");
+      go.disabled = true;
+      msg.textContent = t("models.opening");
+      let r;
+      try {
+        r = await postJson("/plan-accounts/login-start", { provider: pid, account_id: box.dataset.re || "",
+          label: box.querySelector('[data-f="label"]').value.trim() }, 60000);
+      } catch (e) { r = { ok: false, error: String(e) }; }
+      go.disabled = false;
+      msg.textContent = "";
+      if (!r || !r.ok) { msg.innerHTML = WARN_ICON + " " + esc((r && r.error) || t("app.err_cap")); return; }
+      if (r.connected) { c.again(); return; }
+      box.dataset.acc = r.account_id;
+      go.hidden = true;
+      step.innerHTML = `<div>${esc(t("models.pacct_open"))}</div>
+        <div class="ord-plink"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></div>`
+        + (r.code ? `<div>${esc(t("models.pacct_code"))} <code class="ord-pcode">${esc(r.code)}</code></div>` : "")
+        + (r.needs_code
+          ? `<div class="prov-action" style="margin-top:0"><input class="js-input" data-f="code" autocomplete="off" placeholder="${esc(t("models.pacct_paste"))}">
+              <button type="button" class="gcard-btn" data-pacct-code="1">${esc(t("models.pacct_confirm"))}</button></div>`
+          : `<div class="gcard-meta">${ic("loader", { cls: "ic-spin" })} ${esc(t("models.pacct_wait"))}</div>`);
+      if (r.needs_code) {
+        const btn = step.querySelector("[data-pacct-code]");
+        btn.onclick = async () => {
+          const code = step.querySelector('[data-f="code"]').value.trim();
+          if (!code) { step.querySelector('[data-f="code"]').focus(); return; }
+          btn.disabled = true;
+          let d;
+          try { d = await postJson("/plan-accounts/login-code", { provider: pid, account_id: r.account_id, code: code }, 60000); }
+          catch (e) { d = { ok: false, error: String(e) }; }
+          btn.disabled = false;
+          if (d && d.ok) { c.again(); return; }
+          msg.innerHTML = WARN_ICON + " " + esc((d && d.error) || t("app.err_cap"));
+        };
+        return;
+      }
+      // ChatGPT and Grok finish on the web: ask every 3 seconds, for up to 15 minutes (the code's lifetime).
+      const han = Date.now() + 15 * 60 * 1000;
+      const tick = async () => {
+        if (!box.isConnected || box.hidden || box.dataset.acc !== r.account_id) return;
+        let d = null;
+        try {
+          d = await (await fetch("/plan-accounts/login-poll?provider=" + encodeURIComponent(pid)
+            + "&account_id=" + encodeURIComponent(r.account_id))).json();
+        } catch (e) {}
+        if (d && d.connected) { c.again(); return; }
+        if (d && d.ok === false && d.error) { msg.innerHTML = WARN_ICON + " " + esc(d.error); return; }
+        if (Date.now() < han) setTimeout(tick, 3000);
+        else msg.innerHTML = WARN_ICON + " " + esc(t("models.timeout_login"));
+      };
+      setTimeout(tick, 3000);
+    }
+    el.querySelectorAll('.ord-acct[data-dnd^="pacct:"]').forEach(li => {
+      const pid = li.dataset.dnd.slice(6), id = li.dataset.id;
+      const idx = () => items(pid).findIndex(a => a.id === id);
+      li.querySelectorAll("[data-pacct-move]").forEach(b => b.onclick = () => {
+        const i = idx();
+        saveAcc(pid, MO.move(items(pid), i, i + Number(b.dataset.pacctMove)));
+      });
+      const menu = li.querySelector(".ord-menu"), mb = li.querySelector("[data-acct-menu]");
+      mb.onclick = () => menuToggle(menu, mb);
+      menu.querySelector('[data-pacct-act="toggle"]').onclick = () => {
+        const l = items(pid);
+        l[idx()].enabled = !l[idx()].enabled;
+        saveAcc(pid, l);
+      };
+      const rl = menu.querySelector('[data-pacct-act="relogin"]');
+      if (rl) rl.onclick = () => {
+        const box = planBox(pid);
+        resetBox(box);
+        box.dataset.re = id;
+        box.querySelector('[data-f="label"]').value = (items(pid)[idx()] || {}).label || "";
+        box.hidden = false;
+        menu.hidden = true;
+        planLogin(pid, box);
+      };
+      const rm = menu.querySelector('[data-pacct-act="remove"]');
+      if (rm) rm.onclick = () => {
+        const l = items(pid), i = idx();
+        if (!window.confirm(t("models.pacct_rm_q", { ten: l[i].label || t("models.pacct_n", { n: i + 1 }) }))) return;
+        const gone = l.splice(i, 1)[0];
+        saveAcc(pid, l, [gone.id]);
+      };
+    });
+    el.querySelectorAll("[data-pacct-add]").forEach(b => b.onclick = () => {
+      const box = planBox(b.dataset.pacctAdd);
+      box.hidden = !box.hidden;
+      if (!box.hidden) { resetBox(box); box.querySelector('[data-f="label"]').focus(); }
+    });
+    el.querySelectorAll("[data-pacct-go]").forEach(b => b.onclick = () => planLogin(b.dataset.pacctGo, b.closest(".ord-addbox")));
+    el.querySelectorAll("[data-pacct-cancel]").forEach(b => b.onclick = () => {
+      const box = b.closest(".ord-addbox"), pid = box.dataset.pacctBox;
+      if (box.dataset.acc) postJson("/plan-accounts/login-cancel", { provider: pid, account_id: box.dataset.acc }).catch(() => {});
+      resetBox(box);
+      box.hidden = true;
+    });
+
+    const more = el.querySelector("#ordMore");
+    if (more) more.onclick = () => {
+      const box = el.querySelector("#ordOff");
+      box.hidden = !box.hidden;
+      el._ordUi.showOff = !box.hidden;
+      more.setAttribute("aria-expanded", String(!box.hidden));
+    };
+
+    // ---- popovers: the model chip and the Effort chip of a card, the background model on a phone ----
+    let openPop = null;
+    const closePop = () => {
+      if (!openPop) return;
+      if (openPop.slider) openPop.slider.destroy();
+      openPop.el.remove();
+      if (openPop.back) openPop.back.remove();
+      if (openPop.raised) openPop.raised.classList.remove("ord-raise");
+      openPop.btn.setAttribute("aria-expanded", "false");
+      openPop = null;
+    };
+    // A phone gets a bottom sheet instead of a popover (owner's screenshots, 27/10: the popover opened over the card,
+    // the keyboard came up at once and covered the list). The sheet slides up from the bottom with a title and a close
+    // button, rows are finger-sized, and the keyboard waits until the search box is tapped.
+    const phone = () => window.matchMedia("(max-width: 600px)").matches;
+    const shell = (wrap, cls, title) => {
+      if (!phone()) {
+        const pop = document.createElement("div");
+        pop.className = cls + " ord-pop";
+        wrap.appendChild(pop);
+        return { pop: pop, body: pop, sheet: false };
+      }
+      const back = document.createElement("div");
+      back.className = "ord-sheet-back";
+      const pop = document.createElement("div");
+      pop.className = "ord-pop ord-sheet";
+      pop.setAttribute("aria-modal", "true");
+      pop.innerHTML = `<div class="ord-sheet-grab" aria-hidden="true"></div>
+        <div class="ord-sheet-head"><b>${esc(title)}</b>
+          <button type="button" class="ord-sheet-x" aria-label="${esc(t("common.close"))}">${X_ICON}</button></div>
+        <div class="ord-sheet-body"></div>`;
+      document.body.appendChild(back);
+      document.body.appendChild(pop);
+      pop.querySelector(".ord-sheet-x").onclick = () => closePop();
+      return { pop: pop, body: pop.querySelector(".ord-sheet-body"), sheet: true, back: back };
+    };
+    el._ordClose = closePop;
+    if (!el._ordDocBound) {
+      el._ordDocBound = true;
+      document.addEventListener("pointerdown", (e) => {
+        if (el._ordClose && !(e.target.closest && e.target.closest(".ord-chips, .ord-pop"))) el._ordClose();
+      }, true);
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && el._ordClose) el._ordClose(); });
+    }
+    const opened = (btn, sh, slider) => {
+      // Each card is its own stacking layer (backdrop-filter), so a popover that opens downward was painted UNDER the
+      // next card (owner's screenshot, 27/10). The card holding the open popover is lifted above its neighbours.
+      const raised = sh.sheet ? null : btn.closest(".prov-card, .gcard");
+      if (raised) raised.classList.add("ord-raise");
+      openPop = { el: sh.pop, btn: btn, slider: slider || null, back: sh.back || null, raised: raised };
+      btn.setAttribute("aria-expanded", "true");
+      if (!sh.sheet) MO.place(sh.pop);
+    };
+
+    el.querySelectorAll("[data-ordpop]").forEach(btn => btn.onclick = () => {
+      const was = !!openPop && openPop.btn === btn;
+      closePop();
+      if (was) return;
+      const wrap = btn.closest(".ord-chips"), pid = wrap.dataset.p, isBg = pid === "__bg";
+      const cur = isBg ? c.bgCfg : c.prof(pid);
+      const curProv = isBg ? c.bgCfg.provider : pid;
+      if (btn.dataset.ordpop === "eff") {
+        const S = window.JavisEffortSlider;
+        const label = isBg ? t("models.h_aux") : ((c.connList.find(p => p.id === pid) || {}).label || pid);
+        const sh = shell(wrap, "eff-pop", t("eff.head") + " · " + label);
+        sh.pop.setAttribute("role", "dialog");
+        sh.pop.setAttribute("aria-label", t("eff.head"));
+        const locked = S.isLocked(curProv, cur.model);
+        let tm = 0;
+        const slider = S.mount(sh.body, { value: cur.reasoning, locked: locked, lockedValue: locked ? S.lockedLevel(cur.model) : "",
+          onChange: (v) => {
+            cur.reasoning = v;
+            btn.querySelector(".ord-etxt").textContent = c.effName(v);
+            clearTimeout(tm);
+            tm = setTimeout(() => saveSetting("model", isBg ? { auxiliary: { reasoning: v } }
+              : { profile: { provider: pid, reasoning: v } }), 300);
+          } });
+        opened(btn, sh, slider);
+        if (slider.focus && !sh.sheet) slider.focus();
+        return;
+      }
+      // One card's own models: "Default" (the provider picks) first, then the model in use, then the rest A-Z, so a
+      // long catalog (Groq lists dozens of odd ids) never buries the one row people look for.
+      const label = (c.connList.find(p => p.id === pid) || {}).label || pid;
+      const sh = shell(wrap, "mb-pop", label);
+      const pop = sh.pop;
+      pop.setAttribute("role", "listbox");
+      sh.body.innerHTML = `<input class="mb-search" type="search" enterkeyhint="search" placeholder="${esc(t("mpick.search_ph"))}">`
+        + (sh.sheet ? "" : `<div class="mb-prov"><span>${esc(label)}</span></div>`) + `<div class="ord-mlist"></div>`;
+      const ML = window.JavisModelList;
+      let ids = ML ? ML.peek(pid) : [], q = "";
+      const row = (id) => {
+        const on = id === (cur.model || "");
+        return `<div class="mb-item${on ? " cur" : ""}" role="option" tabindex="0" aria-selected="${on}" data-m="${esc(id)}"><span class="tick">${on ? ic("check", { cls: "ic-ok" }) : ""}</span><span class="ord-mname">${esc(id || defName(pid))}</span></div>`;
+      };
+      const draw = () => {
+        const box = sh.body.querySelector(".ord-mlist");
+        if (ids == null) { box.innerHTML = `<div class="mb-empty">${esc(t("mpick.loading"))}</div>`; return; }
+        const f = q.trim().toLowerCase();
+        const hit = (id) => !f || (id || defName(pid)).toLowerCase().includes(f);
+        const now = cur.model || "";
+        const rest = ids.filter(id => id && id !== now).sort((a, b) => a.localeCompare(b));
+        const top = [""].concat(now ? [now] : []).filter(hit);
+        const all = rest.filter(hit);
+        box.innerHTML = !top.length && !all.length ? `<div class="mb-empty">${esc(t("mpick.no_match"))}</div>`
+          : top.map(row).join("") + (all.length ? `<div class="mb-prov ord-msec"><span>${esc(t("models.sheet_all"))}</span></div>`
+            + all.slice(0, 200).map(row).join("") : "");
+      };
+      draw();
+      opened(btn, sh);
+      if (ids == null && ML) ML.models(pid).then(x => { ids = x; if (openPop && openPop.el === pop) { draw(); if (!sh.sheet) MO.place(pop); } });
+      const inp = sh.body.querySelector(".mb-search");
+      inp.oninput = () => { q = inp.value; draw(); };
+      sh.body.onclick = (e) => {
+        const it = e.target.closest(".mb-item[data-m]");
+        if (!it) return;
+        const mid = it.dataset.m;
+        closePop();
+        btn.querySelector(".ord-mtxt").textContent = mid || defName(pid);
+        save({ profile: { provider: pid, model: mid } });
+      };
+      sh.body.onkeydown = (e) => { if (e.key === "Enter" && e.target.classList.contains("mb-item")) e.target.click(); };
+      // A computer types at once; a phone keeps the keyboard down until the search box is tapped.
+      if (!sh.sheet) inp.focus();
+    });
+
+    // Background model: the two-column picker on a computer, the composer-style list on a phone. Both list signed-in
+    // providers only (spec 2.4.4).
+    const auxChg = el.querySelector("#auxChange");
+    if (auxChg) auxChg.onclick = () => {
+      if (!window.matchMedia("(max-width: 600px)").matches || !window.JavisModelList) {
+        closePop();
+        openModelPicker(c.connList, { provider: c.bgCfg.provider, model: c.bgCfg.model }, c.again, {
+          title: t("models.aux_title"),
+          note: t("models.aux_note2"),
+          save: (prov, mod) => saveSetting("model", { auxiliary: { provider: prov, model: mod } }),
+        });
+        return;
+      }
+      const was = !!openPop && openPop.btn === auxChg;
+      closePop();
+      if (was) return;
+      const sh = shell(auxChg.closest(".ord-chips"), "mb-pop ord-bgpop", t("models.h_aux"));
+      const pop = sh.pop;
+      pop.setAttribute("role", "listbox");
+      pop.setAttribute("aria-label", t("models.h_aux"));
+      opened(auxChg, sh);
+      const st = { expanded: c.bgCfg.provider, filter: "" };
+      const draw = async () => {
+        const o = { providers: c.connList, connectedOnly: true, expanded: st.expanded, filter: st.filter, noWait: true,
+                    selected: { provider: c.bgCfg.provider, model: c.bgCfg.model }, searchId: "ordBgSearch" };
+        const html = await window.JavisModelList.render(o);
+        if (!openPop || openPop.el !== pop) return;
+        const typing = document.activeElement && document.activeElement.id === "ordBgSearch";
+        sh.body.innerHTML = html;
+        if (!sh.sheet) MO.place(pop);
+        const inp = sh.body.querySelector("#ordBgSearch");
+        if (inp) {
+          inp.oninput = () => { st.filter = inp.value; draw(); };
+          if (typing) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+        }
+        if (o.cho.length) Promise.all(o.cho).then(() => { if (openPop && openPop.el === pop) draw(); });
+      };
+      sh.body.onclick = (e) => {
+        const it = e.target.closest(".mb-item[data-model]");
+        if (it) { closePop(); save({ auxiliary: { provider: it.dataset.prov, model: it.dataset.model } }); return; }
+        const h = e.target.closest(".mb-prov[data-prov]");
+        if (h && h.dataset.prov) { st.expanded = st.expanded === h.dataset.prov ? "" : h.dataset.prov; draw(); }
+      };
+      draw();
+    };
+  }
+
   async function refreshClaudeCard(el, ep) {
     const st = el.querySelector("#cliStatus"), act = el.querySelector("#cliAction");
     if (!st || !act) { el._cliRedrawn = false; return; }
@@ -5113,7 +5565,7 @@
       modal.innerHTML = `
         <div class="mp-box">
           <div class="mp-head">
-            <div><div class="mp-title">${esc(opts.title || "SET MAIN MODEL")}</div><div class="mp-sub">${esc(t("models.mp_current"))} ${esc(main.model || t("models.mp_default"))} · ${esc(main.provider || "")}</div></div>
+            <div><div class="mp-title">${esc(opts.title || "SET MAIN MODEL")}</div><div class="mp-sub">${esc(t("models.mp_current"))} ${esc(main.model || defName(main.provider))} · ${esc(main.provider || "")}</div></div>
             <button class="mp-x" data-act="close">${X_ICON}</button>
           </div>
           <input class="mp-filter" placeholder="${esc(t("models.mp_filter"))}" value="${esc(filterQ)}">
@@ -6141,6 +6593,8 @@
       + (conns.length > 3 ? '<input class="js-input conn-search" id="connQ" type="search" placeholder="' + esc(window.t("cs.cn_conn_search_ph")) + '">' : "")
       + '<div class="gcard-meta" style="max-width:740px">'
       + '<label style="cursor:pointer"><input type="checkbox" id="mcpStrict" ' + (d.strict ? "checked" : "") + '> ' + esc(window.t("cs.cn_strict")) + '</label></div>'
+      // GitHub is built into Javis (0.362.0, github-connect.js): its card is always first, connected or not.
+      + '<div class="prov-list" id="mcpGithub" style="margin-top:12px"></div>'
       + '<div class="prov-list" id="connList" style="margin-top:12px">' + (connectedHtml || '<div class="mp-empty">' + esc(window.t("cs.cn_empty_a")) + ' <b>' + esc(window.t("cs.cn_tab_sanco")) + '</b> ' + esc(window.t("cs.cn_empty_b")) + '</div>') + '</div>'
       // Connected Facebook Pages (messenger-connect.js), one card in this same list, drawn only once a Page is
       // connected. 0.332.0: it used to be a section of its own further down, with the form open in the page.
@@ -6192,6 +6646,7 @@
     // messenger-connect.js opens its form in this page's shared connection dialog.
     window.JavisConnModal = { open: connModal, head: mHead, close: closeConnModal };
     if (window.JavisMessenger) window.JavisMessenger.mount(document.getElementById("mcpMessenger"));
+    if (window.JavisGithubRepos) window.JavisGithubRepos.mount(document.getElementById("mcpGithub"));
     el.querySelectorAll("#catGrid [data-msc-open]").forEach(b => b.onclick = () => {
       if (window.JavisMessenger && window.JavisMessenger.openForm) window.JavisMessenger.openForm(null);
     });

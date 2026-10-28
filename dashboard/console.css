@@ -162,6 +162,103 @@ body.in-console .hud-actions { display: none; }
 .prov-status.on { color: var(--green); }
 .prov-badge { font-family: var(--font); font-size: 16px; letter-spacing: 0.5px; color: var(--accent); border: 1px solid var(--accent); border-radius: 5px; padding: 2px 6px; }
 .prov-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+/* 0.351.0 usage order (models-order.js). The top card is MAIN; a fallback card chat runs on right now turns green. */
+.ord-card.ord-inuse:not(.main) { border-color: var(--green); box-shadow: 0 0 0 1px color-mix(in srgb, var(--green) 45%, transparent); }
+.ord-head { cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.ord-badges { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex: none; }
+.ord-pos { font-size: 16px; color: var(--text3); white-space: nowrap; }
+.prov-badge.ord-live { color: var(--green); border-color: var(--green); }
+.ord-grip { flex: none; width: 34px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text3); cursor: grab; touch-action: none; margin-right: -6px; }
+.ord-grip:hover { color: var(--text); background: var(--bg3); }
+.ord-chips { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ord-chips .mb-chip, .ord-chips .cp-eff { font-size: 15px; padding: 6px 13px; min-height: 36px; }
+.ord-chips .mb-chip { max-width: 100%; }
+.ord-mtxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ord-chips .mb-pop { left: 0; width: min(340px, calc(100vw - 32px)); }
+.ord-chips .eff-pop { left: 0; }
+.ord-chips .mb-item, .ord-chips .mb-search { font-size: 15px; }
+.aux-now-act.ord-chips { margin-top: 0; flex-wrap: nowrap; }
+.aux-now-act.ord-chips .mb-pop, .aux-now-act.ord-chips .eff-pop { left: auto; right: 0; }
+.ord-swap-row { display: flex; justify-content: center; margin: -4px 0; }
+.ord-swap { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font: inherit; font-size: 15px; cursor: pointer; }
+.ord-swap:hover { border-color: var(--accent); color: var(--accent-ink); }
+.ord-accts { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ord-acct { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 6px 6px 8px; border-radius: 22px;
+  border: 1px solid var(--border); background: var(--bg2); font-size: 16px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.ord-acct.off { opacity: .55; }
+.ord-acct.inuse { border-color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
+.ord-acct.inuse-bg { border-color: var(--accent2-ink); background: var(--accent2-wash); }
+.ord-acct .ord-grip { width: 28px; height: 34px; margin: 0 -6px 0 -2px; }
+.ord-num { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border);
+  background: var(--bg3); font-size: 14px; font-weight: 600; }
+.ord-acct.inuse .ord-num { background: var(--green); border-color: var(--green); color: #fff; }
+.ord-acct.inuse-bg .ord-num { background: var(--accent2-ink); border-color: var(--accent2-ink); color: #fff; }
+.ord-atxt { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.ord-aname { font-weight: 600; overflow-wrap: anywhere; }
+.ord-dot { font-size: 12px; }
+.ord-dot.ready { color: var(--green); } .ord-dot.rest { color: var(--warn-ink); } .ord-dot.off { color: var(--text3); }
+.ord-ast { color: var(--text3); }
+.ord-pill { font-weight: 600; overflow-wrap: anywhere; }
+.ord-pill.chat { color: var(--green); }
+.ord-pill.bg { color: var(--accent2-ink); }
+.ord-actl { display: flex; gap: 4px; flex: none; margin-left: auto; }
+.ord-ib { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--text2); display: grid; place-items: center; cursor: pointer; }
+.ord-ib:hover:not(:disabled) { background: var(--bg3); color: var(--text); }
+.ord-ib:disabled { opacity: .3; cursor: not-allowed; }
+.ord-menu { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 4px 4px 38px; }
+.ord-menu[hidden], .ord-rekey[hidden], .ord-addbox[hidden], .ord-off[hidden] { display: none; }
+.ord-menu .danger { color: var(--red); }
+.ord-rekey { flex-basis: 100%; display: flex; gap: 8px; }
+.ord-rekey .js-input { flex: 1; min-width: 0; }
+.ord-add, .ord-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 8px 14px; border-radius: 22px;
+  border: 1px dashed var(--border); background: transparent; color: var(--text2); font: inherit; font-size: 16px; cursor: pointer; }
+.ord-add:hover, .ord-more:hover { background: var(--bg3); color: var(--text); }
+.ord-more { margin: 0 0 10px; }
+.ord-addbox { border: 1px dashed var(--accent-line); background: var(--accent-wash); border-radius: 12px; padding: 12px; margin-top: 8px;
+  display: flex; flex-direction: column; gap: 10px; }
+.ord-dragging { position: relative; z-index: 5; box-shadow: var(--shadow-3) !important; cursor: grabbing; transition: none; }
+.ord-drop-line { position: fixed; height: 4px; border-radius: 4px; background: var(--accent); z-index: 70; pointer-events: none; }
+.ord-drop-line[hidden] { display: none; }
+body.ord-is-dragging, body.ord-is-dragging * { cursor: grabbing !important; user-select: none; }
+.ord-pressing { outline: 2px dashed var(--accent-line); outline-offset: 3px; }
+.ord-badges-m { display: none; }
+/* 0.353.0: the accounts of a plan card (ChatGPT, Grok, Claude Code). */
+.ord-pacct { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.ord-pacct .prov-auth-title { margin-bottom: 2px; }
+.ord-plink { overflow-wrap: anywhere; font-size: 16px; }
+.ord-pcode { font-size: 20px; letter-spacing: 1px; padding: 2px 8px; }
+.ord-pstep:empty { display: none; }
+.ord-pstep { display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.prov-card.ord-raise, .gcard.ord-raise { position: relative; z-index: 70; }
+/* Phone pickers (0.352.0): a bottom sheet with a title and a close button instead of a popover over the card. */
+.ord-sheet-back { position: fixed; inset: 0; z-index: 900; background: rgba(0, 0, 0, .5); }
+.ord-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 901; display: flex; flex-direction: column;
+  max-height: min(78vh, 680px); background: var(--bg2); border: 1px solid var(--border); border-bottom: 0;
+  border-radius: 18px 18px 0 0; box-shadow: var(--shadow-3); padding: 6px 16px calc(16px + env(safe-area-inset-bottom)); }
+.ord-sheet-grab { width: 40px; height: 4px; border-radius: 4px; background: var(--border); margin: 4px auto 8px; }
+.ord-sheet-head { display: flex; align-items: center; gap: 10px; padding: 0 0 10px; font-size: 17px; }
+.ord-sheet-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ord-sheet-x { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: var(--bg3); color: var(--text); cursor: pointer; }
+.ord-sheet-body { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; min-height: 0; }
+.ord-sheet .mb-search { position: sticky; top: 0; z-index: 1; font-size: 16px; padding: 12px 14px; margin-bottom: 8px; border-radius: 12px; }
+.ord-sheet .mb-item { font-size: 16px; min-height: 48px; padding: 12px; border-radius: 10px; }
+.ord-sheet .mb-prov { font-size: 14px; padding: 14px 8px 6px; }
+.ord-sheet .eff-head { font-size: 16px; }
+.ord-sheet .eff-track { height: 36px; }
+.ord-mname { min-width: 0; overflow-wrap: anywhere; }
+.ord-msec { cursor: default; border-top: 1px solid var(--border); margin-top: 6px; }
+@media (max-width: 600px) {
+  .ord-menu { padding-left: 4px; }
+  /* Name, kind label and status get the whole head; the MAIN / Fallback badge moves to the end of the chip row. */
+  .ord-head .ord-badges { display: none; }
+  .ord-chips .ord-badges-m { display: flex; flex-direction: row; align-items: center; gap: 6px; margin-left: auto; }
+  .ord-head .prov-status { overflow-wrap: anywhere; }
+  .aux-now { flex-wrap: wrap; }
+  .aux-now-act.ord-chips { width: 100%; justify-content: flex-end; }
+}
 /* Messages under the buttons of a provider card. They used to sit INSIDE the flex row of buttons,
    so a long CLI message became a narrow column and stretched the buttons to its height (owner's
    screenshot 2026-10-17). Here they get the full width of the card and vanish when empty. */
@@ -776,7 +873,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   /* Không còn chừa 56px đáy cho rail; chat chiếm hết */
   body.has-rail .hud {
     margin-left: 0; width: 100%;
-    height: 100vh; height: 100dvh;
+    height: 100vh; height: var(--app-h, 100dvh);
   }
   .cview { left: 0; bottom: 0; }
   .cview-body { padding: 16px 14px; }
@@ -792,7 +889,8 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   html, body { width: 100%; height: 100%; overflow: hidden; }
   body.in-console .hud-body { visibility: hidden; }   /* trang quản lý: giấu quả cầu cockpit phía sau */
   .hud {
-    height: 100vh; height: 100dvh;
+    /* --app-h: chiều cao vùng nhìn thấy lúc không gõ (mobile-chat.js, 0.359.0); 100dvh của app cài trên iPhone có khi lệch. */
+    height: 100vh; height: var(--app-h, 100dvh);
     grid-template-rows: minmax(0, 1fr) auto auto;
     padding-top: calc(46px + env(safe-area-inset-top, 0px));
   }  /* header fixed; ba hàng còn lại = body + đính kèm + ô nhập */
@@ -4075,3 +4173,42 @@ button.tm-quote-ref:hover, button.tm-quote-ref:focus-visible { border-color: var
 .tm-task-quality { flex-basis: 100%; min-width: 0; width: 100%; }
 .tm-filterbar:has(.tm-task-quality) { flex-wrap: wrap; }
 .tm-task-quality .tm-sec { overflow-wrap: anywhere; }
+
+/* 0.358.0 (owner, 27/10/2026: "uxui nhìn điện thoại trong phần team loạn lắm"): a calmer Team chat on a phone. Fewer
+   boxes and lines, more width for the words, rich answers read as a chat message instead of a document. Text stays 16px. */
+@media (max-width: 760px) {
+  /* Header: one slim row of plain icon buttons, no boxed borders. */
+  .tm-chat-head { min-height: 48px; padding: 2px 4px; gap: 2px; }
+  .tm-chat-head .ws-btn.tm-icon, .tm-chat-head .tm-back { border-color: transparent; background: none; box-shadow: none; }
+  .tm-chat-head .tm-ava, .tm-chat-head .tm-gava { flex: none; }
+  /* Messages: no outline around an assistant's message, tighter spacing, more room for the text. */
+  .tm-msgs { padding: 8px 8px 12px; gap: 4px; }
+  .tm-msg-agent { margin-bottom: 6px; }
+  .tm-msg-agent .tm-bubble { border-color: transparent; }
+  .tm-msg-agent .tm-col { max-width: calc(100% - 34px); }
+  .tm-msg-owner .tm-col { max-width: 88%; }
+  .tm-bubble { padding: 7px 11px; }
+  .tm-mdwrap.msg-javis .bubble { line-height: 1.5; }
+  .tm-text { line-height: 1.5; }
+  .tm-msg-agent .tm-who { font-size: 16px; }
+  /* Headings inside a message are bold lines of the same size; tables stay compact and scroll sideways. */
+  .tm-bubble h1, .tm-bubble h2, .tm-bubble h3, .tm-bubble h4, .tm-bubble h5, .tm-bubble h6 { font-size: 16px; line-height: 1.4;
+    margin: 6px 0 2px; }
+  .tm-bubble table { display: block; max-width: 100%; overflow-x: auto; font-size: 16px; }
+  .tm-bubble th, .tm-bubble td { padding: 4px 8px; white-space: nowrap; }
+  .tm-bubble p { margin: 4px 0; }
+  .tm-bubble ul, .tm-bubble ol { margin: 4px 0; padding-left: 20px; }
+  .tm-chat-head .tm-title strong { font-size: 17px; }
+  .tm-chat-head .tm-sub { font-size: 16px; }
+  /* Team list: the title on the left, Create and Import together on the right at the same height. */
+  .tm-list-bar { flex-wrap: wrap; gap: 8px; }
+  .tm-list-bar .tm-new { margin-left: auto; }
+  .tm-list-bar .ws-btn { min-height: 44px; font-size: 16px; }
+  /* Side panel: one text size (16px) everywhere, section titles in plain case at the same size, room between sections. */
+  .tm-side, .tm-side .tm-tab, .tm-side .ws-btn, .tm-side label, .tm-side .tm-level, .tm-side .tm-radio, .tm-side .tm-rs,
+  .tm-side .tm-field, .tm-side .tm-sub, .tm-side .tm-mhead, .tm-side input, .tm-side select, .tm-side textarea { font-size: 16px; }
+  .tm-side .tm-qhead { font-size: 16px; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text2);
+    margin-top: 18px; }
+  .tm-side .tm-add-open { margin-bottom: 4px; }
+  .tm-side .tm-close { border-color: transparent; background: none; }
+}

@@ -6,6 +6,125 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.369.0] - 2026-10-28
+### Sửa lỗi
+- **Bấm Tải về khi xem ảnh trên iPhone giờ lưu được ảnh.** Trước đây nút này chỉ mở ảnh ra một trang mới. Giờ nó mở bảng chia sẻ của iPhone, bạn chọn "Lưu hình ảnh" là ảnh vào thẳng ứng dụng Ảnh. Vuốt sang ảnh khác rồi bấm Tải về thì lưu đúng ảnh đang xem.
+
+## [0.368.0] - 2026-10-28
+### Cải thiện
+- **Chọn repo và nhánh gọn hơn.** Bấm chip repo trong khung chat (hoặc dấu cộng, mục Repo GitHub) là hiện menu nhỏ "Đổi repo" và "Đổi nhánh". Danh sách repo tách hai mục "Đã chọn" và "Repo", tên chủ repo nhỏ phía trên, tên repo to bên dưới, có nút "Kết nối thêm".
+- **Làm việc từ nhánh khác nhánh mặc định.** Chọn nhánh (ví dụ dev) trước hoặc giữa cuộc trò chuyện: Javis tách nhánh làm việc từ đó và mở PR vào đúng nhánh đó. Nhánh đang chọn hiện ngay trên chip. Cuộc trò chuyện đang có việc dở thì Javis không cho đổi, để không mất việc.
+
+## [0.367.0] - 2026-10-28
+### Cải thiện
+- **Thẻ GitHub và thẻ Messenger trên trang Kết nối gọn lại.** Thẻ chỉ còn một hàng đếm số repo hoặc số Fanpage, bấm "Xem chi tiết" mới mở cửa sổ đầy đủ, giống thẻ bot ở trang Chatbot. Nối nhiều repo hay nhiều Fanpage không còn kéo dài cả trang.
+
+### Sửa lỗi
+- **Trang Kết nối đếm cả GitHub.** Dòng "Đã kết nối" trước đây ghi "0 tài khoản" dù GitHub đã nối. Giờ GitHub và các Page Facebook đều được cộng vào cùng một con số, thẻ nào hiện sau cũng không làm mất số của thẻ kia.
+
+## [0.366.0] - 2026-10-28
+### Thêm mới
+- **Một engine khác kiểm tra chéo trước khi merge.** CI xanh rồi, diff được gửi cho một engine khác hãng với engine đã viết code (ví dụ code bằng Claude thì ChatGPT xem). Góp ý phải chỉ ra đường lỗi cụ thể, quay về cho engine viết code tự kiểm và sửa, chưa xử lý xong thì chưa merge. Chỉ có một hãng thì Javis ghi rõ trên PR là chưa được kiểm tra chéo.
+- **Javis rút kinh nghiệm theo từng repo:** lỗi CI đã sửa được, lệnh kiểm tra từng hỏng, mỗi thứ thành một dòng bài học (tối đa 30) và được nhắc lại ở lượt sau.
+- **Bảng số liệu theo engine và model** trên thẻ GitHub: tỉ lệ xanh ngay lần đẩy đầu, số vòng sửa, số góp ý, thời gian tới lúc merge.
+- **Có hướng dẫn sử dụng GitHub trong chat** (tiếng Việt và tiếng Anh) trong mục tài liệu.
+
+## [0.365.0] - 2026-10-28
+### Thêm mới
+- **CI xanh là Javis tự merge PR**, có công tắc bật tắt cho từng repo trên thẻ GitHub. Thay đổi bị đánh dấu, còn góp ý chưa xử lý, repo không có CI hay repo còn điều kiện chưa đạt thì không tự merge. Người vẫn bấm Merge được trong bảng chi tiết.
+- **Mỗi cuộc trò chuyện có biểu tượng trạng thái GitHub** ngay cạnh tên trong danh sách chat: đang làm, sẵn sàng, đã merge, cần người xem. Bấm vào để xem nhánh, PR, kết quả kiểm tra và lý do bị kẹt.
+- **Xếp hàng việc tiếp theo:** việc mới chỉ bắt đầu khi PR trước đã merge và kiểm tra sau merge đã xanh. Nhánh tụt sau main thì GitHub cập nhật trước, xung đột thì Javis mở một vòng sửa.
+
+## [0.364.0] - 2026-10-28
+### Thêm mới
+- **Javis tự đẩy code lên GitHub và mở PR nháp** sau lượt chat có sửa repo và qua được bước kiểm tra. Commit đứng tên tài khoản đã kết nối, không bao giờ đẩy đè.
+- **Javis theo dõi CI của từng commit.** Xanh thì báo trong chat và chuyển PR sang sẵn sàng. Đỏ thì tự mở lượt sửa ngay trong chat đó, kèm log lỗi đã che bí mật, tối đa 3 vòng rồi dừng và nhờ người xem.
+- **Biết lúc nào không phải lỗi của mình:** nhánh chính cũng đỏ thì dừng, máy chạy CI hỏng thì chạy lại đúng một lần, repo không có CI thì nói rõ là chưa được kiểm chứng.
+- Khởi động lại máy giữa chừng cũng không đẩy hay mở PR hai lần.
+
+## [0.363.0] - 2026-10-28
+### Thêm mới
+- **Javis tự kiểm tra code sau mỗi lượt có sửa repo GitHub.** Nó chạy đúng các lệnh CI của repo ngay trên máy (đọc từ thư mục workflows của repo, bỏ các bước cài vào máy, cần secret hay deploy), rồi báo kết quả vào chính cuộc trò chuyện.
+- **Chặn trước khi đẩy:** diff có thứ giống mật khẩu, token thì không cho commit; bỏ qua test, xoá test, sửa workflow để cho CI xanh thì bị đánh dấu để người xem trước khi merge.
+- **Mọi engine đều đọc luật của repo** (AGENTS.md, CLAUDE.md, CONTRIBUTING.md), không riêng Claude Code. Danh sách lệnh kiểm tra của từng repo sửa được ở thẻ GitHub trên trang Kết nối.
+
+## [0.362.0] - 2026-10-28
+### Thêm mới
+- **Kết nối GitHub có sẵn trên trang Kết nối.** Dán token một lần, hoặc bấm dùng chung token sao lưu brain. Không phải cài thêm gói nào.
+- **Gắn repo GitHub vào cuộc trò chuyện:** bấm dấu cộng, chọn Repo GitHub, tích một hay nhiều repo. Javis tải repo về máy (ngoài thư mục brain), mỗi cuộc trò chuyện làm trên nhánh và thư mục riêng, nên hai cuộc cùng sửa một repo không đè việc của nhau.
+- **Gỡ repo khỏi brain** chỉ xoá bản trên máy, repo trên GitHub giữ nguyên. Javis từ chối gỡ khi còn sửa đổi chưa lưu hay commit chưa đẩy lên.
+- Bản này chưa tự đẩy code lên GitHub. Phần kiểm tra, đẩy lên, mở PR và theo dõi CI đến ở các bản kế tiếp.
+
+## [0.361.0] - 2026-10-27
+### Cải thiện
+- **Nội bộ:** test cảm xúc của linh vật không còn đỏ ngẫu nhiên trên CI. Linh vật chớp mắt vào lúc ngẫu nhiên, và khoảng 1/400 lần chạy test soi mắt đúng khung hình đang nhắm. Giờ test chờ qua cái chớp mắt rồi mới soi. Linh vật trong app không đổi gì.
+
+## [0.360.0] - 2026-10-27
+### Cải thiện
+- **Đã chốt bản thiết kế "GitHub ngay trong khung chat".** Sắp tới bạn chọn repo GitHub từ nút cộng của khung chat, giao việc bằng lời, Javis sửa trên nhánh riêng, tự kiểm tra, mở PR, theo dõi CI, xanh thì tự merge (tắt được theo từng repo). Bản này chỉ có tài liệu thiết kế, chưa có tính năng mới.
+- Kết nối GitHub sẽ có sẵn trên trang Kết nối, không phải cài thêm gói nào.
+
+## [0.359.0] - 2026-10-27
+### Sửa lỗi
+- **Khung chat trên iPhone khi cài như app (Thêm vào MH chính) không còn hụt đầu hay thừa khoảng trống dưới ô nhập.** Lúc không gõ, khung chat lấy đúng chiều cao phần màn hình nhìn thấy; bàn phím hạ xuống mà trang bị trượt lên thì tự kéo về. Thanh trạng thái giữ nguyên như cũ. Cảm ơn hwangrin đã báo và đề xuất ở PR #850.
+
+## [0.358.0] - 2026-10-27
+### Sửa lỗi
+- **Tin anh chị vừa gửi trong Nhóm luôn hiện.** Trước đây thỉnh thoảng gửi xong không thấy câu của mình vì 3 lý do, giờ đã sửa cả 3:
+  - Trên điện thoại, bàn phím hay khung soạn cao lên làm tin mới nhất bị che dưới khung soạn. Giờ khung chat tự giữ tin cuối trong tầm nhìn (chat chính cũng được sửa theo).
+  - Lần tải lại tin bị lỗi mạng hay về muộn từng xoá mất bong bóng tin vừa gửi. Giờ bong bóng chỉ biến mất khi bản trên máy chủ đã hiện, và ghi "Đã gửi" trong lúc chờ.
+  - Gửi tin khi đang lọc xem một việc giờ tự quay về cả cuộc trò chuyện để thấy tin đó.
+
+### Cải thiện
+- **Thành viên Nhóm nói ngắn gọn như nhắn tin**: thường 1 đến 3 câu, không chào hỏi, không tiêu đề hay bảng. Sản phẩm dài thì ghi vào file và chỉ báo file nào kèm ý chính. Bước tổng hợp cuối cũng ngắn, không kể lại từng bước.
+- **Xem ảnh trong chat vuốt trái, phải sang các ảnh khác** của cùng khung chat, có bộ đếm "2 / 4" như trình xem ảnh của điện thoại. Trên máy tính dùng nút mũi tên hai bên hay phím ← →. Áp cho mọi khung chat: chat chính, chat Nhóm, ngăn Thông tin của Nhóm, Hội thoại khách hàng.
+- **Trang Nhóm trên điện thoại gọn hơn**: đầu khung chat bỏ viền hộp quanh các nút, tin của trợ lý bỏ khung viền và rộng chỗ cho chữ hơn, tiêu đề trong tin cùng cỡ chữ, bảng gọn và cuộn ngang. Ngăn cài đặt Team dùng một cỡ chữ 16px và tiêu đề mục đều nhau. Nút Tạo team và Nhập team đứng cùng hàng.
+
+## [0.357.0] - 2026-10-27
+### Thêm mới
+- **Giao việc cho Team ngay từ chat.** Nói với Javis "giao cho Phòng nội dung viết 3 bài", Javis giao đúng một việc vào Team đó, Team tự điều phối như khi bạn giao ở trang Nhóm. Xong, bị chặn hay cần bạn quyết thì kết quả tự báo về đúng khung chat đã giao (web, Telegram, Zalo) và hòm thư.
+- Tin báo nói rõ việc **XONG** hay đã **ĐẠT nghiệm thu**. Việc cần bạn duyệt vẫn dừng ở thẻ của bạn, Javis không duyệt thay. Lỡ gọi lại cùng yêu cầu cũng không ra việc thứ hai. Chỉ chủ mới giao được; Team của brain khác bị từ chối trước khi tạo việc (issue #826).
+
+## [0.356.0] - 2026-10-27
+### Sửa lỗi
+- **Tạo ảnh bằng gói ChatGPT không còn chết ở lỗi "Tool choice image_generation not found".** Model ChatGPT nào không có công cụ tạo ảnh thì Javis tự chuyển sang model khác của tài khoản, như khi model bị từ chối (issue #854).
+- **Đăng nhập Google Workspace khi chạy Javis bằng Docker trên máy tính.** Trước đây bấm đồng ý xong trình duyệt báo không kết nối được localhost:8000. Giờ Javis tự lo phần trong container; bạn chỉ cần mở cổng 8000 một lần bằng file docker-compose.google.yml (cổng chỉ mở cho chính máy đó), và bấm Kết nối lần đầu sẽ có lời nhắc đúng lệnh cần chạy. Cập nhật bằng update.sh giữ nguyên cổng này (issue #855).
+
+## [0.355.0] - 2026-10-27
+### Cải thiện
+- **Model "mặc định" giờ ghi rõ là model nào.** Ở trang Models, chip model và bảng chọn model hiện ví dụ "mặc định (llama-3.3-70b-versatile)" thay cho chữ "mặc định" trơn, để bạn biết thẻ đó đang chạy model gì khi chưa chọn riêng. Thẻ gói (Claude Code, ChatGPT, Grok) chưa đặt model thì ghi "mặc định của CLI (tự chọn theo gói)". Chip model ở khung chat cũng gọi đúng tên model đó.
+- **Gợi ý đặt tên tài khoản gói rõ ràng hơn.** Ô tên khi thêm tài khoản giờ gợi ý kiểu "Gói Pro 2" hay "Gói Max 200".
+### Sửa lỗi
+- **Nhiều tài khoản một gói chạy đúng hơn.** Hai cuộc trò chuyện cùng lúc không còn cho nghỉ nhầm tài khoản (tài khoản nghỉ là đúng tài khoản vừa hết lượt). Việc nền gọi một model mà gói không có không còn khiến tài khoản đó nghỉ luôn cho chat; chỉ hết lượt thật mới nghỉ. Tài khoản bạn đã tắt không bao giờ bị dùng, kể cả khi các tài khoản khác đều đang nghỉ.
+- **Đăng nhập lại không còn báo xong ngay.** Trước đây bấm Đăng nhập lại cho tài khoản Grok hay Claude thứ hai thì trang báo xong trong vài giây vì thấy file đăng nhập cũ; giờ phải đăng nhập xong thật mới tính.
+- **Không còn mất tài khoản khi mở trang Models ở hai nơi.** Đổi thứ tự hay bật tắt ở một trang cũ (mở trước khi thêm tài khoản) không còn xoá tài khoản mới thêm; chỉ bấm Gỡ mới xoá.
+- **Tài khoản Claude thêm dùng được các MCP bạn đã nối trong Claude Code**, giống tài khoản 1. Trên Linux và Windows, tài khoản Claude chỉ tính là đã đăng nhập khi có file đăng nhập thật.
+
+## [0.354.0] - 2026-10-27
+### Cải thiện
+- **Hết lượt thì chat tự chạy lại bằng đường kế tiếp.** Mô hình đang chạy báo hết lượt trước khi kịp viết chữ nào hay gọi công cụ nào thì Javis hỏi lại ngay đúng câu đó bằng tài khoản hoặc key kế của cùng nhà, rồi tới nhà kế trong Thứ tự dùng. Khung chat hiện một dòng như "Đang dùng ChatGPT vì Claude Code hết lượt." và bạn không phải gửi lại. Telegram cũng vậy.
+- **Hết lượt giữa chừng thì có nút Chạy lại ngay.** Câu trả lời dừng ở đoạn đã viết, bấm nút là hỏi lại bằng mô hình còn lượt. Javis không tự chạy lại khi đã gọi công cụ, để không gửi tin hay đăng bài hai lần.
+
+## [0.353.0] - 2026-10-27
+### Thêm mới
+- **Nhiều tài khoản cho một gói đăng ký.** Thẻ ChatGPT, Grok Build và Claude Code ở trang Models giờ có danh sách tài khoản. Bấm Thêm tài khoản, đăng nhập bằng link và mã ngay trên trang (chạy được cả trên VPS). Tài khoản 1 là tài khoản máy đang dùng. Hết lượt thì tài khoản kế tiếp tự chạy tiếp, dùng hết các tài khoản của một thẻ rồi mới sang thẻ sau. Tài khoản hết lượt tự quay lại khi tới giờ mở. Kéo hoặc bấm mũi tên để đổi thứ tự, tắt hay gỡ từng tài khoản.
+- Dùng nhiều tài khoản cùng gói có nguy cơ bị nhà cung cấp khoá, dù Javis chưa ghi nhận trường hợp nào. Nếu gặp, hãy báo cho nhà phát triển.
+
+## [0.352.0] - 2026-10-27
+### Cải thiện
+- **Lời nhắc về rủi ro khoá tài khoản viết lại nhẹ nhàng hơn.** Dùng gói đăng ký (Claude Pro/Max, gói xAI) cho việc nền vẫn có nguy cơ bị nhà cung cấp khoá tài khoản, nhưng Javis chưa ghi nhận trường hợp nào. Nếu bạn gặp, hãy báo cho nhà phát triển để mọi người cùng biết.
+- **Chọn model trên điện thoại dễ hơn.** Ở trang Models, bấm chip model, chip Effort hay "Đổi model" của việc nền giờ mở một bảng trượt lên từ đáy màn hình, có tiêu đề và nút đóng, hàng to dễ bấm. Bàn phím chỉ bật khi bạn chạm vào ô tìm. Danh sách model xếp gọn: "mặc định" trên cùng, model đang dùng ngay sau, còn lại theo thứ tự chữ cái. Nhãn MAIN hay Dự phòng chuyển xuống hàng chip để tên nhà cung cấp không bị bẻ dòng.
+- **Bỏ mục "Bot dựa vào đâu để trả lời" ở form tạo chatbot.** Bot nào cũng trả lời theo Agent và tài liệu, nên không cần chọn nữa. Bot cũ đang để "Chỉ tài liệu" giữ nguyên tới khi bạn sửa và lưu lại; muốn bot chỉ nói theo tài liệu thì ghi luật đó vào file Agent.
+### Sửa lỗi
+- **Bảng chọn model không còn bị thẻ bên dưới che.** Trên máy tính, bảng chọn model hay Effort mở xuống dưới từng bị thẻ nhà cung cấp kế tiếp đè lên, không bấm được. Giờ bảng luôn nằm trên cùng.
+
+## [0.351.0] - 2026-10-27
+### Cải thiện
+- **Trang Models mới: một danh sách Thứ tự dùng.** Chỉ hiện các nhà đã đăng nhập, thẻ trên cùng là mô hình chính (MAIN), các thẻ sau là Dự phòng 1, 2... Kéo thẻ (trên điện thoại giữ nút 6 chấm hoặc nhấn giữ thẻ) hoặc bấm Đảo để đổi thứ tự. Mỗi thẻ có chip chọn mô hình và chip Effort riêng, giống khung chat. Thẻ dự phòng đang thay MAIN chạy chat thì sáng chữ ĐANG DÙNG.
+- **Nhiều API key cho một nhà cung cấp.** Thẻ API hiện danh sách key đánh số: thêm key, đổi tên, chuyển lên xuống, tắt, đổi key, gỡ. Key đang chạy được tô màu, key hết lượt ghi giờ mở lại.
+- **Mô hình việc nền nằm ngay dưới Thứ tự dùng**, có chip Effort riêng. Trên điện thoại bảng chọn giống khung chat, mở lên trên. Bảng chọn chỉ liệt kê nhà đã kết nối. Khi mô hình nền hết lượt, một dòng cho biết việc nền đang chạy tạm bằng gì.
+- **Gọn hơn:** nhà chưa kết nối gom vào nút Kết nối thêm nhà cung cấp; bỏ ô Main Model, ô Model Telegram và ô Suy nghĩ chung (Telegram theo MAIN, gõ /model trong một cuộc trò chuyện để ghim riêng).
+
 ## [0.350.0] - 2026-10-27
 ### Cải thiện
 - **Việc nền đi theo thứ tự rõ ràng.** Chạy bằng mô hình nền trước, hết lượt thì lần lượt sang các nhà cung cấp dự phòng (mỗi nhà chạy cấu hình mặc định của nó), mô hình chính dùng sau cùng. Javis không còn tự chen Claude hay OpenRouter miễn phí vào khi bạn chưa kết nối chúng.

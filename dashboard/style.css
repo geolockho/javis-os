@@ -1446,6 +1446,8 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   text-align: center; color: var(--text3); font-size: 12px; font-family: var(--font);
   padding: 2px 12px; opacity: 0.85;
 }
+/* 0.354.0: the turn moved to the next route (out of quota). Stays in the chat, readable on a phone. */
+.msg-ghichu.msg-doiduong { font-size: 16px; opacity: 1; padding: 4px 12px; }
 /* Trả lời của lệnh "/" hệ thống (/status, /usage, /tasks...). Nền nhạt, chữ nhỏ hơn và viền
    trái màu nhấn: nhìn ra ngay đây là KẾT QUẢ LỆNH của giao diện chứ không phải lời của model. */
 .msg-lenh .bubble {
@@ -2545,6 +2547,22 @@ body.jv-lb-open { overflow: hidden; }        /* khoá cuộn nền để lăn ch
 @media (max-width: 700px) {
   .jv-lb-bar { padding: 8px 10px; }
   .jv-lb-nut button { padding: 6px 9px; }
+}
+/* 0.358.0: a gallery of every picture in the chat. Counter "2 / 4" in the bar, round arrows on the sides (a swipe does
+   the same on a phone), the first and last picture dim the arrow that leads nowhere. */
+.jv-lb-dem { color: #fff; font-size: 16px; font-variant-numeric: tabular-nums; flex: none; opacity: .9; }
+.jv-lb-di { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; display: inline-flex; align-items: center;
+  justify-content: center; width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.45); color: #fff; cursor: pointer; font-size: 20px; }
+.jv-lb-di:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
+.jv-lb-di:disabled { opacity: .25; cursor: default; }
+.jv-lb-truoc { left: calc(12px + env(safe-area-inset-left, 0px)); }
+.jv-lb-sau { right: calc(12px + env(safe-area-inset-right, 0px)); }
+.jv-lb.that .jv-lb-di, .jv-lb.pinch .jv-lb-di { display: none; }
+@media (max-width: 700px) {
+  .jv-lb-di { width: 44px; height: 44px; background: rgba(0, 0, 0, 0.3); }
+  .jv-lb-truoc { left: calc(4px + env(safe-area-inset-left, 0px)); }
+  .jv-lb-sau { right: calc(4px + env(safe-area-inset-right, 0px)); }
 }
 
 /* Code block: header nhan ngon ngu + nut Copy + to mau cu phap */
@@ -4469,3 +4487,65 @@ select option, select optgroup { background-color: var(--bg2); color: var(--text
 .step-header .agent-picker { flex: 1; }
 .step-row:not(.open) .step-header .agent-picker { display: none; }
 .st-verify .agent-picker { flex: 1; min-width: 160px; }
+
+/* GitHub inside chat (0.362.0, github-connect.js): the built-in card on Connections and the repo chip. */
+.gh-card .gh-local { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.gh-local-head { font-weight: 600; font-size: 16px; }
+.gh-local-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 16px; }
+.gh-local-name { font-weight: 600; word-break: break-all; }
+.gh-local-meta { color: var(--text2); flex: 1; min-width: 120px; }
+.gh-chip svg { width: 15px; height: 15px; flex: none; }
+.gh-apply[disabled] { opacity: .55; cursor: default; }
+/* Repo and branch picker in the + menu (0.368.0, after Claude Code's picker): sections, grouped rows, two-line names. */
+.gh-sec { padding: 10px 10px 4px; font-size: 12.5px; color: var(--text3); font-weight: 600; }
+.gh-group { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.gh-group > .cp-mi { border-radius: 0; }
+.gh-group > .cp-mi + .cp-mi { border-top: 1px solid var(--border); }
+.gh-group > .cp-mi:hover, .gh-group > .cp-mi:focus-visible { background: var(--bg2); }
+.cp-menu [hidden] { display: none; }
+.gh-two { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gh-owner { font-size: 12px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gh-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gh-tick { flex: none; display: inline-flex; color: var(--accent, #3b82f6); }
+.gh-tick svg { width: 18px; height: 18px; }
+.gh-results { display: flex; flex-direction: column; gap: 2px; }
+.gh-foot { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.gh-foot .gh-apply { width: 100%; }
+.gh-foot .gh-apply[hidden] { display: none; }
+.gh-repo .cp-mi-hint { display: inline-flex; align-items: center; gap: 4px; }
+.gh-repo .cp-mi-hint .cp-ic { width: 14px; height: 14px; }
+.gh-chip-br { display: inline-flex; align-items: center; gap: 3px; color: var(--text2); font-size: 12px; max-width: 90px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.gh-chip-br .cp-ic { width: 12px; height: 12px; }
+.cp-pin.gh-chip { max-width: 260px; }
+.cp-pin.gh-chip > span:first-of-type { min-width: 3ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 860px) { .cp-pin.gh-chip { max-width: 200px; } .gh-chip-br { max-width: 64px; } }
+.gh-checks-box { width: 100%; min-height: 160px; font-family: var(--mono, ui-monospace, monospace); font-size: 16px; line-height: 1.45; resize: vertical; }
+/* GitHub status icon per conversation (0.365.0, spec 12.1): right of the title in the chat list, and in the repo chip. */
+.cside-item.has-gh { position: relative; }
+.cside-item.has-gh .ci-title { padding-right: 36px; }
+.gh-st { display: inline-flex; align-items: center; gap: 2px; cursor: pointer; border-radius: 6px; padding: 2px; line-height: 1; }
+.cside-item .gh-st { position: absolute; right: 8px; top: 7px; }
+.gh-st svg { width: 17px; height: 17px; }
+.gh-st b { font-size: 16px; font-weight: 700; line-height: 1; }
+.gh-st:hover, .gh-st:focus-visible { background: var(--info-wash); outline: none; }
+.gh-working { color: var(--accent, #c06a2b); }
+.gh-working svg { animation: gh-pulse 1.6s ease-in-out infinite; }
+.gh-ready { color: var(--green, #2c7a4b); }
+.gh-merged { color: #8957e5; }
+.gh-broken, .gh-warn { color: var(--danger-ink, #b3261e); }
+.gh-sub-stuck::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--danger-ink, #b3261e); margin-left: 1px; }
+@keyframes gh-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .gh-working svg { animation: none; } }
+.gh-chip .gh-st { margin-left: 2px; padding: 0; }
+.gh-detail-body { display: flex; flex-direction: column; gap: 14px; padding: 6px 2px 4px; font-size: 16px; max-height: 70vh; overflow-y: auto; }
+.gh-row { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.gh-row-head code { font-size: 16px; word-break: break-all; }
+.gh-row-state { color: var(--text2); }
+.gh-checks { margin: 0; padding-left: 18px; color: var(--text2); }
+.gh-chk-failure, .gh-chk-timed_out { color: var(--danger-ink, #b3261e); }
+.gh-chk-success { color: var(--green, #2c7a4b); }
+.gh-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; cursor: pointer; }
+.gh-table-wrap { overflow-x: auto; margin-top: 10px; }
+.gh-table { border-collapse: collapse; width: 100%; font-size: 16px; }
+.gh-table th, .gh-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }

@@ -8,6 +8,125 @@ English entries start at 0.66.0. Every earlier release is described in the Vietn
 
 Format: each release is a `## [x.y.z] - date` block, with changes grouped under `### Added / Fixed / Improved / Security`.
 
+## [0.369.0] - 2026-10-28
+### Fixed
+- **Download in the picture viewer on an iPhone now saves the picture.** It used to only open the picture in a new page. It now opens the iPhone share sheet, where "Save Image" puts it straight into Photos. After swiping to another picture, Download saves the one on screen.
+
+## [0.368.0] - 2026-10-28
+### Improved
+- **Tidier repo and branch picking.** Tapping the repo chip in the chat box (or plus, GitHub repo) opens a small menu with "Change repo" and "Change branch". The repo list has "Selected" and "Repos" sections, the owner small above the repo name, and a "Connect more" button.
+- **Work from a branch other than the default.** Pick a branch (dev, say) before or during a chat: Javis cuts its working branch from it and opens the PR into it. The chosen branch shows on the chip. A chat with work in progress cannot switch, so nothing is lost.
+
+## [0.367.0] - 2026-10-28
+### Improved
+- **The GitHub and Messenger cards on the Connections page are compact.** Each card shows one row with the number of repos or Pages; "View details" opens the full list in a popup, like the bot cards on the Chatbot page. Many repos or Pages no longer stretch the whole page.
+
+### Fixed
+- **The Connections page counts GitHub.** The "Connected" heading used to say "0 accounts" while GitHub was connected. GitHub and Facebook Pages now add into the same number, and whichever card loads last no longer wipes out the other's count.
+
+## [0.366.0] - 2026-10-28
+### Added
+- **A second engine reviews before merging.** After green CI the diff goes to an engine from a different vendor than the one that wrote it (code written with Claude is read by ChatGPT, for example). Findings must name a concrete failure path, go back to the author to verify and fix, and hold the merge until handled. With only one vendor connected, Javis notes on the PR that it was not cross-reviewed.
+- **Javis learns per repo:** a CI failure it later fixed or a check command that failed becomes one lesson line (at most 30), recalled on the next turn.
+- **Numbers per engine and model** on the GitHub card: first push green, fix rounds, review findings, minutes to merge.
+- **A user guide for GitHub inside chat** (Vietnamese and English) in the docs.
+
+## [0.365.0] - 2026-10-28
+### Added
+- **Green CI means Javis merges the PR by itself**, with an on/off switch per repo on the GitHub card. A flagged change, open review findings, a repo without CI or an unmet repo requirement never merges on its own. A person can still press Merge in the detail panel.
+- **Every conversation shows a GitHub status icon** next to its name in the chat list: working, ready, merged, needs a person. Tap it to see the branch, the PR, the check results and why it is stuck.
+- **Next jobs wait in line:** a new job starts only after the previous PR is merged and the checks after merging are green. A branch behind main is updated by GitHub first, and a conflict becomes a fix round.
+
+## [0.364.0] - 2026-10-28
+### Added
+- **Javis pushes to GitHub and opens a draft PR by itself** after a chat turn that changed a repo and passed the checks. Commits carry the connected account's name, and nothing is ever force-pushed.
+- **Javis follows the CI of every commit.** Green is reported in the chat and the PR is marked ready. Red starts a fix turn in that same chat with the error log (secrets hidden), up to 3 rounds, then it stops and asks a person.
+- **It knows when a failure is not its own:** a red main branch means stop, a broken CI runner gets exactly one re-run, and a repo without CI is reported as unverified.
+- A restart halfway through never pushes or opens a PR twice.
+
+## [0.363.0] - 2026-10-28
+### Added
+- **Javis checks the code after every turn that changed a GitHub repo.** It runs the repo's own CI commands on this machine (read from the repo's workflows folder, leaving out steps that install into the machine, need secrets or deploy) and reports in the same conversation.
+- **Stopped before pushing:** a diff that looks like it holds a password or token is not committed; skipping tests, deleting tests or editing workflows to get green CI is flagged for a person before merging.
+- **Every engine reads the repo's rules** (AGENTS.md, CLAUDE.md, CONTRIBUTING.md), not only Claude Code. Each repo's check commands are editable on the GitHub card of the Connections page.
+
+## [0.362.0] - 2026-10-28
+### Added
+- **GitHub is built into the Connections page.** Paste a token once, or reuse the brain-backup token with one click. Nothing to install.
+- **Attach GitHub repos to a conversation:** press plus, pick GitHub repo, tick one or more repos. Javis downloads them to this machine (outside the brain folder), and each conversation works on its own branch and folder, so two chats editing the same repo never overwrite each other.
+- **Removing a repo from the brain** deletes only the local copy; the repo on GitHub stays as it is. Javis refuses while there are unsaved edits or commits not pushed yet.
+- This release does not push code to GitHub yet. Checking, pushing, opening a PR and watching CI come in the next releases.
+
+## [0.361.0] - 2026-10-27
+### Improved
+- **Internal:** the pet emotion test no longer fails at random on CI. The pet blinks at random moments, and about 1 run in 400 the test looked at the eyes during a blink frame. The test now lets the blink finish before it looks. The pet in the app is unchanged.
+
+## [0.360.0] - 2026-10-27
+### Improved
+- **The design for "GitHub inside chat" is settled.** Soon you pick GitHub repos from the chat's plus button, give a task in words, and Javis edits on its own branch, checks its work, opens a PR, watches CI and merges when green (switchable per repo). This release only adds the design document, no new feature yet.
+- The GitHub connection will be built into the Connections page, with nothing extra to install.
+
+## [0.359.0] - 2026-10-27
+### Fixed
+- **The chat on an iPhone home-screen app no longer loses its top or leaves a gap under the composer.** With the keyboard closed the chat takes the exact height of the visible screen, and a page iOS left scrolled after the keyboard closes is pulled back. The status bar looks the same as before. Thanks to hwangrin for the report and the proposal in PR #850.
+
+## [0.358.0] - 2026-10-27
+### Fixed
+- **A message you just sent in a Team always shows.** It sometimes seemed to vanish after sending, for 3 reasons, all fixed:
+  - On a phone, the keyboard or a taller composer pushed the newest message under the composer. The chat now keeps the last message in view (the main chat too).
+  - A reload that failed or came back late could remove the bubble of the message just sent. The bubble now stays until the server's copy shows, and says "Sent" meanwhile.
+  - Sending while one job is filtered now goes back to the whole chat, where the message lands.
+
+### Improved
+- **Team members talk like a chat message**: usually 1 to 3 sentences, no greetings, no headings or tables. Long products go into a file, and the chat only says which file plus the main point. The final summary step is short too and does not retell each step.
+- **Swipe between pictures in a chat**: the picture viewer now holds every picture of the same chat, with a "2 of 4" counter like a phone's photo viewer. On a computer use the side arrows or the ← → keys. It works in every chat: the main chat, Team chat, the Team info panel and customer Conversations.
+- **A tidier Teams page on a phone**: the chat header buttons lose their boxes, an assistant's message loses its outline and gets more room for text, headings inside a message are the text size, tables are compact and scroll sideways. The Team settings panel uses one 16px text size with even section titles. Create team and Import team sit on one row.
+
+## [0.357.0] - 2026-10-27
+### Added
+- **Give a Team a job straight from chat.** Tell Javis "have the Content team write 3 posts" and it gives that Team exactly one job, coordinated by the Team as if you had given it on the Teams page. When it is done, blocked or needs your decision, the result comes back to the chat you asked in (web, Telegram, Zalo) and to the inbox.
+- The message says whether the job is **DONE** or **PASSED acceptance**. A job that needs your approval still stops on your card; Javis never approves for you. Repeating the same request never makes a second job. Only the owner can give jobs; a Team of another brain is refused before any job exists (issue #826).
+
+## [0.356.0] - 2026-10-27
+### Fixed
+- **Image generation on a ChatGPT plan no longer dies on "Tool choice image_generation not found".** When a ChatGPT model has no image tool, Javis moves to another model of the account, as it does when a model is refused (issue #854).
+- **Google Workspace sign-in with Javis in Docker on a computer.** Clicking Allow used to end on "cannot connect to localhost:8000". Javis now handles the inside of the container; you open port 8000 once with docker-compose.google.yml (to that computer only), and the first Connect tells you the exact command. Updating with update.sh keeps the port (issue #855).
+
+## [0.355.0] - 2026-10-27
+### Improved
+- **"Default" model now says which model it is.** On the Models page, the model chip and the model list show for example "default (llama-3.3-70b-versatile)" instead of a bare "default", so you know what a card runs when you have not picked a model. A plan card (Claude Code, ChatGPT, Grok) with no model set says "CLI default (picked by your plan)". The chat composer's model chip names that model too.
+- **Clearer hint for naming a plan account.** The name box when adding an account now suggests names like "Pro plan 2" or "Max 200 plan".
+### Fixed
+- **Several accounts on one plan behave more reliably.** Two chats at once no longer rest the wrong account (the one that rests is the one that ran out). A background job asking for a model the plan lacks no longer rests that account for chat; only a real quota error does. An account you switched off is never used, even when every other account is resting.
+- **Sign in again no longer finishes at once.** Re-signing a second Grok or Claude account used to report success within seconds because the old login file was still there; now the new sign-in has to finish.
+- **No lost account when the Models page is open in two places.** Reordering or switching an account on an older page (opened before an account was added) no longer deletes the new account; only Remove deletes.
+- **An extra Claude account sees the MCP servers you connected in Claude Code**, like account 1. On Linux and Windows a Claude account counts as signed in only when its login file exists.
+
+## [0.354.0] - 2026-10-27
+### Improved
+- **Out of quota, chat reruns on the next route by itself.** When the running model reports it is out of quota before writing a word or calling a tool, Javis asks the same question again right away on the next account or key of the same provider, then on the next provider in the usage order. The chat shows a line such as "Using ChatGPT because Claude Code is out of quota." and you do not have to send it again. Telegram does the same.
+- **Out of quota halfway, a Run again now button.** The answer stops where it got to; the button asks again on a model that still has quota. Javis never reruns by itself after a tool call, so nothing gets sent or posted twice.
+
+## [0.353.0] - 2026-10-27
+### Added
+- **Several accounts on one subscription plan.** The ChatGPT, Grok Build and Claude Code cards on the Models page now list their accounts. Tap Add account and sign in with a link and a code right on the page (works on a VPS too). Account 1 is the one the machine already uses. When one runs out of quota the next takes over, and all accounts of a card are used before the next card. A resting account comes back on its own once its reset time passes. Drag or use the arrows to reorder, switch off or remove any account.
+- Using several accounts on the same plan carries a risk of the provider locking them, though Javis has no reported case so far. If it happens, please tell the developer.
+
+## [0.352.0] - 2026-10-27
+### Improved
+- **Gentler wording for the account lock risk.** Running background work on a subscription plan (Claude Pro/Max, the xAI plan) still carries a risk of the provider locking the account, but Javis has no reported case so far. If it happens to you, please tell the developer so everyone knows.
+- **Easier model picking on a phone.** On the Models page, the model chip, the Effort chip and the background model's "Change model" now open a sheet that slides up from the bottom, with a title, a close button and large rows. The keyboard only comes up when you tap the search box. The model list is tidier: "default" first, the model in use next, the rest A to Z. The MAIN or Fallback label moves to the chip row so the provider name no longer breaks across lines.
+- **The "What the bot answers from" choice is gone from the chatbot form.** Every bot answers from its Agent and documents, so there is nothing to pick. An older bot set to "Documents only" keeps it until you edit and save it; to keep a bot to its documents, write that rule into its Agent file.
+### Fixed
+- **The model picker is no longer hidden behind the next card.** On a computer, a model or Effort picker opening downward was covered by the next provider card and could not be clicked. It now always sits on top.
+
+## [0.351.0] - 2026-10-27
+### Improved
+- **New Models page: one Usage order list.** Only signed-in providers show, the top card is the main model (MAIN), the next ones are Fallback 1, 2... Drag a card (on a phone hold the 6-dot handle or press and hold the card) or press Swap to reorder. Each card has its own model chip and Effort chip, like the chat composer. A fallback card running chat in place of MAIN lights up IN USE.
+- **Several API keys per provider.** API cards show a numbered key list: add a key, name it, move it up or down, turn it off, change it, remove it. The key in use is highlighted, a key out of quota shows when it comes back.
+- **The background model sits right under the Usage order**, with its own Effort chip. On a phone its picker looks like the chat composer's and opens upward. The picker lists connected providers only. When the background model is out of quota, a line says what background work runs on for now.
+- **Tidier:** providers not connected wait behind Connect another provider; the Main Model, Telegram model and global Reasoning boxes are gone (Telegram follows MAIN, type /model in a chat to pin that chat).
+
 ## [0.350.0] - 2026-10-27
 ### Improved
 - **Background work follows a clear order.** It runs on the background model first; when that is out of quota it moves through the fallback providers (each on its own default setup) and uses the main model last. Javis no longer slips in Claude or free OpenRouter when you have not connected them.
