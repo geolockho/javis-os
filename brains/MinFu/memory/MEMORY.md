@@ -99,3 +99,8 @@
 - [Muốn giải thích luồng bằng sơ đồ text](facts/user-muon-giai-thich-bang-so-do-text.md) - Khi giải thích luồng mạng hoặc setup, user muốn sơ đồ text map và đi từng bước.
 - [Tiêu chí chọn cách gọi service giữa các cluster](facts/tieu-chi-chon-cach-goi-service-lien-cluster.md) - Bốn tiêu chí user đặt cho cách gọi service liên cluster: băng thông, đường truyền, dễ cấu hình, dễ trace lỗi.
 - [Muốn gc gọi trực tiếp service trên sc, không qua ingress](facts/muon-goi-service-sc-truc-tiep-tu-gc.md) - Ngày 2026-10-27 user hỏi cách gc gọi thẳng service sc thay vì đi qua ingress-nginx (mục tiêu, chưa chốt).
+- [Manifest PoC đường gc → sc đã viết trong workspace](facts/manifest-poc-gc-sc-gateway.md) - Bộ manifest PoC tại workspace/gc-sc-gateway/, còn các chỗ TODO chưa điền (thực tế tính đến 2026-10-27).
+- [Thang 3 bậc bảo mật gc → sc (đề xuất, chưa chốt)](facts/bac-bao-mat-gc-sc.md) - HTTP thường, TLS một chiều, mTLS; đi từ bậc 0 lên dần, user chưa chọn bậc (2026-10-27).
+- [Chốt bắt đầu gc → sc ở bậc 0, bậc 1 và 2 để nâng sau](facts/chon-bac-0-gc-sc-truoc.md) - Ngày 2026-10-28 user chọn bậc 0 (HTTP thường, whitelist IP) cho gc → sc, bậc 1 và 2 viết sẵn để nâng cấp sau
+- [Manifest gc → sc tách thư mục theo bậc 0, 1, 2 trong workspace](facts/manifest-gc-sc-tach-thu-muc-theo-bac.md) - workspace/gc-sc-gateway/ chia bac-0 (dùng ngay), bac-1 và bac-2 (nâng sau), mỗi bậc có gc/, sc/ và README
+- [Cluster dùng cert-manager tự cấp cert cho tls.hosts của Ingress](facts/cert-manager-tu-cap-cert-tls-hosts.md) - User khẳng định cert-manager tự sinh cert cho tls.hosts; annotation issuer trên từng cluster chưa kiểm
