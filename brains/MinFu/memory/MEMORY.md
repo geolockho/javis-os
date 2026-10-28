@@ -111,3 +111,6 @@
 - [Lỗi CSRF kubeconfig-generator đã sửa và push 2 commit lên main](facts/sua-csrf-kubeconfig-generator-da-push.md) - Ngày 2026-10-28 push 659168b (sửa CSRF) và facc6f9 (README dùng team-a), chưa deploy, test chưa chạy.
 - [Role view cấp cho dev qua kubeconfig-generator chỉ đọc, không xem được Secret](facts/role-view-dev-kubeconfig-chi-doc.md) - Role view của dev chỉ get/list/watch trong namespace có label; ConfigMap và pods/log đọc được, Secret thì không.
 - [Node fsel-prod có label node_role=appnodes-prod2](facts/fsel-prod-node-label-appnodes-prod2.md) - Ảnh thống kê CPU/RAM khớp 2 node appnodes-prod2 (48C96G và 64C128G), 3 node appnodes-prod không nằm trong ảnh.
+
+- [Báo cáo tài nguyên fsel-prod 2 tiếng và cuối ngày qua Prometheus](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-10-28.md) - Ngày 2026-10-28 đã dựng skill bao-cao-tai-nguyen-k8s-prometheus, agent tl-toi-uu-tai-nguyen-k8s, lịch 2h và 23:30 gửi Slack C0C8RMMB7AN; chưa chạy thử qua lịch.
+- [Nguồn dữ liệu báo cáo tài nguyên fsel-prod](facts/nguon-du-lieu-bao-cao-tai-nguyen-fsel-prod.md) - Prometheus prod và thư mục values ArgoCD dùng cho báo cáo tài nguyên fsel-prod
