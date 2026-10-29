@@ -125,3 +125,4 @@
 - [Dùng Jira quản lý task và muốn nhắc log work hằng ngày](facts/jira-quan-ly-task-va-nhac-log-work.md) - Người dùng dùng Jira quản lý task và muốn được nhắc log work mỗi ngày làm việc.
 - [Bên người dùng đang dùng Docker Hub](facts/dockerhub-dang-dung.md) - Đang tìm nguồn thay thế hoặc mirror cho bitnamilegacy trong môi trường dùng Docker Hub.
 - [Thông tin xác thực Jira đã được chia sẻ trong chat](facts/jira-thong-tin-xac-thuc-da-chia-se-trong-chat.md) - Mật khẩu và PAT Jira đã được gửi trong hội thoại; trạng thái đổi mật khẩu và thu hồi PAT chưa rõ.
+- [Hai MCP Jira đã được kiểm tra đúng tài khoản](facts/hai-mcp-jira-da-duoc-kiem-tra.md) - Javis báo đã kiểm tra Jira Fsel và Jira hoangviet, mỗi kết nối trả về đúng tài khoản tương ứng.
