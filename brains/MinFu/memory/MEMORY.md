@@ -122,3 +122,4 @@
 - [Link tải Lens trên trang download của kubeconfig-generator](facts/lens-tai-tren-trang-download-kubeconfig.md) - User yêu cầu thêm link tải Lens (Windows) ở trang /dl cho dev, Javis đã thêm nhưng chưa commit hay push.
 - [Chỉ commit và push kubeconfig-generator khi user xác nhận](facts/xac-nhan-truoc-khi-push-kubeconfig.md) - Javis sửa code trong workspace, sync sang repo, rồi hỏi trước khi commit và push; user đã xác nhận từng lần.
 - [Chọn thuê VF6 cho chuyến Bình Liêu tháng 11](facts/chuyen-binh-lieu-thang-11-chon-vf6.md) - Người dùng đổi lựa chọn xe thuê cho chuyến Bình Liêu 6-8/11 sang VF6.
+- [Dùng Jira quản lý task và muốn nhắc log work hằng ngày](facts/jira-quan-ly-task-va-nhac-log-work.md) - Người dùng dùng Jira quản lý task và muốn được nhắc log work mỗi ngày làm việc.
