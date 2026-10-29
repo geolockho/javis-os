@@ -121,3 +121,4 @@
 - [Logo monogram kc và bỏ dark mode của kubeconfig-generator](facts/logo-monogram-kc-bo-dark-mode.md) - Ngày 2026-10-29 user chọn logo 3 (monogram kc) và bỏ dark mode, giao diện chỉ còn bản sáng.
 - [Link tải Lens trên trang download của kubeconfig-generator](facts/lens-tai-tren-trang-download-kubeconfig.md) - User yêu cầu thêm link tải Lens (Windows) ở trang /dl cho dev, Javis đã thêm nhưng chưa commit hay push.
 - [Chỉ commit và push kubeconfig-generator khi user xác nhận](facts/xac-nhan-truoc-khi-push-kubeconfig.md) - Javis sửa code trong workspace, sync sang repo, rồi hỏi trước khi commit và push; user đã xác nhận từng lần.
+- [Chọn thuê VF6 cho chuyến Bình Liêu tháng 11](facts/chuyen-binh-lieu-thang-11-chon-vf6.md) - Người dùng đổi lựa chọn xe thuê cho chuyến Bình Liêu 6-8/11 sang VF6.
