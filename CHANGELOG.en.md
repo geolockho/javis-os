@@ -8,6 +8,123 @@ English entries start at 0.66.0. Every earlier release is described in the Vietn
 
 Format: each release is a `## [x.y.z] - date` block, with changes grouped under `### Added / Fixed / Improved / Security`.
 
+## [0.396.0] - 2026-10-29
+### Improved
+- **Group chats now keep their latest 1,000 messages in the inbox, up from 100.** A busy group stays readable for days back. Private chats with customers still keep everything.
+- Messages already cut earlier do not come back; from now on a group fills up to 1,000 before the oldest start to go.
+
+## [0.394.0] - 2026-10-29
+### Fixed
+- **Switching to another app and back, a running turn no longer looks stopped.** Javis kept working on the server while you were away, but on reconnecting the chat removed the "Javis is thinking" line and did not show what had been written, so the command looked stopped until the finished answer popped up. The status line now comes back at once, with the text Javis wrote while you were away.
+- **Back in the app, a dead connection is noticed after about 20 seconds instead of up to 50,** so the chat catches up sooner on phones.
+
+## [0.393.0] - 2026-10-29
+### Fixed
+- **The phone menu opens again.** On iPhone, the menu button only dimmed the screen with no menu on it: Safari drew the menu while it slid in, then dropped it. The menu now slides in a way Safari does not mangle, and is fully hidden when shut.
+### Improved
+- On phones the **light/dark button** moves to the version row at the bottom of the menu, next to the sidebar collapse button.
+
+## [0.391.0] - 2026-10-29
+### Fixed
+- **The capability index `Javis/index.md` now updates itself in every brain**, not only Brain Default. A brain with no loop used to keep the file from the day it was created, so it still said "0 agents" after dozens were added, and an AI reading it to avoid duplicates was misled.
+- Adding, editing or deleting an agent, skill, workflow, loop or plugin updates the index within about 30 seconds, also when the AI writes the file itself. No more toggling a plugin to force a rebuild.
+- **Lighter than before:** Javis rebuilds only the brains that actually changed, so many brains do not slow the machine down.
+
+## [0.390.0] - 2026-10-29
+### Improved
+- **The Javis Store shows at most 3 columns of cards**, six full rows per 18-item page. Narrow screens still drop to 2 columns, phones to 1.
+- **Fewer tags on a card:** no kind tag (the open tab already says it) and no official or community tag. Only packs that run code get a small amber chip in the corner, beside the group chip, so the name fits on one line.
+- Refresh is no longer pushed past the edge on wide screens. The catalog time now shows when you hover the button.
+
+## [0.387.0] - 2026-10-29
+### Fixed
+- **Claude Code and Codex now really stay running between messages.** In 0.382.0 Javis thought the setup had changed after every message (Claude Code and Codex rewrite their sign-in file themselves), so it started them again each time. Measured again on the dashboard: the next message shows text after about 2 seconds instead of 8 to 14.
+- **Getting ready as you type now actually works** for both Claude Code and Codex, and covers a chat left idle for up to 12 hours (was 1 hour). Signing in or out makes Javis start them again on the new account.
+
+## [0.386.0] - 2026-10-28
+### Improved
+- **Javis Store on phones:** the six kind tabs become a dropdown, next to the group dropdown in one row that stays put while you scroll. Each choice shows its item count and new versions, in larger, easier to tap text. Computers keep the tabs.
+
+## [0.385.0] - 2026-10-28
+### Fixed
+- **Signing in to Claude on the Models page no longer says done and then falls back to "Not signed in".** The Claude CLI reports success even when it could not save the sign-in (on a Mac, a locked Keychain), and Javis took its word for it, so the card went back with no reason. Javis now checks right away and, if nothing was saved, says why and what to do.
+- Pasting a wrong code and then the right one no longer returns the first code's error. A refused code shows Claude's own reason on the card.
+
+## [0.384.0] - 2026-10-28
+### Improved
+- **A tidier Javis Store:** the repeated heading and intro lines are gone, and the tabs plus the Refresh and Install from .zip buttons share one row that **stays put while you scroll**. The group list moved to the right and stays put too.
+- **18 items per page**, with previous and next buttons. Moving to a page takes you to its first card.
+- **No more broken layout on phones:** the six tabs fit one row, groups are picked from a dropdown beside the search box, and Refresh and Install from .zip shrink to icons.
+
+## [0.382.0] - 2026-10-28
+### Improved
+- **Claude Code answers faster from the second message on.** Javis keeps Claude Code running between the messages of a chat instead of starting it again every time. Measured on a real machine: the next message went from about 10 seconds to about 4.
+- **Codex shows its answer as it writes** instead of making you wait for the whole paragraph. Codex is also kept running between messages, and Javis's rules go once per chat instead of with every message, so long chats no longer slow down.
+- Just start typing and Javis gets the brain ready again for a chat that has been idle over 5 minutes. How many stay ready is capped by the machine's free RAM; background work and customer bots run as before.
+
+## [0.381.0] - 2026-10-28
+### Improved
+- **Models** moves from the Connections group to the **System** group in the sidebar: choosing the AI brain is Javis's own setting, while Connections is for outside services.
+
+## [0.380.0] - 2026-10-28
+### Fixed
+- **Conversations list:** the number of messages in each chat is back (grey "12 msgs") next to the red unread count. The reply box drops its two notes, keeping only the warning that a personal account sends under your own name.
+- **A truer "Needs you":** opening a chat takes it off Needs you until the customer writes again. Friend-request notices ("accepted your friend request") do not count as a customer waiting. Chats of a nick that has an AI no longer offer "Create an AI for this channel".
+- **Channels tab:** a nick's groups and people come 20 a page (Previous / Next, "21-40 of 289") and the search covers every page. The channel list on the left stays in view while scrolling and has its own search.
+- A customer's emoji reaction is shown under the customer's name, no longer as "Bot reacted".
+
+## [0.379.0] - 2026-10-28
+### Fixed
+- **Allowing a Zalo Bot group now sticks.** Zalo Bot group ids look like `zgr-...` and were silently dropped: "Allow this group" said done, yet the group stayed "waiting for approval" and the bot never answered there. Thanks to @VQTPiano for the report and the fix (#875).
+
+## [0.378.0] - 2026-10-28
+### Fixed
+- **Customer bots with a long profile no longer go silent.** On a Linux server, a bot on the Claude plan whose prompt passed about 128 KB (a long assistant profile plus the customer context of each turn) could not start Claude, so the customer got no reply. The prompt now goes through a file, so any length works. Thanks to @QuanAMG for the report and diagnosis (#871).
+
+## [0.377.0] - 2026-10-28
+### Added
+- **Channels tab on the Chatbot page:** every Zalo nick, Page and Telegram bot grouped by channel with real logos. Pick the AI on duty for each with one dropdown; Cancel and Save appear only after a change. Also "No AI needed", "Put an AI on several Pages" at once, and an AI switch per group or person with Undo.
+- **Stats tab:** how many messages the AI and you answered, how long customers waited, against the period before, with bars by channel and by bot. Pick the period with a full date picker: today, last 7, 30 or 90 days, last month, week or month to date, or days on the calendar.
+- **Fuller Conversations filter:** Time (the same date picker), Last message by (customer, AI, you) and Pinned chats only. A list emptied by filters offers Clear right in the middle.
+
+### Fixed
+- Changing the bot on duty for a Page moves its existing chats to the new bot, so they no longer say "no bot". Switching the AI off in one chat that cannot be saved now says so instead of claiming it is done.
+## [0.376.0] - 2026-10-28
+### Improved
+- **Pin and speaker buttons under every answer.** The pin puts an answer into the conversation's contents (the marks rail on the right, the ≡ button on phones), marked with an orange pin, one click to jump back; pins are kept on the server so other devices see them. The speaker reads that answer aloud; press again to stop.
+- **No token count on the small line under an answer.** It now shows only the engine, the model and the context mode; the Usage page has the token numbers.
+- **The "Recommended repos" tab is now "Recommended".** A shorter name without the word "repos", one line on a phone. The card line now reads "Updated from the author".
+- **Clearer icons in the Javis Store.** The solid letter tiles are gone. Skills show the puzzle icon of the Skills page, workflows and tools their own icons, each card in its own light colour. Agents show an agent portrait like the Partners page. Packs with a real logo keep it.
+
+### Added
+- **Recommended gains 15 of the most popular skill sets**, each taken as the author wrote it and updated with them: Superpowers, GitNexus, REA, Matt Pocock's skills, Anthropic Skills, Vercel, planning with files, UI/UX Pro Max, Marketing Skills (52 skills), Humanizer, Claude for Marketing, Sales and Small Business, HyperFrames, Video Use. Already in the Javis Store, no app update needed.
+## [0.375.0] - 2026-10-28
+### Improved
+- **Javis now sets up a browser right after install.** If the machine has no Chrome or Edge, Javis downloads a compact Chromium (about 100 MB) in the background on first start, so nobody has to find the button on the Tools page. Javis stays usable while it downloads.
+- Machines that already have Chrome or Edge use it as is and download nothing. If you pressed Remove on the browser, Javis respects that and does not download it again.
+- To turn the automatic download off, set the environment variable `JAVIS_SKIP_BROWSER=1`.
+
+## [0.372.0] - 2026-10-28
+### Added
+- **New Conversations tab on the Chatbot page.** On a computer: customers, chat and an Info panel side by side. Each row's coloured edge says who is on it: Needs you, AI is handling, You are handling.
+- **Pick channels with checkboxes:** several Zalo nicks or Pages at once, each with its "Needs you" count. One **Filter** button holds tags, chat type, bot and status.
+- **"Who replies" bar under the customer's name:** AI replies, AI drafts and you approve, or I reply. Every change can be undone.
+- **"AI reply" button:** type an instruction ("quote 20 cases wholesale") and the AI writes the reply as a draft you edit before sending. The Info panel keeps a note on the customer.
+
+## [0.371.0] - 2026-10-28
+### Added
+- **Groundwork for the new Chatbot page** (the screen itself comes in the next release). Every chat now has one shared state: AI is handling it, You are handling it, Needs you, or Only logged.
+- **New "AI drafts, I approve" mode:** the bot writes its reply but does not send it; it waits for you to Send, Rewrite or Drop.
+- **Switch the AI off in a single chat** without changing the whole bot, and **give the AI an instruction** (for example "quote 20 cases wholesale") to write the reply to the customer.
+
+## [0.370.0] - 2026-10-28
+### Added
+- **Recommended repos in the Javis Store.** A new first tab in the Store with skill sets copied word for word from the author's own GitHub repo, nothing translated or changed. Each card links to the source repo with the day the latest version was taken. The store compares them with the source every day: when the author changes a skill the pack gets a new version, Javis tells you in the bell and you press Update. Skills you edited yourself are kept.
+- **The first two:** Remotion (12 official skills for making videos in React: new projects, animation, captions, maps, rendering) and Lemo-Opuscar (short films made entirely in code, in 59 styles).
+
+### Improved
+- **Skills that ship their own files work on every engine.** A skill with `scripts/` or `references/` now tells the model its folder when it is loaded, as Claude Code does, so the model finds those files instead of guessing.
+
 ## [0.369.0] - 2026-10-28
 ### Fixed
 - **Download in the picture viewer on an iPhone now saves the picture.** It used to only open the picture in a new page. It now opens the iPhone share sheet, where "Save Image" puts it straight into Photos. After swiping to another picture, Download saves the one on screen.

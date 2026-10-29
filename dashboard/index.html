@@ -32,8 +32,8 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=148">
-  <link rel="stylesheet" href="/static/console.css?v=125">
+  <link rel="stylesheet" href="/static/style.css?v=149">
+  <link rel="stylesheet" href="/static/console.css?v=127">
   <!-- Áp tông đã lưu TRƯỚC khi vẽ để không nháy tối rồi mới đổi sang sáng.
        Giá trị cũ "dim" (tông tối-nhạt, gỡ ở 0.9.250) quy về tối; theme.js sẽ ghi đè lại.
        Chế độ "auto" (0.74.0, mặc định khi chưa chọn gì từ 0.75.1) tính theo khung giờ "HH:MM-HH:MM", cùng quy tắc với lightAt() trong
@@ -817,15 +817,6 @@
           </div>
           <div id="wzProvHint"></div>
         </div>
-        <!-- Công cụ tuỳ chọn: hỏi NGAY LÚC ĐẦU như trình cài của Hermes, thay vì để người
-             dùng tự phát hiện ra mình thiếu vài tuần sau. Khối này tự ẩn nếu máy đã có sẵn. -->
-        <div id="wzCongCu" style="display:none;margin-top:14px">
-          <label data-i18n="wz.ct_head">Công cụ tuỳ chọn</label>
-          <label class="wz-ct-dong" style="display:flex;gap:9px;align-items:flex-start;font-weight:400;cursor:pointer">
-            <input type="checkbox" id="wzCtBrowser" style="margin-top:3px;width:auto">
-            <span data-i18n="wz.ct_browser">Cài trình duyệt để Javis tự kiểm thử giao diện sau khi sửa code (khoảng 100 MB, tải ở nền)</span>
-          </label>
-        </div>
         <div class="set-actions"><button class="s-btn" id="wzFinish" data-i18n="wz.start">Bắt đầu dùng Javis →</button></div>
         <div class="auth-err" id="wzErr"></div>
       </div>
@@ -993,7 +984,7 @@
        diện. Phải nạp TRƯỚC app.js (sendMessage gọi window.JavisLenh) và SAU chat-slash.js (đọc menu). -->
   <script src="/static/chat-goal.js?v=1"></script>
   <script src="/static/chat-lenh.js?v=2"></script>
-  <script src="/static/chat-acts.js?v=5"></script>
+  <script src="/static/chat-acts.js?v=6"></script>
   <!-- One POST /upload with progress and stall watch, shared by the main chat and the Team chat (app.js, teams.js). -->
   <script src="/static/chat-upload.js?v=1"></script>
   <!-- Stick to the latest message, the jump button and its "New messages" pill, shared by app.js and teams.js. -->
@@ -1006,7 +997,7 @@
   <!-- Vuốt tin sang trái để trích dẫn trên điện thoại (0.216.0): nạp TRƯỚC chat-reactions.js. -->
   <script src="/static/msg-swipe.js?v=1"></script>
   <script src="/static/chat-reactions.js?v=7"></script>
-  <script src="/static/chat-marks.js?v=4"></script>
+  <script src="/static/chat-marks.js?v=5"></script>
   <!-- Khối tiến trình từng bước trong khung chat: phải đứng TRƯỚC app.js vì app.js gọi
        window.JavisSteps ngay khi khung tool_call đầu tiên về. -->
   <script src="/static/chat-steps.js?v=2"></script>
@@ -1026,7 +1017,7 @@
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/incoming-call.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
-  <script src="/static/app.js?v=155"></script>
+  <script src="/static/app.js?v=156"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
   <!-- Thân bảng chọn model dùng chung: phải đứng TRƯỚC model-picker.js (thanh chat) và
@@ -1061,7 +1052,7 @@
   <!-- Tag filter bar and tag picker shared by Cộng sự and Team (0.195.0): load BEFORE workspace.js and teams.js. -->
   <script src="/static/tag-picker.js?v=1"></script>
   <script src="/static/workspace.js?v=33"></script>
-  <script src="/static/packs.js?v=2"></script>
+  <script src="/static/packs.js?v=4"></script>
   <!-- Hộp chọn thành viên kiểu Zalo (0.142.0): nạp TRƯỚC teams.js, teams.js gọi window.JavisTeamPicker. -->
   <script src="/static/team-picker.js?v=1"></script>
   <!-- Bộ phán xử nói / chờ / im của từng trợ lý (T3 phần J 0.156.0): lịch sử quyết định và nút sửa. Nạp TRƯỚC teams.js
@@ -1073,11 +1064,16 @@
   <script src="/static/teams.js?v=20"></script>
   <script src="/static/chatbots-reply-policy.js?v=1"></script>
   <script src="/static/chatbots-try.js?v=1"></script>
-  <script src="/static/chatbots.js?v=19"></script>
+  <script src="/static/chatbots.js?v=20"></script>
   <!-- Trang Hội thoại (hộp thư khách): nạp TRƯỚC console.js để renderConversations uỷ quyền được. -->
-  <script src="/static/conversations-filters.js?v=4"></script>
+  <script src="/static/conversations-filters.js?v=6"></script>
+  <script src="/static/date-range.js?v=1"></script>
+  <script src="/static/inbox-v5.js?v=3"></script>
+  <script src="/static/inbox-channels.js?v=3"></script>
+  <script src="/static/inbox-stats.js?v=2"></script>
+  <link rel="stylesheet" href="/static/inbox-v5.css?v=8">
   <script src="/static/ht-media.js?v=3"></script>
-  <script src="/static/conversations.js?v=16"></script>
+  <script src="/static/conversations.js?v=24"></script>
   <!-- Dashboard Token (trang Mức dùng nâng cấp): nạp TRƯỚC console.js để renderUsage ủy quyền được. -->
   <script src="/static/usage.js?v=3"></script>
   <!-- Trang Code (terminal): nạp TRƯỚC console.js để renderCode ủy quyền được. File này CHỈ có
@@ -1100,7 +1096,7 @@
   <script src="/static/login-vault.js?v=2"></script>
   <script src="/static/messenger-connect.js?v=3"></script>
   <script src="/static/voice-catalog.js?v=1"></script>
-  <script src="/static/console.js?v=199"></script>
+  <script src="/static/console.js?v=200"></script>
   <script src="/static/mobile-chat.js?v=15"></script>
   <script src="/static/brain-view.js?v=1"></script>
   <script src="/static/push.js?v=3"></script>

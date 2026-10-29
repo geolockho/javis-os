@@ -10,7 +10,7 @@ Since 0.61.0 this page also holds the Chatbots: **one item on the rail, three ta
 
 Left navigation, group **Capabilities**, item **Conversations**. Inside, three tabs:
 
-- **Inbox**: every customer message, read back, take over, reply.
+- **Conversations**: every customer message, who is handling which chat, reply, let the AI draft.
 - **Channels**: every account customers write to (Telegram bots, Zalo bots, personal Zalo...), add accounts, turn recording on.
 - **Chatbots**: the AI staff on duty for those accounts. See [Chatbots](25-chatbots.md).
 
@@ -29,38 +29,99 @@ Four concepts, read once and never guess again:
 
 Underneath, every channel normalizes its messages into **one common event** and writes into one store: channel account, customer, conversation, message. The inbox never needs to know whether a message came from Telegram or Zalo.
 
-## The Inbox tab
+## The Conversations tab
 
-Since 0.65.10 the top is compact so the working area takes most of the screen: the **Chatbot** title, the two tabs, the search box and the filter row sit on top, and the list and the message pane fill the rest, each scrolling on its own with the reply box pinned at the bottom. The four number cards and the subtitle are gone. The **unread** count still shows as a badge on the tab, and "handled by a human" is available in the **Status** filter.
+Since 0.372.0 (Chatbot v5) a computer shows **three columns**: the customers on the left, the chat in the middle and the **Info** panel on the right (it can be closed; below 1200px wide it slides over the chat when you press **Info**). A phone shows one column: the list, tap to open a chat, the ⓘ button opens Info.
 
-The left column lists conversations, newest first. Each row: the customer (or group) name, the channel logo, the last message, the time, and the unread count. There is a search box for names or text, channel chips (shown only once two channels exist) and a bot selector (shown only once two bots exist).
+**Who is handling this chat.** The server works out one state per chat and every part of the page reads it:
 
-**Groups keep only the latest 100 messages** (since 0.65.12). The inbox stores every message of private chats with customers, but each **group** keeps just its 100 newest; older ones are deleted as new ones arrive. This keeps the store from growing forever and stops Javis from holding strangers' words longer than needed (a personal Zalo account in many groups records even groups the bot is not allowed to answer in). The first time after updating, existing groups with more than 100 messages are cut down to 100; Javis **backs up the whole store file once** before cutting (a `customer_conversations.sqlite3.bak-truoc-cat-nhom-...` file next to the store) and **deletes that backup after 14 days**. To get the cut messages back, copy the backup over the store file within those 14 days. A conversation's "messages ever received" counter does not go down.
+| Colour | Name | When |
+|---|---|---|
+| yellow | **Needs you** | a customer waits with nobody on it, someone called the AI in a group you have not allowed yet, the AI wrote a draft waiting for you |
+| violet | **AI is handling** | the AI may answer here and the bot is running |
+| blue | **You are handling** | you chose I reply and the customer is not waiting |
+| grey | **Logged only** | the AI does not answer here (not allowed, no bot, bot off) and nobody waits |
 
-**Loads gradually, no lag** (since 0.65.11). The list loads the first 40 rows; scrolling near the bottom loads 40 more (or press **Show more**), and the counter reads "40+ conversations" until it runs out. The message pane works the same way: opening a conversation loads only the **latest** 40 messages, scrolling up near the top (or pressing **Show older messages**) loads 40 older ones and keeps your place. Every 5 seconds Javis only asks for messages **newer than the last one** and appends them; if you are reading older messages when a new one arrives the pane stays still instead of jumping to the top.
+Each row has a **left edge** in that colour, an avatar with the **channel's logo** in its corner, the name, the time, the last message (with "AI:" or "You:" in front), the unread count, up to two tags plus "+n", and the nick or Page name when several are in view. Hovering a row says in one sentence what is going on.
 
-Click a conversation and its history opens on the right: customer messages on the left, bot replies and messages you sent from your phone on the right. A failed bot turn sits there too, with its technical reason, so you can tell "the bot answered wrong" from "the bot is broken".
+At the top of the left column:
 
-On a phone the page is one column: tap a conversation to open its history, with a back button. The page refreshes itself every few seconds.
+- **Channel picker**: opens the list of nicks and Pages with checkboxes, grouped by channel with real logos. Ticking a channel ticks all of it; each one shows its **Needs you** count. Nothing ticked means everything. It has a search box, **Clear**, **Done** and **Manage channels**.
+- **Search** (name, phone number, text) and the **Filter** button: a two-level menu with Time (when the last message came: today, last 7, 30 or 90 days, last month, week or month to date, or days picked on the calendar), Has tag, Without tag, Chat type, Answering bot, Status (unread, waiting longest, hidden), Last message by (customer, AI, you) and Customer info (left a phone or email, pinned chats only). Active filters show as chips with an x underneath.
+- **Four quick filters**: Needs you · AI is handling · You are handling · All, with counts. The page first opens on **Needs you**; when nothing needs you it says so, with **Show all**.
 
-## Reply, take over and hand back
+Every choice is remembered in the browser. The number on the **Conversations** tab is the **Needs you** count.
 
-At the bottom of a conversation is a compose box: type and press **Enter** to send (Shift+Enter for a new line). The message goes out through the chat's own channel: a Telegram or Zalo bot sends with that account's token, personal Zalo sends through the very account you scanned, **under your own name** (the compose box says so). A channel that cannot send from Javis yet shows a line saying so instead of the box.
+**"A customer waits"** (one reason for Needs you): the customer wrote last, nobody answered, **you have not opened the chat since** (opening it takes it off Needs you until the customer writes again), and the message is more than a friend-request notice ("accepted your friend request").
 
-Sending from here in a chat that has a bot **takes the chat over**: the bot stays quiet with this customer until you press **Hand back to AI**. Otherwise the customer would read two voices at once. The **Take over** button at the top of the conversation does the same without sending anything; after pressing it you can also reply in the channel's own app.
+**Groups keep only the latest 1,000 messages** (since 0.396.0; 100 from 0.65.12 until then). The inbox stores every message of private chats with customers, but each **group** keeps just its 1,000 newest; older ones are deleted as new ones arrive. This keeps the store from growing forever and stops Javis from holding strangers' words longer than needed (a personal Zalo account in many groups records even groups the bot is not allowed to answer in). The first time after updating to 0.65.12, existing groups with more than 100 messages were cut down to 100 (those messages do not come back with the raise to 1,000); Javis **backs up the whole store file once** before cutting (a `customer_conversations.sqlite3.bak-truoc-cat-nhom-...` file next to the store) and **deletes that backup after 14 days**. To get the cut messages back, copy the backup over the store file within those 14 days. A conversation's "messages ever received" counter does not go down.
+
+**Loads gradually, no lag** (since 0.65.11). The list loads the first 40 rows; scrolling near the bottom loads 40 more (or press **Show more**). The message pane works the same way: opening a conversation loads only the **latest** 40 messages, scrolling up near the top (or pressing **Show older messages**) loads 40 older ones and keeps your place. Every 5 seconds Javis only asks for messages **newer than the last one** and appends them; if you are reading older messages when a new one arrives the pane stays still.
+
+Click a conversation and its history opens in the middle: customer messages on the left, AI replies (labelled "AI · bot name") and yours on the right. A failed bot turn sits there too, with its technical reason, so you can tell "the bot answered wrong" from "the bot is broken". The page refreshes itself every few seconds.
+
+## Who replies: the bar under the customer's name
+
+The bar has the colour of the chat's state and always **one sentence** about what is going on (for example "The AI wrote a reply and waits for you to approve it"). Next to it, the controls that fit:
+
+- **The AI may answer here**: three modes, **AI replies**, **AI drafts, I approve**, **I reply**. In I reply there is also **Hand back to the AI**.
+- **Not allowed yet**: **Let the AI answer here**. The bot keeps who it answers everywhere else.
+- **Someone called the AI in a group not allowed yet**: **Allow** or **Dismiss**.
+- **The channel has no bot**: **Create an AI for this channel** opens the bot form with that account ticked.
+
+Every change shows a line at the bottom of the screen with **Undo**.
+
+**AI drafts, I approve** (new in 0.371.0): the bot's turn runs as usual but its reply is **not sent**. It waits in a **dashed box** above the compose box and the chat moves to Needs you. Edit it if needed, then **Send** (logged in the inbox as the AI's words), **Rewrite** or **Discard**. A newer customer message replaces a draft not approved yet. Changing the mode keeps a waiting draft; replying by hand drops it.
+
+**Switch the AI off in one chat only**: choose "The AI does not answer here" in the Info panel. Only that chat goes quiet.
+
+## Replying, and the "AI reply" button
+
+The compose box has two buttons:
+
+- **Send**: sends your text as it is. **Enter** sends, Shift+Enter adds a line.
+- **AI reply**: what you typed is an **instruction for the AI**, for example "quote 20 cases wholesale, delivery Thursday". The AI writes a polite reply in the dashed box, naming your instruction, with Discard / Rewrite / Send. With an empty box it reads the chat and writes on its own. **It never sends by itself.** The instruction is read by the AI only and never lands in the inbox.
+
+Under the last customer message, a **"Bot silent: reason"** line appears when the reply policy logged one (for example "Score below threshold (0.52 / 0.60)"), with **Why** opening that bot's reply policy panel, and **Ask the AI to answer this**: the AI answers that message now and sends it, the chat stays in AI replies. If the policy had stayed silent on it, the bot also **learns one more case**. If sending fails after the AI wrote the reply, the text lands in the compose box for you to send by hand.
+
+The message goes out through the chat's own channel: a Telegram or Zalo bot sends with that account's token, personal Zalo sends through the very account you scanned, **under your own name** (the compose box says so). A channel that cannot send from Javis yet shows a line saying so instead of the box.
+
+Sending by hand in a chat in **AI replies** **takes the chat over**: the AI stays quiet with this customer until you pick AI replies again. Otherwise the customer would read two voices at once. Choosing **I reply** does the same without sending anything; after that you can also reply in the channel's own app.
 
 Two things to know:
 
-- A bot turn already in progress when you press Take over still sends its reply. Cutting off a message mid-send is more confusing for the customer.
+- A bot turn already in progress when you take over still sends its reply. Cutting off a message mid-send is more confusing for the customer.
 - Takeover is **per chat**, not a bot switch. Other customers keep getting bot replies.
 
+## The Info panel
+
+- **Customer**: name, nick or Page, the phone or email they left, **tags** (add, remove, create on the spot) and a **note** only you see (saved when you click out of the box; it belongs to the customer, so their other chats show it too).
+- **AI in this chat**: who replies (off here, or one of the three modes); for groups **the AI speaks up when** (called by name, it sees a need, every message); **when you type yourself, the AI waits** how long. The last two are settings of the whole bot, and the panel says so. A link opens the bot's settings.
+- **Channel**: the logo, the channel and the nick or Page.
+
 ## The Channels tab
+
+Since 0.377.0 every nick and Page lives on the **Channels** tab. On the left: **Connect a new channel**, the **See every brain** switch, then each channel with its real logo and its nicks or Pages; each row says which AI is on duty (or "No AI yet", "No AI needed") and how many chats need you. A channel with two or more places offers **Put an AI on several Pages**: tick them, pick a bot, Save.
+
+Pick a nick or Page and the right side shows:
+
+- **AI on duty for this Page**: one bot dropdown. **Cancel** and **Save** appear only after a change; nothing changes before Save. **No AI needed** means the place is only logged and no longer counts as a job on the tab. Changing the bot moves the place's existing chats to the new bot. A bot left with nothing to serve is switched off, and Javis says so.
+- **The account card**: state, record switch, import history, edit, delete (described below).
+- **Groups and people**: one **AI here** switch per chat, a sentence on who is handling it, **Allow** when someone called the AI in a group not allowed yet, and **Open chat**. Every change can be undone.
+
+The number on the Channels tab counts the places that need you: an account in error, or one with no bot that you did not mark "No AI needed".
+
+## The Stats tab
+
+Press the period button to open the date picker: a quick range (today, yesterday, last 7, 30 or 90 days, last month, week or month to date) or a start and end day on the calendar, then **Apply**. Javis remembers the period you looked at last. Four tiles: AI answered, You answered (messages sent from Javis), Average customer wait (from a customer message to its first answer), Waiting for you (opens the Needs you list). Each compares with the period before of the same length. Below, two bar lists: AI answers by channel and by bot. Numbers come from the Javis inbox.
+
+## The account card
 
 Every account customers write to appears as **the same kind of card**, whatever the channel: channel logo and name, account name, state (running, off, error with the reason), the bot on duty, conversation and unread counts, and the channel's capabilities (groups, files, reply from Javis). No channel gets its own section, Zalo included. A channel added later simply shows up as one more card.
 
 Two kinds of account, differing in how you get them, not in how they look:
 
-**Bot accounts** (Telegram, Zalo Bot) are a token. Press **Add account**, pick the channel type, paste the token, press **Check** so Javis asks the right platform which bot it is, give it a display name and Save. A bot account records into the inbox while the bot serving it is enabled; with no bot on duty the card says so and offers **Create a bot**, which opens the form on the Chatbots tab with that account ticked. It can be deleted once no bot serves it; recorded conversations stay.
+**Bot accounts** (Telegram, Zalo Bot) are a token. Press **Add account**, pick the channel type, paste the token, press **Check** so Javis asks the right platform which bot it is, give it a display name and Save. A bot account records into the inbox while the bot serving it is enabled; with no bot on duty the card says so and offers **Create a bot**, which opens the form on the Bot tab with that account ticked. It can be deleted once no bot serves it; recorded conversations stay.
 
 **Your own accounts** (personal Zalo) come from the **Connections** page (QR scan in Zalo Agent MCP) and appear here with a **Record conversations** switch. Turn it on and Javis reads new messages every 20 seconds through the MCP and writes them into the inbox. Three plain facts about this channel:
 

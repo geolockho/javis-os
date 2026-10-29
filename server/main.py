@@ -92,6 +92,7 @@ import purge          # xoá kết nối cho sạch: chủ sở hữu duy nhất
 import core_off       # năng lực MẶC ĐỊNH gỡ được: trạng thái ghi ở STATE_DIR, không sửa cây code
 import packs          # GÓI mở rộng: thả thư mục vào STATE_DIR/packs là có thêm connector
 import cred_exchange   # đổi credential hộ user (vd App Password -> Google master token) khi đấu
+import ops_index_watch   # keeps every brain's Javis/index.md current, cheaply
 import plugins_host   # hệ PLUGIN: thư mục Python thả vào, tự thêm tool/hook cho mọi engine qua hub
 import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API cục bộ
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
@@ -200,6 +201,8 @@ import voice_ear     # tai nghe lại: model đa ngôn ngữ nghe âm thanh rồ
 import agent_notify  # 0.205.0: unread and mute for private partner chats
 import steer_inbox  # 0.206.0: messages the owner sends while a turn runs
 import codex_steer  # 0.213.0: Codex chat turns on app-server take those messages mid-way
+import warm_pool  # 0.382.0: engine processes kept warm between the owner's chat turns
+import claude_warm  # 0.382.0: Claude Code chat turns on a warm process
 import codex_realtime  # ChatGPT Live: một Codex app-server sống lâu, realtime trên gói ChatGPT (0.65.17)
 import voice_call     # nút mic là gọi Javis: tự chọn ChatGPT Live / Live API / Cơ bản (0.65.18)
 
@@ -3015,6 +3018,42 @@ async def _claude_sub_doc(cli, prompt, model):
             yield {"type": "error", "content": str(ev.get("content") or localefmt.chu("lỗi không rõ", "unknown error"))}
 
 
+def _sdk_has_system_prompt_file() -> bool:
+    """Whether the installed claude-agent-sdk maps `{"type": "file"}` to --system-prompt-file."""
+    try:
+        from claude_agent_sdk import types as _sdk_types
+        return hasattr(_sdk_types, "SystemPromptFile")
+    except Exception:  # noqa: BLE001 - no SDK: the caller keeps the inline prompt
+        return False
+
+
+def _raw_prompt_through_file(cli):
+    """Send a raw (no preset) system prompt as --system-prompt-file instead of one argv entry (#871, 0.378.0).
+
+    The raw branch of `ClaudeSDK._options` hands the prompt to the SDK as a string, which becomes
+    `--system-prompt <text>`: ONE argument, and Linux caps one argument at MAX_ARG_STRLEN = 131,072
+    bytes whatever ARG_MAX says. A dedicated bot with a long agent file plus per-turn context crossed
+    it and every turn died with "[Errno 7] Argument list too long". The file keeps the raw semantics
+    (no claude_code preset, so the token savings stay).
+
+    Wraps this instance's `_options` instead of editing claude_sdk_engine.py: that file is pinned by
+    the native qualification evidence (plan_limits.py wraps it from outside for the same reason). The file is written with
+    the engine's own helper, so its usual cleanup after the turn removes it.
+    """
+    if not _sdk_has_system_prompt_file():
+        return cli
+    base = cli._options
+
+    def _options():
+        opts = base()
+        sp = getattr(opts, "system_prompt", None)
+        if isinstance(sp, str) and sp:
+            opts.system_prompt = {"type": "file", "path": cli._write_sysprompt_file(sp)}
+        return opts
+    cli._options = _options
+    return cli
+
+
 def _claude_sub_stream(model, messages, reasoning="off", *, brain=None, tag="chat",
                        tiet_kiem=False):
     """Gói Claude Code, KHÔNG tool - thay cho đường gọi thẳng /v1/messages bằng token OAuth.
@@ -3032,6 +3071,8 @@ def _claude_sub_stream(model, messages, reasoning="off", *, brain=None, tag="cha
                         tag=tag, allowed_tools=CLAUDE_SUB_KHONG_TOOL,
                         model=_claude_api_model(model) or None)
     cli.system_prompt_raw = bool(tiet_kiem)
+    if cli.system_prompt_raw:
+        _raw_prompt_through_file(cli)
     # 0.345.0: no tool may run here (CLAUDE_SUB_KHONG_TOOL), yet Claude Code still sent every tool
     # schema and the skill list: measured 27,665 input tokens for "chào em" on the fast path. "*"
     # takes them all out of the request, tools added by future Claude Code versions included
@@ -4583,6 +4624,7 @@ def oauth_openai_disconnect():
         _sync_legacy_engine(cfg["model"])
     cfgmod.write_settings(cfg)
     openai_oauth.disconnect()
+    warm_pool.POOL.drop_kind("codex")   # 0.387.0: a warm app-server keeps the login it started with
     try:
         connect_health.probe_engines()   # ngắt chủ động → đèn đổi ngay theo Main Model mới
     except Exception:
@@ -5011,6 +5053,7 @@ async def grok_check(brain: str = "brain"):
 
 @app.post("/claude/login")
 def claude_login():
+    warm_pool.POOL.drop_kind("claude")   # 0.387.0: a warm `claude` keeps the login it started with
     return claude_auth_login()
 
 
@@ -5025,6 +5068,7 @@ def claude_login_code(code: str = Form("")):
     """Nhận code user dán sau khi mở link đăng nhập."""
     d = auth_login_ui_code(code)
     if d.get("ok"):
+        warm_pool.POOL.drop_kind("claude")   # 0.387.0: a warm `claude` keeps the login it started with
         # Vừa đăng nhập xong: đèn báo não phải xanh NGAY, không chờ vòng probe 10 phút
         # (banner 'chưa kết nối Model AI' treo sau khi đã kết nối là lỗi khách báo 27/08).
         connect_health.engine_reconnected("claude")
@@ -5034,6 +5078,7 @@ def claude_login_code(code: str = Form("")):
 @app.post("/claude/logout")
 def claude_logout():
     d = claude_auth_logout()
+    warm_pool.POOL.drop_kind("claude")   # 0.387.0: a warm `claude` keeps the login it started with
     try:
         connect_health.probe_engines()   # ngắt chủ động → đèn phải đổi ngay, khỏi chờ vòng quét
     except Exception:
@@ -13571,6 +13616,48 @@ def rebuild_javis_index(brain: str) -> dict:
         return {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
 
+def _ops_index_signature(root: str) -> str:
+    return ops_index_watch.brain_signature(root, _agents_dir(root), _workflows_dir(root),
+                                           plugins_host.vault_plugins_dir(root))
+
+
+_OPS_INDEX_WATCH = ops_index_watch.IndexWatcher(
+    signature_of=_ops_index_signature, rebuild=rebuild_javis_index,
+    shared_signature=plugins_host.shared_signature)
+
+
+def _ops_index_brains() -> list:
+    """Every brain whose Javis/index.md the scheduler keeps current, as resolved roots (one entry per brain).
+
+    The folders in BRAINS_DIR that are real brains (they have Javis/), plus the brains the loop scheduler knows,
+    which may live outside BRAINS_DIR. Before 0.389.0 only the second list was swept, so a brain with no loop kept
+    the index from the day it was created."""
+    cands = []
+    try:
+        cands += [str(p) for p in sorted(Path(BRAINS_DIR).iterdir())
+                  if p.is_dir() and not p.name.startswith(".") and (p / "Javis").is_dir()]
+    except OSError:
+        pass
+    try:
+        cands += [_brain_root(b) for b in loop_feature.scheduler_brains()]
+    except Exception:
+        pass
+    out, seen = [], set()
+    for c in cands:
+        try:
+            rp = str(Path(c).resolve())
+        except OSError:
+            continue
+        if rp not in seen and os.path.isdir(rp):
+            seen.add(rp)
+            out.append(rp)
+    return out
+
+
+def _ops_index_sweep() -> list:
+    return _OPS_INDEX_WATCH.sweep(_ops_index_brains())
+
+
 def _dong_lan_chay_gan_nhat(brain) -> str:
     """Một dòng cho system prompt: lần chạy quy trình gần nhất của brain, rỗng nếu chưa có.
     Nhờ dòng này, hỏi "quy trình chạy gần nhất ra sao" ở khung chat chính là Javis biết ngay
@@ -13840,10 +13927,10 @@ async def _start_scheduler():
                             await asyncio.to_thread(_do_backup)   # 1 lần: toàn bộ thư mục brains, 2 chiều
                 except Exception as be:
                     print(f"[backup tick] {type(be).__name__}: {be}", file=__import__('sys').stderr)
-                # 5) Javis index: dựng lại chỉ mục tầng vận hành (chỉ ghi khi đổi → không churn)
+                # 5) Javis index: every brain, but only the ones whose agents/skills/workflows/loops/plugins
+                #    changed on disk (stat-only signature, see ops_index_watch), a few per tick.
                 try:
-                    for _ib in loop_feature.scheduler_brains():
-                        await asyncio.to_thread(rebuild_javis_index, _ib)
+                    await asyncio.to_thread(_ops_index_sweep)
                 except Exception as ie:
                     print(f"[javis index tick] {type(ie).__name__}: {ie}", file=__import__('sys').stderr)
                 # 6) Dọn media quá hạn: attachments/ + inbox/ là VÙNG CACHE chứ không phải
@@ -16694,6 +16781,26 @@ async def websocket_endpoint(ws: WebSocket):
             # `_route`, `_tried`, `_hops_left` (0.354.0): run_turn reruns the turn on the next route after a quota error
             # that came before any output (_chat_next_route); `_hops_left` 0 means this run may not hand over.
             ws = _SendProxy(conv_sid, runtime_trace)  # các nhánh engine bên dưới dùng ws proxy này
+            _t_turn0 = time.monotonic()
+            _first_out = {}
+
+            def _note_first_output(engine_name, warm=None):
+                """0.382.0: how long the owner waited for the engine's first sign of life (text, tool or error), and
+                whether a warm process served it. Once per turn; the numbers behind the speed work."""
+                if "ms" in _first_out:
+                    if warm is not None:
+                        _first_out["warm"] = warm
+                    return
+                _first_out["ms"] = int((time.monotonic() - _t_turn0) * 1000)
+                _first_out.setdefault("warm", bool(warm))
+                try:
+                    _CONTEXT_RUNTIME.record_runtime_event(
+                        runtime_trace, "engine.first_output",
+                        {"engine": engine_name, "ms": _first_out["ms"], "warm": _first_out["warm"]})
+                except Exception:  # noqa: BLE001 - a timing note must never break a turn
+                    pass
+                print(f"[turn timing] {conv_sid[:12]} engine={engine_name} first_output_ms={_first_out['ms']} "
+                      f"warm={_first_out['warm']}", file=sys.stderr)
             # 0.190.0: what the brain's memory looks like before the turn, for the "Đã nhớ · Hoàn tác" line and the
             # empty-claim check after it (memory_receipt).
             try:
@@ -17169,6 +17276,7 @@ async def websocket_endpoint(ws: WebSocket):
                 # dùng được skill. Mỗi hội thoại dashboard giữ riêng codex_thread_id để resume.
                 ccli = CodexCLI(cwd=_cwd_luot_chat(_row0, brain), model=actual_model, tag=turn_tag, instructions=sysprompt)
                 ccli.steer = True   # 0.213.0: the chat engine takes messages mid-way (codex_steer.py)
+                ccli.warm_key = conv_sid   # 0.382.0: keep app-server and the thread for the next turn (warm_pool)
                 # Hub vẫn trỏ BRAIN kể cả khi cwd là repo: MCP, cron và nhắc hẹn thuộc về bộ
                 # não của người dùng, không thuộc về cây mã nguồn đang mở.
                 _apply_codex_hub(ccli, _brain_root(brain))   # MCP + đúng brain cho cron/nhắc hẹn
@@ -17237,6 +17345,10 @@ async def websocket_endpoint(ws: WebSocket):
                         dang_chay = set()   # id các bước Codex đã báo bắt đầu, chưa báo xong
                         async for ev in ccli.query(prompt):
                             et = ev["type"]
+                            if et == "session":
+                                _first_out["warm"] = bool(ev.get("warm"))
+                            else:
+                                _note_first_output("codex", _first_out.get("warm"))
                             if et == "session":
                                 if ev.get("session_id"):
                                     store.set_codex_thread_id(conv_sid, ev["session_id"])
@@ -17743,8 +17855,12 @@ async def websocket_endpoint(ws: WebSocket):
                     """Một lần gọi `claude`. Trả True nếu mạch cũ không còn (resume trượt)."""
                     nonlocal final_text, _streamed, _cli_sid, _cost, _ctx_in, _ctx_cache, _cli_err
                     resume_failed = False
-                    async for event in cli.query(prompt):
+                    async for event in claude_warm.query(cli, prompt, conv_sid):
                         etype = event["type"]
+                        if etype == "warm":
+                            _first_out["warm"] = bool(event.get("warm"))
+                            continue
+                        _note_first_output("claude-code", _first_out.get("warm"))
                         if etype in ("tool_call", "tool_result"):
                             _resonance_note_write(conv_sid, user_mid, brain, event)
                             if etype == "tool_call":
@@ -18643,6 +18759,11 @@ async def websocket_endpoint(ws: WebSocket):
             action = payload.get("action")
             if action == "reset":
                 continue                        # client tự quản phiên; reset KHÔNG còn giết lượt nào
+            if action == "typing":
+                # 0.382.0: the owner started typing. Reopen this conversation's engine process if it was closed for
+                # being idle, so the message lands on a warm one (warm_pool.prewarm; bounded by the same budget).
+                warm_pool.POOL.prewarm(str(payload.get("session_id") or ""))
+                continue
             if action == "ping":
                 # Trang hỏi "còn sống không" sau một quãng im (0.85.11): socket chết mà không đóng thì
                 # không có pong, trang bỏ socket đó và nối lại. Xem _checkSocket trong app.js.
@@ -19258,15 +19379,52 @@ async def sessions_messages(session_id: str, limit: int = Query(30),
 
 
 def _gan_reaction(store, session_id, msgs) -> None:
-    """T2: mỗi tin đã có `content_sha` (kho phiên); tin `assistant` thêm `reaction` (khuôn R của hợp đồng hay null)."""
+    """T2: mỗi tin đã có `content_sha` (kho phiên); tin `assistant` thêm `reaction` (khuôn R của hợp đồng hay null).
+    0.374.0: và `pinned` (đã ghim vào mục lục của cuộc chat hay chưa)."""
+    ids = [m["id"] for m in msgs if m.get("role") == "assistant"]
     try:
-        got = store.dm_reactions_for(session_id, [m["id"] for m in msgs if m.get("role") == "assistant"])
+        got = store.dm_reactions_for(session_id, ids)
     except Exception as _e:   # noqa: BLE001
         print(f"[dm reactions] {type(_e).__name__}: {_e}", file=sys.stderr)
         got = {}
+    try:
+        ghim = store.pinned_message_ids(session_id, ids)
+    except Exception as _e:   # noqa: BLE001 - a broken pin read never hides the chat
+        print(f"[message pins] {type(_e).__name__}: {_e}", file=sys.stderr)
+        ghim = set()
     for m in msgs:
         if m.get("role") == "assistant":
             m["reaction"] = reaction_values.public(got.get(int(m["id"])))
+            m["pinned"] = int(m["id"]) in ghim
+
+
+@app.post("/sessions/{session_id}/messages/{message_id}/pin")
+async def sessions_message_pin(session_id: str, message_id: int, request: Request):
+    """0.374.0: pin an answer into the chat's table of contents, or unpin it. Body {"pinned": true|false}. Only Javis's
+    answers are pinned (a question is already in the list). Writes nothing else and starts no turn."""
+    try:
+        body = await request.json()
+    except Exception:   # noqa: BLE001
+        body = None
+    if not isinstance(body, dict) or not isinstance(body.get("pinned"), bool):
+        return JSONResponse({"ok": False, "error": localefmt.chu("Thân yêu cầu không hợp lệ", "Invalid request body")},
+                            status_code=400)
+
+    def _do():
+        store = get_store()
+        if not store.get_session(session_id):
+            return 404, localefmt.chu("Không có cuộc trò chuyện này", "No such chat")
+        msg = store.message_row(session_id, int(message_id))
+        if msg is None:
+            return 404, localefmt.chu("Không có tin này trong cuộc trò chuyện", "No such message in this chat")
+        if msg.get("role") != "assistant":
+            return 409, localefmt.chu("Chỉ ghim được câu trả lời", "Only answers can be pinned")
+        store.set_message_pinned(session_id, int(message_id), body["pinned"])
+        return 200, ""
+    code, err = await asyncio.to_thread(_do)
+    if code != 200:
+        return JSONResponse({"ok": False, "error": err}, status_code=code)
+    return {"ok": True, "pinned": body["pinned"]}
 
 
 # ============================================================
@@ -19551,6 +19709,7 @@ async def sessions_rename(session_id: str, title: str = Form(...)):
 @app.post("/sessions/{session_id}/delete")
 async def sessions_delete(session_id: str):
     get_store().delete(session_id)
+    warm_pool.POOL.forget(session_id)   # 0.382.0: its warm engine process and prewarm recipe go with it
     # 0.256.0: terminal của engine API giữ tiến trình nền, thư mục và biến môi trường theo phiên,
     # kho mốc khôi phục giữ ref theo phiên. Phiên mất thì dọn theo, kẻo dev server chạy mãi.
     try:
@@ -24898,6 +25057,9 @@ conversations_routes.register(app, conversations_routes.ConversationsDeps(
     manual_answer=chatbot_runtime.manual_answer,
     manual_done=chatbot_runtime.manual_done,
     brain_root=_brain_root,
+    pending=chatbot_runtime.nhom_cho,
+    drop_pending=chatbot_runtime.bo_nhom_cho,
+    manual_meta=chatbot_runtime.manual_meta,
 ))
 
 # Trang Coding (0.63.0): sổ repo, ràng buộc phiên, worktree, điểm hồi. Không có deps - kho
@@ -27935,6 +28097,12 @@ async def _start_loop_watch():
 @app.on_event("shutdown")
 async def _stop_loop_watch():
     loop_watch.stop()
+
+
+@app.on_event("shutdown")
+async def _close_warm_engines():
+    """0.382.0: close the engine processes kept warm between chat turns (warm_pool)."""
+    await warm_pool.POOL.close_all()
 
 
 @app.get("/health/loop")
