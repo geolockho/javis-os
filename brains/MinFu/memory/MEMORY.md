@@ -118,3 +118,5 @@
 - [Chuyến Bình Liêu 6-8/11: đang cân nhắc thuê VF5 thay Kia K3](facts/chuyen-binh-lieu-thang-11-thue-vf5.md) - Ước tính VF5 khoảng 2,05 triệu, K3 khoảng 3,8-4,2 triệu; chưa chốt xe, chưa có đơn giá vượt km thật (tính đến 2026-10-28).
 - [Bảng báo cáo tài nguyên fsel-prod: chữ to hơn, sắp tăng dần theo tỉ lệ dùng/request](facts/uu-tien-bang-bao-cao-tai-nguyen-theo-ti-le-dung.md) - Người dùng muốn bảng báo cáo tài nguyên sắp tăng dần theo tỉ lệ usage/request và chữ to hơn một cỡ.
 - [ConfigMap trong repo ArgoCD fsel-prod chứa mật khẩu DB plaintext](facts/configmap-mat-khau-plaintext-argocd-fsel-prod.md) - Ngày 2026-10-28 thấy templates/ của values fsel-prod có mật khẩu DB và secret key dạng plaintext, nên chuyển sang Secret.
+- [Logo monogram kc và bỏ dark mode của kubeconfig-generator](facts/logo-monogram-kc-bo-dark-mode.md) - Ngày 2026-10-29 user chọn logo 3 (monogram kc) và bỏ dark mode, giao diện chỉ còn bản sáng.
+- [Link tải Lens trên trang download của kubeconfig-generator](facts/lens-tai-tren-trang-download-kubeconfig.md) - User yêu cầu thêm link tải Lens (Windows) ở trang /dl cho dev, Javis đã thêm nhưng chưa commit hay push.
