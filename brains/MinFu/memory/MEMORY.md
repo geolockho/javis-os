@@ -120,3 +120,4 @@
 - [ConfigMap trong repo ArgoCD fsel-prod chứa mật khẩu DB plaintext](facts/configmap-mat-khau-plaintext-argocd-fsel-prod.md) - Ngày 2026-10-28 thấy templates/ của values fsel-prod có mật khẩu DB và secret key dạng plaintext, nên chuyển sang Secret.
 - [Logo monogram kc và bỏ dark mode của kubeconfig-generator](facts/logo-monogram-kc-bo-dark-mode.md) - Ngày 2026-10-29 user chọn logo 3 (monogram kc) và bỏ dark mode, giao diện chỉ còn bản sáng.
 - [Link tải Lens trên trang download của kubeconfig-generator](facts/lens-tai-tren-trang-download-kubeconfig.md) - User yêu cầu thêm link tải Lens (Windows) ở trang /dl cho dev, Javis đã thêm nhưng chưa commit hay push.
+- [Chỉ commit và push kubeconfig-generator khi user xác nhận](facts/xac-nhan-truoc-khi-push-kubeconfig.md) - Javis sửa code trong workspace, sync sang repo, rồi hỏi trước khi commit và push; user đã xác nhận từng lần.
