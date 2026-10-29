@@ -126,3 +126,4 @@
 - [Bên người dùng đang dùng Docker Hub](facts/dockerhub-dang-dung.md) - Đang tìm nguồn thay thế hoặc mirror cho bitnamilegacy trong môi trường dùng Docker Hub.
 - [Thông tin xác thực Jira đã được chia sẻ trong chat](facts/jira-thong-tin-xac-thuc-da-chia-se-trong-chat.md) - Mật khẩu và PAT Jira đã được gửi trong hội thoại; trạng thái đổi mật khẩu và thu hồi PAT chưa rõ.
 - [Hai MCP Jira đã được kiểm tra đúng tài khoản](facts/hai-mcp-jira-da-duoc-kiem-tra.md) - Javis báo đã kiểm tra Jira Fsel và Jira hoangviet, mỗi kết nối trả về đúng tài khoản tương ứng.
+- [Người dùng chưa từng sạc xe điện](facts/chua-tung-sac-xe-dien.md) - Tính đến 2026-10-29, người dùng nói chưa từng tự sạc xe điện.
