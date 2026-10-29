@@ -124,3 +124,4 @@
 - [Chọn thuê VF6 cho chuyến Bình Liêu tháng 11](facts/chuyen-binh-lieu-thang-11-chon-vf6.md) - Người dùng đổi lựa chọn xe thuê cho chuyến Bình Liêu 6-8/11 sang VF6.
 - [Dùng Jira quản lý task và muốn nhắc log work hằng ngày](facts/jira-quan-ly-task-va-nhac-log-work.md) - Người dùng dùng Jira quản lý task và muốn được nhắc log work mỗi ngày làm việc.
 - [Bên người dùng đang dùng Docker Hub](facts/dockerhub-dang-dung.md) - Đang tìm nguồn thay thế hoặc mirror cho bitnamilegacy trong môi trường dùng Docker Hub.
+- [Thông tin xác thực Jira đã được chia sẻ trong chat](facts/jira-thong-tin-xac-thuc-da-chia-se-trong-chat.md) - Mật khẩu và PAT Jira đã được gửi trong hội thoại; trạng thái đổi mật khẩu và thu hồi PAT chưa rõ.
