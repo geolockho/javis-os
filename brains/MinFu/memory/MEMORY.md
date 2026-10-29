@@ -115,4 +115,6 @@
 - [Báo cáo tài nguyên fsel-prod 2 tiếng và cuối ngày qua Prometheus](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-10-28.md) - Ngày 2026-10-28 đã dựng skill bao-cao-tai-nguyen-k8s-prometheus, agent tl-toi-uu-tai-nguyen-k8s, lịch 2h và 23:30 gửi Slack C0C8RMMB7AN; chưa chạy thử qua lịch.
 - [Nguồn dữ liệu báo cáo tài nguyên fsel-prod](facts/nguon-du-lieu-bao-cao-tai-nguyen-fsel-prod.md) - Prometheus prod và thư mục values ArgoCD dùng cho báo cáo tài nguyên fsel-prod
 - [User đi xe VinFast VF5 (xe điện)](facts/xe-vinfast-vf5-cua-user.md) - User dùng xe điện VinFast VF5 khi đi đường dài, cần tính điểm sạc và thời gian sạc.
+- [Chuyến Bình Liêu 6-8/11: đang cân nhắc thuê VF5 thay Kia K3](facts/chuyen-binh-lieu-thang-11-thue-vf5.md) - Ước tính VF5 khoảng 2,05 triệu, K3 khoảng 3,8-4,2 triệu; chưa chốt xe, chưa có đơn giá vượt km thật (tính đến 2026-10-28).
 - [Bảng báo cáo tài nguyên fsel-prod: chữ to hơn, sắp tăng dần theo tỉ lệ dùng/request](facts/uu-tien-bang-bao-cao-tai-nguyen-theo-ti-le-dung.md) - Người dùng muốn bảng báo cáo tài nguyên sắp tăng dần theo tỉ lệ usage/request và chữ to hơn một cỡ.
+- [ConfigMap trong repo ArgoCD fsel-prod chứa mật khẩu DB plaintext](facts/configmap-mat-khau-plaintext-argocd-fsel-prod.md) - Ngày 2026-10-28 thấy templates/ của values fsel-prod có mật khẩu DB và secret key dạng plaintext, nên chuyển sang Secret.
