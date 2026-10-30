@@ -127,3 +127,6 @@
 - [Thông tin xác thực Jira đã được chia sẻ trong chat](facts/jira-thong-tin-xac-thuc-da-chia-se-trong-chat.md) - Mật khẩu và PAT Jira đã được gửi trong hội thoại; trạng thái đổi mật khẩu và thu hồi PAT chưa rõ.
 - [Hai MCP Jira đã được kiểm tra đúng tài khoản](facts/hai-mcp-jira-da-duoc-kiem-tra.md) - Javis báo đã kiểm tra Jira Fsel và Jira hoangviet, mỗi kết nối trả về đúng tài khoản tương ứng.
 - [Người dùng chưa từng sạc xe điện](facts/chua-tung-sac-xe-dien.md) - Tính đến 2026-10-29, người dùng nói chưa từng tự sạc xe điện.
+
+- [Chat cũ bị lạc khỏi danh sách sau khi chuyển thư mục Javis](facts/chat-cu-bi-lac-sau-khi-chuyen-thu-muc-javis.md) - Phát hiện ngày 2026-10-28: 15 phiên web còn mang đường dẫn brain cũ nên bộ lọc không hiển thị trên thiết bị nào; dữ liệu chưa mất và chưa sửa DB.
+- [Chốt lịch tạo issue và log work Jira lúc 18h](facts/lich-jira-hang-ngay-18h-hai-tai-khoan.md) - Người dùng chốt quy trình Jira các ngày làm việc cho hophu và hoangviet, bắt đầu từ tuần sau.
