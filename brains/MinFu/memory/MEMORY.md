@@ -130,3 +130,5 @@
 
 - [Chat cũ bị lạc khỏi danh sách sau khi chuyển thư mục Javis](facts/chat-cu-bi-lac-sau-khi-chuyen-thu-muc-javis.md) - Phát hiện ngày 2026-10-28: 15 phiên web còn mang đường dẫn brain cũ nên bộ lọc không hiển thị trên thiết bị nào; dữ liệu chưa mất và chưa sửa DB.
 - [Chốt lịch tạo issue và log work Jira lúc 18h](facts/lich-jira-hang-ngay-18h-hai-tai-khoan.md) - Người dùng chốt quy trình Jira các ngày làm việc cho hophu và hoangviet, bắt đầu từ tuần sau.
+- [Muốn giảm thao tác cấp quyền GitLab cho user mới](facts/quan-ly-quyen-gitlab-cho-user-moi.md) - Yêu cầu thăm dò ngày 2026-10-30; chưa chốt giữa web tool và cách cấp quyền khác.
+- [Đang cân nhắc phương án qua Đông Hưng nếu mưa trong chuyến Bình Liêu](facts/phuong-an-du-phong-mua-binh-lieu-dong-hung.md) - Trong chuyến Bình Liêu 6-8/11/2026, người dùng muốn có phương án B nếu mưa và đang cân nhắc đi qua cửa khẩu sang Trung Quốc.
