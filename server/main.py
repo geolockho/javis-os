@@ -98,6 +98,7 @@ import web_security   # chống CSRF-to-localhost + DNS-rebinding cho web API c�
 import image_gen      # tạo ảnh bằng gói ChatGPT (OAuth) - Codex Responses + tool image_generation
 import media_gc       # dọn vùng cache media (attachments/ + inbox/) theo hạn tuổi + trần dung lượng
 import inbox         # hòm thư: mọi kết quả chạy nền để lại một mẩu thư bền ở server
+import notify_policy  # 0.403.0: Javis Core decides which notices ring (groups, levels, modes, the owner's reactions)
 import webpush       # thông báo đẩy trình duyệt (Web Push, tự mã hoá - không thêm thư viện)
 import stt            # nghe tin thoại (Whisper qua Groq) -> chữ, cho kênh Telegram/Zalo
 import luot_dang_chay # sổ lượt chat đang chạy theo brain: tool giao việc tự biết khung chat nào hỏi
@@ -148,6 +149,7 @@ import owner_channels   # owner's control channels on Slack and WhatsApp (0.71.0
 import whatsapp_bot     # WhatsApp transport + webhook router (0.71.0)
 import messenger_bot    # Messenger transport + webhook router (0.134.0)
 import messenger_setup  # Messenger connect wizard and health check (0.311.0)
+import zalo_oa_bot      # Zalo OA transport + webhook router (0.412.0)
 import channel_context   # metadata kênh + gom file trả về kênh chat (port gateway hermes-agent)
 import lang as lang_mod   # chốt ngôn ngữ trả lời cho một lượt
 import lang_registry      # sổ đăng ký: mọi thứ về một ngôn ngữ nằm đúng một chỗ
@@ -279,7 +281,10 @@ _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth
                       "/whatsapp/webhook",
                       # /messenger/webhook (0.134.0): same contract as WhatsApp, the signature is
                       # checked in the route under the app secrets of the Messenger accounts.
-                      "/messenger/webhook")
+                      "/messenger/webhook",
+                      # /zalo-oa/webhook (0.412.0): Zalo calls it with no cookie; the route checks
+                      # X-ZEvent-Signature under the OA secret keys of the Zalo OA accounts.
+                      "/zalo-oa/webhook")
 # Endpoint CHỈ-LOCALHOST: agent (Claude CLI chạy cùng máy/container) curl được mà không cần
 # cookie đăng nhập; request từ ngoài (qua Traefik/Caddy/LAN) đến từ IP khác loopback → vẫn bị chặn.
 # /reminders/cancel đi cùng nhóm với /reminders (TẠO nhắc): huỷ là thao tác YẾU HƠN tạo, nên
@@ -354,6 +359,9 @@ async def _auth_guard(request: Request, call_next):
         public = (path in _AUTH_PUBLIC_EXACT
                   or any(path.startswith(p) for p in _AUTH_PUBLIC_PREFIX)
                   or (path in _AUTH_LOCAL_EXACT and _direct_local_request(request))
+                  # Zalo's domain check fetches /zalo_verifier<code>.html (0.412.0). The route answers
+                  # only codes the owner saved and 404s everything else, so nothing leaks.
+                  or (path.startswith("/zalo_verifier") and path.endswith(".html") and "/" not in path[1:])
                   # Đường HTTP của plugin mà CHÍNH plugin khai là công khai (0.64.26). Chỉ hỏi
                   # khi đúng tiền tố, để request thường không phải đi tra danh sách plugin.
                   or ((path.startswith("/ext/") or path.startswith("/.well-known/"))
@@ -2825,7 +2833,13 @@ def _chat_provider_for_session(mcfg, row):
     Vì sao có hàm này (16/08): đổi model ở tab/phiên khác kéo model của MỌI phiên đổi
     theo, vì tất cả đọc chung settings.json. Chủ muốn phiên nhớ model cuối user đã chọn
     TRONG phiên đó. Ghim hỏng (provider không còn cấu hình) thì rơi về mặc định chung
-    thay vì chết lượt chat."""
+    thay vì chết lượt chat.
+
+    0.402.0 (owner, 29/10/2026): every Javis Core chat runs on Javis Core's own pin (`_core_pin`), or on the main
+    model while it has none; the pin of the single chat is ignored."""
+    if javis_core.is_core_channel((row or {}).get("channel")):
+        _cp = _core_pin(mcfg)
+        row = {"pinned_provider": _cp.get("provider") or "", "pinned_model": _cp.get("model") or ""}
     pprov = ((row or {}).get("pinned_provider") or "").strip()
     if not pprov:
         return _chat_provider(mcfg)
@@ -2845,6 +2859,13 @@ def _chat_provider_for_session(mcfg, row):
     if pprov == "openrouter":
         model = model or mcfg.get("openrouter_model")
     return pprov, kind, key, model
+
+
+def _core_pin(mcfg) -> dict:
+    """{'provider','model'} Javis Core is pinned to, or {} when it follows the main model (0.402.0). Set from the model
+    bar of any Javis Core chat (`POST /sessions/{id}/model`); "Follow the main model" clears it."""
+    prov = str((mcfg or {}).get("core_provider") or "").strip()
+    return {"provider": prov, "model": str((mcfg or {}).get("core_model") or "").strip()} if prov else {}
 
 
 def _tg_ghim(mcfg, chat_key="") -> dict:
@@ -10483,7 +10504,8 @@ async def _kiem_ngan_sach(nhac: bool = True) -> dict:
                 # kind="system": Javis TỰ nói, không phải trả lời câu ai hỏi. Đúng nhãn mà
                 # inbox.py đặt tên sẵn cho ca này ("cảnh báo hết hạn mức"), và nhãn đó là thứ
                 # người dùng đọc trên thẻ thư để biết tin này từ đâu ra.
-                await _notify_owner("", tin, kind="system")
+                await _notify_owner("", tin, kind="system", source="cost",
+                                    level="urgent" if ns["muc_do"] == "het" else "important")
             except Exception:  # noqa: BLE001 - không gửi được thì thôi, đừng làm hỏng vòng lặp
                 pass
     return ns
@@ -10516,7 +10538,8 @@ async def _bao_cao_tuan_neu_toi_gio() -> bool:
     usage_saving.ghi_moc("ngan_sach", tuan, "", "Đã gửi báo cáo token tuần")
     try:
         # An account-level report with no brain: kind system (the bell and the owner's own Telegram, 0.186.0).
-        await _notify_owner("" if dich == "auto" else dich, await _bao_cao_token("last_week"), kind="system")
+        await _notify_owner("" if dich == "auto" else dich, await _bao_cao_token("last_week"), kind="system",
+                            source="cost", level="info")
     except Exception as e:  # noqa: BLE001 - gửi hỏng thì thôi, đừng giết vòng lặp nền
         print(f"[bao cao tuan] {type(e).__name__}: {e}", file=sys.stderr)
     return True
@@ -11834,13 +11857,14 @@ READONLY_TOOLS = ["Read", "Glob", "Grep", "LS"]
 import self_improve
 
 
-async def _loop_notify(text: str) -> None:
+async def _loop_notify(text: str, source: str = "loop", level: str = "important") -> None:
     """A restricted system notice: a loop paused itself, the AI engine is down (0.186.0).
 
     It used to go to EVERY Telegram id on the allow-list. It is the owner's business only, so it now lands in the
-    bell (kind system) and on the owner's own Telegram when that is known (`_owner_telegram_id`)."""
+    bell (kind system) and on the owner's own Telegram when that is known (`_owner_telegram_id`).
+    0.403.0: `source` and `level` place it for Javis Core's rules (a loop pausing itself: job, important)."""
     try:
-        await _notify_owner("", text, kind="system", source="system")
+        await _notify_owner("", text, kind="system", source=source, level=level)
     except Exception as e:
         print(f"[loop notify] {e}", file=__import__('sys').stderr)
 
@@ -12083,7 +12107,7 @@ def huy_viec_nen_giong(conv_sid: str) -> int:
 
 
 async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="",
-                          quiet=False, brain="", dedup="", routing=""):
+                          quiet=False, brain="", dedup="", routing="", level="", group="", decision=None, viec=None):
     """Để lại MỘT mẩu thư cho mọi kết quả chạy nền, rồi rung chuông đẩy nếu có đăng ký.
 
     Vì sao đặt ở đây chứ không ở từng nơi sinh việc: `_notify_owner` là CỬA DUY NHẤT mà
@@ -12094,8 +12118,17 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
     Hòm thư ghi BẤT KỂ tin đi bằng kênh nào: kênh (chat web / Telegram / Zalo / push) là
     chuông cửa, hụt cũng không sao; hòm thư là bản ghi bền. Đó cũng là lý do hàm này nuốt
     mọi lỗi - hòm thư hỏng thì cùng lắm mất một mẩu thư, không được phép làm hỏng việc BÁO.
+
+    0.403.0: `notify_policy.decide` (or the `decision` `_notify_owner` already took) says whether the notice rings
+    (loud), is kept quietly under "Filtered" (quiet), or is not kept at all (drop: the owner turned its group off).
     """
     try:
+        dec = decision or _notify_decide(text, kind=kind, source=source, quiet=quiet, level=level, group=group,
+                                         viec=viec, dedup=dedup)
+        if dec.get("verdict") == "drop":
+            return {"dropped": True, "id": "", "session_id": ""}
+        filtered = dec.get("verdict") != "loud"
+        quiet = filtered
         cid = str(owner_chat or "").strip()
         sid = cid[len(WEB_CHAT_PREFIX):] if cid.startswith(WEB_CHAT_PREFIX) else ""
         # KÊNH của hội thoại đích, đọc từ chính kho phiên. Dashboard cần nó để bấm vào mẩu thư
@@ -12115,7 +12148,9 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
                 print(f"[inbox] không đọc được kênh của phiên {sid[:8]}: "
                       f"{type(e).__name__}: {e}", file=sys.stderr)
         item = inbox.add(text, kind=kind, session_id=sid, source=source, label=label,
-                         read=bool(quiet), channel=kenh, brain=brain, dedup=dedup, routing=routing)
+                         read=bool(quiet), channel=kenh, brain=brain, dedup=dedup, routing=routing,
+                         group=dec.get("group") or "", level=dec.get("level") or "", sig=dec.get("sig") or "",
+                         filtered=filtered, why=dec.get("why") or "")
     except Exception as e:
         print(f"[inbox] bỏ thư lỗi: {type(e).__name__}: {e}", file=sys.stderr)
         return None
@@ -12155,6 +12190,18 @@ async def _bo_vao_hom_thu(owner_chat, text, *, kind="answer", label="", source="
     return item
 
 
+def _notify_decide(text, *, kind="answer", source="", quiet=False, level="", group="", viec=None, dedup="") -> dict:
+    """Javis Core's verdict on one notice (0.403.0, `notify_policy.decide`). Never raises: a broken rule store rings."""
+    try:
+        g = notify_policy.group_of(source=source, kind=kind, viec=viec, dedup=dedup, group=group)
+        lv = notify_policy.level_of(level=level, quiet=quiet, group=g)
+        return notify_policy.decide(g, lv, inbox._tieu_de(text))
+    except Exception as e:  # noqa: BLE001
+        print(f"[notify policy] decide failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return {"group": group or "other", "level": level or ("info" if quiet else "important"), "sig": "",
+                "verdict": "quiet" if quiet else "loud", "why": ""}
+
+
 def _owner_telegram_id() -> str:
     """The owner's own Telegram chat, the only one an untargeted report may go to (0.186.0).
 
@@ -12170,7 +12217,7 @@ def _owner_telegram_id() -> str:
     return ids[0] if len(ids) == 1 else ""
 
 
-def _report_route(owner_chat, brain, kind, quiet=False) -> dict:
+def _report_route(owner_chat, brain, kind, quiet=False, filtered=False) -> dict:
     """Where one report goes (0.186.0, Javis Core spec section 6). Pure decision, no sending.
 
     - `web:<sid>` of a chat that still exists: that chat, nothing copied to Javis Core.
@@ -12181,6 +12228,9 @@ def _report_route(owner_chat, brain, kind, quiet=False) -> dict:
       has no brain and goes to the bell and the owner's Telegram. A report with neither target nor brain is not
       guessed: it stays in the bell marked `no_target`.
     The brain is the one the WORK belongs to, passed by the producer, never the brain open on screen.
+
+    0.403.0: a notice Javis Core filtered (`filtered`) with no chat of its own stays in the bell only: not copied into
+    Javis Core's chat, not sent to the owner's Telegram. A chat or channel that asked for the work still gets it.
     """
     cid = str(owner_chat or "").strip()
     bk = ""
@@ -12211,6 +12261,8 @@ def _report_route(owner_chat, brain, kind, quiet=False) -> dict:
     if cid:
         mine = bool(own) and cid == own
         return {"chat": core() if (mine and not quiet) else "", "external": cid, "brain": bk}
+    if filtered:
+        return {"chat": "", "external": "", "brain": bk}
     if kind == "system":
         return {"chat": "", "external": own, "brain": bk}
     if bk:
@@ -12219,7 +12271,8 @@ def _report_route(owner_chat, brain, kind, quiet=False) -> dict:
 
 
 async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
-                        quiet=False, ngan="", viec=None, web="", card="", brain="", dedup="") -> tuple:
+                        quiet=False, ngan="", viec=None, web="", card="", brain="", dedup="",
+                        level="", group="") -> tuple:
     """Báo cáo cho NGƯỜI YÊU CẦU loop/task (mặc định của Javis). Quy tắc:
       - owner_chat dạng "web:<sid>" → đẩy thẳng vào ĐÚNG khung chat web đã giao việc.
       - owner_chat dạng "zalo:<id>" → gửi qua bot Zalo cho ĐÚNG người đó.
@@ -12251,13 +12304,18 @@ async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
     Trả (ok, error). `ok` là ĐÃ TỚI ĐƯỢC NGƯỜI DÙNG, và hòm thư tính là tới: nó nằm ở
     server, còn sau F5, thấy được từ máy khác. Nhờ vậy một cái nhắc hẹn trên máy chưa đấu
     Telegram không còn bị ghi là "failed" trong khi nội dung đang nằm sẵn trong hòm."""
-    route = _report_route(owner_chat, brain, kind, quiet=quiet)
+    # 0.403.0: Javis Core's verdict first, so a filtered notice is neither copied to its chat nor sent to Telegram.
+    dec = _notify_decide(text, kind=kind, source=source, quiet=quiet, level=level, group=group, viec=viec, dedup=dedup)
+    filtered = dec.get("verdict") != "loud"
+    route = _report_route(owner_chat, brain, kind, quiet=quiet or filtered, filtered=filtered)
     chat = route.get("chat") or ""
     vao_hom = await _bo_vao_hom_thu(f"{WEB_CHAT_PREFIX}{chat}" if chat else "", text, kind=kind, label=label,
                                     source=source, quiet=quiet, brain=route.get("brain") or "", dedup=dedup,
-                                    routing=route.get("routing") or "")
+                                    routing=route.get("routing") or "", decision=dec)
     if vao_hom and vao_hom.get("duplicate"):
         return True, ""   # filed before: a retry must not post or ring a second time
+    if vao_hom and vao_hom.get("dropped") and not chat and not route.get("external"):
+        return True, ""   # the owner turned this group off: nothing to deliver, and that is not a failure
     if route.get("routing"):
         # No chat and no source brain: kept in the bell for the owner, sent nowhere else (spec 6.4).
         print(f"[notify] không rõ nơi nhận ({route['routing']}), chỉ giữ trong hòm thư: {str(text)[:80]!r}",
@@ -12265,7 +12323,16 @@ async def _notify_owner(owner_chat, text, *, kind="answer", label="", source="",
         return bool(vao_hom), ("" if vao_hom else "no_target")
     ok, err = False, ""
     if chat:
-        ok, err = await _gui_qua_kenh(f"{WEB_CHAT_PREFIX}{chat}", text, ngan=ngan, viec=viec, web=web, card=card)
+        # 0.403.0: in Javis Core's chat the notice carries the bell item's marker, so an emoji on it there is feedback
+        # on this notice (`_notice_feedback_from_chat`). Only the chat copy: the bell and other channels stay clean.
+        mark = ""
+        try:
+            if vao_hom and vao_hom.get("id") and javis_core.is_core_channel((get_store().get_session(chat) or {}).get("channel")):
+                mark = f"\n<!-- javis-cite:inbox:{vao_hom['id']} -->"
+        except Exception:  # noqa: BLE001
+            mark = ""
+        ok, err = await _gui_qua_kenh(f"{WEB_CHAT_PREFIX}{chat}", text + mark, ngan=ngan, viec=viec,
+                                      web=(web + mark) if web else web, card=card)
     ext = route.get("external") or ""
     if ext:
         # Each channel on its own: one that fails does not stop the other or lose the report.
@@ -12685,8 +12752,12 @@ import web_watch
 
 
 async def _watch_send(chat_id, text, viec=None, web="", brain="", dedup=""):
+    # 0.403.0: what the owner set a watch up to hear about is urgent, like a reminder; a watch that stopped working
+    # (signed out, paused) is an important connection notice.
+    failed = str((viec or {}).get("status") or "") == "blocked"
     return await _notify_owner(chat_id, text, kind="report", source="watch",
-                               viec=viec, web=web, brain=brain, dedup=dedup)
+                               viec=viec, web=web, brain=brain, dedup=dedup,
+                               group="connection" if failed else "job", level="important" if failed else "urgent")
 
 
 async def _watch_summarize(prompt: str) -> str:
@@ -12754,6 +12825,7 @@ async def _incident_ask(prompt: str) -> str:
 async def _incident_post(brain: str, text: str) -> None:
     # Empty chat id: the brain's Javis Core chat, the inbox and the owner's Telegram (_report_route, 0.186.0).
     await _notify_owner("", text, kind="report", source="incident", brain=brain,
+                        level="important" if text.startswith("⚠") else "info",
                         viec={"kind": "incident", "status": "failed" if text.startswith("⚠") else "done",
                               "title": text[:120], "id": ""})
 
@@ -13845,7 +13917,10 @@ async def _start_scheduler():
     except Exception as e:
         print(f"[web watch start] {e}", file=_sys.stderr)
     try:
-        connect_health.on_engine_down = _loop_notify   # đèn báo não → Telegram, chỉ 1 lần mỗi đợt chết
+        # Đèn báo não → chuông và Telegram của chủ, chỉ 1 lần mỗi đợt chết.
+        # 0.403.0: the AI engine down is urgent (nothing works); connections broken after a restart are important.
+        connect_health.on_engine_down = lambda text: _loop_notify(text, source="engine", level="urgent")
+        connect_health.on_connections_down = lambda text: _loop_notify(text, source="connections", level="important")
         connect_health.start()   # vòng check sức khoẻ kết nối + probe đèn báo não
     except Exception as e:
         print(f"[connect health start] {e}", file=_sys.stderr)
@@ -14050,8 +14125,10 @@ async def _start_scheduler():
                              read_agent=lambda b, slug: _read_md(_agents_dir(b) / f"{slug}.md"),
                              session_probe=_manual_session_probe, session_undo=_manual_session_undo,
                              # Lượt bot hỏng: khách không nhận gì, chủ nghe ở chuông thông báo (chủ repo 15/10/2026).
+                             # 0.403.0: urgent: a customer is waiting for a person, or got no answer at all.
                              notify=lambda text: _bo_vao_hom_thu("", text, kind="system", source="chatbot",
-                                                                 label=localefmt.chu("Chatbot", "Chatbot")))
+                                                                 label=localefmt.chu("Chatbot", "Chatbot"),
+                                                                 level="urgent"))
         chatbot_reply_policy.wire(ask=_reply_policy_ask)
         chatbot_reply_policy_review.wire(ask=_reply_policy_review_ask, notify=_reply_policy_notify,
                                          write_feedback=_reply_policy_write_feedback, get_bot=chatbot_store.get_bot)
@@ -15352,6 +15429,80 @@ async def inbox_read(payload: dict = Body(None)):
 async def inbox_delete(payload: dict = Body(None)):
     ok = inbox.xoa(str((payload or {}).get("id") or ""))
     return {"ok": ok, "unread": inbox.so_chua_doc()}
+
+
+# ── 0.403.0: Javis Core, the notification commander (docs/dev/2026-10-javis-core-chi-huy-thong-bao.md) ────────────
+async def _core_say(brain: str, text: str) -> None:
+    """One short line from Javis Core in its own chat (what its judge just changed). Never raises."""
+    try:
+        bk = _brain_key(brain or "brain")
+        sid = javis_core.default_session(get_store(), bk, same_brain=_cung_brain)
+        if sid:
+            await _gui_qua_kenh(f"{WEB_CHAT_PREFIX}{sid}", text)
+    except Exception as e:  # noqa: BLE001
+        print(f"[notify policy] Javis Core could not say it: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+@app.post("/inbox/react")
+async def inbox_react(payload: dict = Body(None)):
+    """The owner's feedback on one bell item: a Resonance emoji (`value`) and/or "needed" / "not_needed" (`axis`).
+    Javis Core's judge learns from it (`notify_policy.react`) and says in its chat what it changed."""
+    p = payload or {}
+    iid = str(p.get("id") or "")
+    value = str(p.get("value") or "").strip()
+    axis = str(p.get("axis") or "").strip()
+    if value and value not in notify_policy.EMOJI_SCORE:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Cảm xúc không hợp lệ", "Invalid reaction")}, status_code=400)
+    if axis and axis not in notify_policy.AXES:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Lựa chọn không hợp lệ", "Invalid choice")}, status_code=400)
+    item = inbox.phan_hoi(iid, value, axis)
+    if not item:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Không còn thông báo này", "This notice is gone")},
+                            status_code=404)
+    changes = notify_policy.react(item, value, axis) if (value or axis) else []
+    if changes:
+        await _core_say(item.get("brain") or "", "\n".join(notify_policy.describe(c) for c in changes))
+    return {"ok": True, "reaction": item.get("reaction"), "changes": changes,
+            "messages": [notify_policy.describe(c, hint=False) for c in changes]}
+
+
+@app.get("/notify/policy")
+async def notify_policy_get():
+    return {"ok": True, **notify_policy.status()}
+
+
+@app.post("/notify/policy/group")
+async def notify_policy_group(payload: dict = Body(None)):
+    p = payload or {}
+    g, m = str(p.get("group") or ""), str(p.get("mode") or "")
+    if g not in notify_policy.GROUPS or m not in notify_policy.MODES:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Nhóm hoặc chế độ không hợp lệ", "Invalid group or mode")},
+                            status_code=400)
+    c = notify_policy.set_mode(g, m, set_by="owner", reason=localefmt.chu("Bạn chọn.", "Your choice."))
+    return {"ok": True, "change": c, **notify_policy.status()}
+
+
+@app.post("/notify/policy/rule")
+async def notify_policy_rule(payload: dict = Body(None)):
+    """Remove (rule empty) or set ("mute" / "always") the owner's rule for one kind of notice (`key` = group|signature)."""
+    p = payload or {}
+    key = str(p.get("key") or "")
+    rule = str(p.get("rule") or "") or None
+    g, _, sig = key.partition("|")
+    c = notify_policy.set_rule(g, sig, rule, set_by="owner", label=str(p.get("label") or ""),
+                               reason=localefmt.chu("Bạn chọn.", "Your choice."))
+    if c is None and rule not in (None, "mute", "always"):
+        return JSONResponse({"ok": False, "error": localefmt.chu("Luật không hợp lệ", "Invalid rule")}, status_code=400)
+    return {"ok": True, "change": c, **notify_policy.status()}
+
+
+@app.post("/notify/policy/undo")
+async def notify_policy_undo(payload: dict = Body(None)):
+    c = notify_policy.undo(str((payload or {}).get("id") or ""))
+    if c is None:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Không hoàn tác được thay đổi này", "This change cannot be undone")},
+                            status_code=404)
+    return {"ok": True, "change": c, **notify_policy.status()}
 
 
 @app.get("/push/key")
@@ -19754,6 +19905,10 @@ async def sessions_meta(session_id: str):
     sess = get_store().get_session(session_id)
     if not sess:
         return JSONResponse({"error": "not found"}, status_code=404)
+    if javis_core.is_core_channel(sess.get("channel")):
+        # 0.402.0: a Javis Core chat shows the pin of Javis Core, not an old stamp of this one chat.
+        _cp = _core_pin(cfgmod.read_settings().get("model", {}))
+        sess["pinned_provider"], sess["pinned_model"] = _cp.get("provider") or None, _cp.get("model") or None
     pp = (sess.get("pinned_provider") or "").strip()
     if pp:
         d = _provider_def(pp)
@@ -19822,11 +19977,20 @@ async def sessions_set_model(session_id: str, provider: str = Form(""),
     Có `brain` thì tạo hàng nếu phiên chưa tồn tại - dashboard mint id phía client nên
     user có thể đổi model trước cả tin nhắn đầu tiên (cùng khuôn /sessions/{id}/project).
     CHỦ Ý không đi qua _set_main_model: hàm đó ghi mốc nhật ký usage cho việc đổi bộ não
-    TOÀN CỤC, ghim theo phiên mà đi qua đó là rác hoá biểu đồ token."""
+    TOÀN CỤC, ghim theo phiên mà đi qua đó là rác hoá biểu đồ token.
+
+    0.402.0: a Javis Core chat pins Javis Core as a whole (`model.core_provider/core_model`), see `_core_pin`."""
     prov = (provider or "").strip()
     if prov and not _provider_def(prov):
         return JSONResponse({"error": localefmt.chu(f"provider không tồn tại: {prov}",
                                                     f"provider does not exist: {prov}")}, status_code=400)
+    _row = get_store().get_session(session_id)
+    if _row and javis_core.is_core_channel(_row.get("channel")):
+        _mdl = (model or "").strip() if prov else ""
+        await asyncio.to_thread(cfgmod.update_settings, {"model": {"core_provider": prov, "core_model": _mdl}})
+        if (_row.get("pinned_provider") or "").strip():
+            get_store().set_pinned_model(session_id, "", "")   # an older stamp of this chat must not show as a pin
+        return {"ok": True, "pinned_provider": prov or None, "pinned_model": _mdl or None, "scope": "core"}
     ok = get_store().set_pinned_model(session_id, prov, model,
                                       brain=_brain_key(brain) if (brain or "").strip() else None)
     if not ok:
@@ -24458,8 +24622,13 @@ def _ms_account_secrets() -> list:
 @app.get("/channels/webhook-info")
 async def channels_webhook_info(request: Request, channel: str = ""):
     """Address and verify token to paste into the platform for a channel that receives messages
-    by webhook (Messenger). Shown on the Add account form; the verify token is not a secret."""
-    if str(channel or "").strip().lower() != "messenger":
+    by webhook (Messenger, Zalo OA). Shown on the Add account form; the verify token is not a secret."""
+    kenh = str(channel or "").strip().lower()
+    if kenh == "zalo_oa":
+        url = _zo_webhook_url(request)
+        return {"ok": True, "webhook_url": url, "verify_token": "", "https": url.startswith("https://"),
+                "site_verify": True, "site_codes": _zo_site_codes()}
+    if kenh != "messenger":
         return JSONResponse({"ok": False, "error": localefmt.chu("Kênh này không dùng webhook",
                                                                  "This channel does not use a webhook")},
                             status_code=400)
@@ -24620,6 +24789,86 @@ async def messenger_check(request: Request):
                                                app_id, url, _ms_bot_running(aid, cr["page_id"]))
     return {"ok": True, "account": _ms_account_view(channel_accounts.get_account(aid) or a),
             "check": chk, "repair_errors": errs}
+
+
+# ============================================================
+# Zalo OA (0.412.0): customer bots on a Zalo Official Account. Zalo calls one webhook for every
+# OA; `zalo_oa_bot.handle_webhook` routes by OA id. No owner control channel here.
+# ============================================================
+def _zo_webhook_url(request: Request) -> str:
+    base = web_security.external_base(
+        request.url.scheme, request.url.netloc,
+        request.headers.get("x-forwarded-proto", ""), request.headers.get("x-forwarded-host", ""))
+    return base + "/zalo-oa/webhook"
+
+
+def _zo_site_codes() -> list:
+    z = cfgmod.read_settings().get("zalo_oa", {}) or {}
+    return [str(c) for c in (z.get("site_codes") or []) if str(c or "").strip()]
+
+
+def _zo_account_secrets() -> list:
+    """(App ID, OA secret key) of every Zalo OA account, for the webhook signature check."""
+    out = []
+    try:
+        for a in channel_accounts.list_accounts(channel="zalo_oa"):
+            cr = zalo_oa_bot.split_credentials(channel_accounts.get_token(a.get("id", "")))
+            if cr.get("oa_secret"):
+                out.append((cr.get("app_id", ""), cr["oa_secret"]))
+    except Exception as e:
+        print(f"[zalo_oa secrets] {type(e).__name__}: {e}", file=sys.stderr)
+    return out
+
+
+@app.post("/zalo-oa/webhook")
+async def zalo_oa_webhook(request: Request):
+    """Inbound Zalo OA events. Public URL, so nothing is trusted before the signature check; a
+    request no known OA secret key signed is dropped with 401 and never handed to a bot."""
+    raw = await request.body()
+    if len(raw) > 2_000_000:
+        return PlainTextResponse("too large", status_code=413)
+    sig = request.headers.get("x-zevent-signature", "") or request.headers.get("mac", "")
+    if not zalo_oa_bot.verify_signature(raw, sig, _zo_account_secrets()):
+        return PlainTextResponse("bad signature", status_code=401)
+    try:
+        payload = json.loads(raw.decode("utf-8") or "{}")
+    except Exception:
+        return PlainTextResponse("bad json", status_code=400)
+    # Answer 200 right away (Zalo wants it within about 2 seconds and retries otherwise); the
+    # events run as tasks.
+    n = await zalo_oa_bot.handle_webhook(payload if isinstance(payload, dict) else {})
+    return {"ok": True, "events": n}
+
+
+@app.post("/zalo-oa/site-verification")
+async def zalo_oa_site_verification(request: Request):
+    """Save the domain verification code Zalo shows (file name, meta tag or bare code), so that
+    /zalo_verifier<code>.html answers and the owner can press Verify on developers.zalo.me.
+    `remove: true` forgets it."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    code = zalo_oa_bot.parse_site_code(body.get("code"))
+    if not code:
+        return JSONResponse({"ok": False, "error": localefmt.chu(
+            "Không đọc được mã xác thực. Dán tên file zalo_verifier...html, thẻ meta hoặc chính mã đó.",
+            "Could not read a verification code. Paste the zalo_verifier...html file name, the meta tag or the code itself.")},
+            status_code=400)
+    codes = [c for c in _zo_site_codes() if c != code]
+    if not body.get("remove"):
+        codes = ([code] + codes)[:10]
+    cfgmod.update_settings({"zalo_oa": {"site_codes": codes}})
+    return {"ok": True, "code": code, "site_codes": codes,
+            "file": f"/zalo_verifier{code}.html"}
+
+
+@app.get("/zalo_verifier{code}.html")
+async def zalo_oa_verifier_file(code: str):
+    """The file Zalo fetches to verify the webhook domain. Only codes the owner saved exist."""
+    if code not in _zo_site_codes():
+        return PlainTextResponse("not found", status_code=404)
+    return HTMLResponse(zalo_oa_bot.verifier_html(code))
 
 
 def restart_telegram():
@@ -26313,9 +26562,17 @@ class _TeamAdmin:
         return {"enabled": bool(on) and a is not None}
 
 
+# 0.403.0: team notices that wait on the owner (called by name, acceptance, approval, still blocked on them) are urgent
+# questions; the rest (a job blocked, acceptance failed) are important team notices. Matched on team_runner's own words.
+_TEAM_ASKS_OWNER = re.compile(r"gọi bạn trong nhóm|called you in team|chờ bạn nghiệm thu|waits for your acceptance|"
+                              r"xin duyệt|asks for approval|vẫn đang chờ bạn|still waiting for you", re.I)
+
+
 async def _team_notify(session_id, text):
+    asks = bool(_TEAM_ASKS_OWNER.search(str(text or "")))
     await _bo_vao_hom_thu(f"{WEB_CHAT_PREFIX}{session_id}", text, kind="report",
-                          label=localefmt.chu("Team", "Team"), source="team")
+                          label=localefmt.chu("Team", "Team"), source="team",
+                          group="question" if asks else "team", level="urgent" if asks else "important")
 
 
 _FEEDBACK_PROJECTOR = [None]
@@ -26985,6 +27242,12 @@ async def sessions_message_reaction(session_id: str, message_id: int, request: R
                                     agent_config_version=ver, goal_id=str(receipt.get("goal_id") or ""), **extra)
         if not got["replayed"] and not extra:
             _feedback_projector().project("dm", got["log_id"])
+        # 0.403.0 (owner, 2026-10-29): a notice opened in Javis Core is a chat message; the emoji the owner puts on it
+        # there is Javis Core's feedback on that notice (`notify_policy.react`). The marker names the bell item.
+        if not got["replayed"] and javis_core.is_core_channel(sess.get("channel")):
+            m = _CITE_INBOX_RE.search(str(msg.get("content") or ""))
+            if m:
+                got = dict(got, notice=m.group(1), notice_value=n["value"] or "", notice_axis=n["axis"] or "")
         return got, store.dm_reaction_of(session_id, int(message_id))
 
     try:
@@ -26992,6 +27255,8 @@ async def sessions_message_reaction(session_id: str, message_id: int, request: R
     except sessions.DmReactionError as ex:
         return JSONResponse({"ok": False, "error": localefmt.chu(ex.vi, ex.en)}, status_code=ex.code)
     r = reaction_values.public(state)
+    if got.get("notice"):
+        await _notice_feedback_from_chat(got["notice"], got.get("notice_value") or "", got.get("notice_axis") or "")
     if not got["replayed"]:
         try:
             await _CHAT_RUNTIME.publish({"type": "chat_reaction", "session_id": session_id,
@@ -27002,6 +27267,26 @@ async def sessions_message_reaction(session_id: str, message_id: int, request: R
 
 
 _FEEDBACK_PULSE_BUSY = [False]
+_CITE_INBOX_RE = re.compile(r"<!-- javis-cite:inbox:([0-9a-f]{6,32}) -->")
+# The chat's speak/silent axis on a notice means "should have rung" / "should have stayed quiet".
+_NOTICE_AXIS = {"should_speak": "needed", "should_silent": "not_needed"}
+
+
+async def _notice_feedback_from_chat(item_id: str, value: str, axis: str) -> None:
+    """An emoji (and the speak/silent axis) the owner put on a notice inside Javis Core's chat, passed to Javis Core's
+    judge like the bell's buttons (0.403.0). Taking a reaction back changes nothing. Never raises."""
+    try:
+        ax = _NOTICE_AXIS.get(axis, "")
+        if not (value or ax):
+            return
+        item = inbox.lay(item_id)
+        if not item:
+            return
+        changes = notify_policy.react(item, value, ax)
+        if changes:
+            await _core_say(item.get("brain") or "", "\n".join(notify_policy.describe(c) for c in changes))
+    except Exception as e:  # noqa: BLE001 - feedback must never cost the reaction itself
+        print(f"[notify policy] chat feedback: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 def _dm_resolve_pending_authors(limit: int = 200) -> int:
@@ -27102,6 +27387,16 @@ def _agent_persona(root, slug, agent_key=None):
 
 
 tasks_feature.deps.agent_persona = _agent_persona
+
+
+def _agent_roster(root):
+    """0.411.0: the brain's assistants for the Kanban specifier to route a job to (slug, name, role, durable key)."""
+    keys = _agent_jobs_keys(root)
+    return [{"slug": a["slug"], "name": a.get("name") or a["slug"], "role": a.get("role") or "",
+             "key": keys.get(a["slug"], "")} for a in agents_index(root, kem_prompt=False)]
+
+
+tasks_feature.deps.agent_roster = _agent_roster
 
 
 def _agent_jobs_key(root, slug, register=False):

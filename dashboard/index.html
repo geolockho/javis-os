@@ -32,8 +32,8 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=149">
-  <link rel="stylesheet" href="/static/console.css?v=127">
+  <link rel="stylesheet" href="/static/style.css?v=153">
+  <link rel="stylesheet" href="/static/console.css?v=130">
   <!-- Áp tông đã lưu TRƯỚC khi vẽ để không nháy tối rồi mới đổi sang sáng.
        Giá trị cũ "dim" (tông tối-nhạt, gỡ ở 0.9.250) quy về tối; theme.js sẽ ghi đè lại.
        Chế độ "auto" (0.74.0, mặc định khi chưa chọn gì từ 0.75.1) tính theo khung giờ "HH:MM-HH:MM", cùng quy tắc với lightAt() trong
@@ -163,6 +163,10 @@
         </button>
         <button class="noti-tab" id="notiTabNews" type="button" role="tab" aria-selected="false">
           <span data-i18n="noti.tab_news">Tin tức</span><span class="noti-tab-count" id="notiTabNewsCount" hidden>0</span>
+        </button>
+        <!-- 0.403.0: Javis Core's notification filter (each group's mode, per-kind rules, undo). -->
+        <button class="noti-tab noti-tab-filter" id="notiTabFilter" type="button" role="tab" aria-selected="false">
+          <span data-i18n="noti.filter_btn">Bộ lọc</span>
         </button>
       </div>
       <div class="noti-list" id="notificationList">
@@ -942,9 +946,9 @@
   <!-- Opened by IP on a Hostinger VPS: move to the verified https link of this VPS (auto-domain.js, 0.302.0). -->
   <script src="/static/auto-domain.js?v=1"></script>
   <script src="/static/i18n/index.js?v=2"></script>
-  <script src="/static/vendor/lucide-icons.js?v=12"></script>
+  <script src="/static/vendor/lucide-icons.js?v=13"></script>
   <script src="/static/icons.js?v=2"></script>
-  <script src="/static/info-tip.js?v=1"></script>
+  <script src="/static/info-tip.js?v=2"></script>
 
   <!-- theme.js phải nạp TRƯỚC mọi file khác: graph.js / app.js đăng ký
        hàm vẽ lại theo tông ngay lúc parse, nếu window.javisTheme chưa có thì chúng
@@ -961,7 +965,8 @@
   <script src="/static/voice-lang.js?v=1"></script>
   <script src="/static/voice.js?v=29"></script>
   <script src="/static/graph.js?v=17"></script>
-  <script src="/static/chat-render.js?v=22"></script>
+  <script src="/static/pan-zoom.js?v=1"></script>
+  <script src="/static/chat-render.js?v=23"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -984,7 +989,7 @@
        diện. Phải nạp TRƯỚC app.js (sendMessage gọi window.JavisLenh) và SAU chat-slash.js (đọc menu). -->
   <script src="/static/chat-goal.js?v=1"></script>
   <script src="/static/chat-lenh.js?v=2"></script>
-  <script src="/static/chat-acts.js?v=6"></script>
+  <script src="/static/chat-acts.js?v=7"></script>
   <!-- One POST /upload with progress and stall watch, shared by the main chat and the Team chat (app.js, teams.js). -->
   <script src="/static/chat-upload.js?v=1"></script>
   <!-- Stick to the latest message, the jump button and its "New messages" pill, shared by app.js and teams.js. -->
@@ -1027,7 +1032,7 @@
   <!-- Models page usage order (0.351.0): drag, swap, popover placement. console.js calls window.JavisModelsOrder. -->
   <script src="/static/models-order.js?v=1"></script>
   <script src="/static/plan-limit.js?v=2"></script>
-  <script src="/static/model-picker.js?v=17"></script>
+  <script src="/static/model-picker.js?v=18"></script>
   <script src="/static/composer-plus.js?v=3"></script>
   <script src="/static/composer-folder.js?v=4"></script>
   <script src="/static/github-connect.js?v=3"></script>
@@ -1059,8 +1064,8 @@
        (ngăn Nhóm gọi window.JavisAgentJudge.hydrate); góp phần "judge" vào khung nhịp qua window.JavisPulseParts. -->
   <script src="/static/agent-judge-ui.js?v=2"></script>
   <!-- Nút mic nhập chữ của khung soạn Nhóm (0.176.0): nạp TRƯỚC teams.js. -->
-  <script src="/static/dictate.js?v=3"></script>
-  <script src="/static/composer-dictate.js?v=2"></script>
+  <script src="/static/dictate.js?v=4"></script>
+  <script src="/static/composer-dictate.js?v=4"></script>
   <script src="/static/teams.js?v=20"></script>
   <script src="/static/chatbots-reply-policy.js?v=1"></script>
   <script src="/static/chatbots-try.js?v=1"></script>
@@ -1068,12 +1073,13 @@
   <!-- Trang Hội thoại (hộp thư khách): nạp TRƯỚC console.js để renderConversations uỷ quyền được. -->
   <script src="/static/conversations-filters.js?v=6"></script>
   <script src="/static/date-range.js?v=1"></script>
-  <script src="/static/inbox-v5.js?v=3"></script>
-  <script src="/static/inbox-channels.js?v=3"></script>
-  <script src="/static/inbox-stats.js?v=2"></script>
-  <link rel="stylesheet" href="/static/inbox-v5.css?v=8">
+  <script src="/static/inbox-v5.js?v=4"></script>
+  <script src="/static/inbox-channels.js?v=5"></script>
+  <script src="/static/inbox-stats.js?v=4"></script>
+  <link rel="stylesheet" href="/static/inbox-v5.css?v=11">
+  <link rel="stylesheet" href="/static/inbox-compact.css?v=4">
   <script src="/static/ht-media.js?v=3"></script>
-  <script src="/static/conversations.js?v=24"></script>
+  <script src="/static/conversations.js?v=27"></script>
   <!-- Dashboard Token (trang Mức dùng nâng cấp): nạp TRƯỚC console.js để renderUsage ủy quyền được. -->
   <script src="/static/usage.js?v=3"></script>
   <!-- Trang Code (terminal): nạp TRƯỚC console.js để renderCode ủy quyền được. File này CHỈ có
@@ -1096,15 +1102,15 @@
   <script src="/static/login-vault.js?v=2"></script>
   <script src="/static/messenger-connect.js?v=3"></script>
   <script src="/static/voice-catalog.js?v=1"></script>
-  <script src="/static/console.js?v=200"></script>
-  <script src="/static/mobile-chat.js?v=15"></script>
+  <script src="/static/console.js?v=202"></script>
+  <script src="/static/mobile-chat.js?v=16"></script>
   <script src="/static/brain-view.js?v=1"></script>
   <script src="/static/push.js?v=3"></script>
   <script src="/static/install-nudge.js?v=1"></script>
   <!-- Mời tặng sao GitHub (0.324.0): thẻ hiện ở khoảnh khắc vui, xem server/star_nudge.py. -->
   <link rel="stylesheet" href="/static/star-nudge.css?v=3">
   <script src="/static/star-nudge.js?v=2"></script>
-  <script src="/static/notifications.js?v=10"></script>
+  <script src="/static/notifications.js?v=11"></script>
   <!-- Linh vật ở mép màn hình. Nạp SAU app.js vì nó chỉ được app.js gọi vào
        (setOrbState -> JavisPet.setState), và sau console.js để trang Cài đặt vẽ được thẻ chọn. -->
   <script src="/static/pet.js?v=1"></script>

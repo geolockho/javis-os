@@ -6,10 +6,123 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.413.0] - 2026-10-30
+### Cải thiện
+- **Bot Zalo cá nhân nhắn có chữ đậm, chữ màu.** Bot viết in đậm hay tô màu (`{red:Giảm 50%}`) thì khách thấy đúng chữ đậm, chữ màu như người thật nhắn, không còn thấy dấu sao `**`.
+- **Hiện "đang soạn tin" trong lúc bot viết** câu trả lời ở chat riêng, khách khó phân biệt bot với người. Cần bản javis-zalo 1.9.0; bản cũ thì bot vẫn trả lời bình thường, chỉ chưa hiện dòng này.
+
+## [0.412.0] - 2026-10-30
+### Thêm mới
+- **Bot trả lời được hộp thư Zalo Official Account.** Chọn kênh **Zalo OA** ở Chatbot, Thêm kênh, dán App ID, App secret key, OA secret key và Refresh token; bot dùng chung Agent, giờ trực và Hộp thư như các kênh khác. Cần Javis có tên miền HTTPS.
+- **Javis tự làm mới token Zalo OA.** Token của Zalo chỉ sống khoảng 25 giờ và mỗi refresh token dùng được một lần, Javis tự đổi và cất cặp mới ngay, bạn không phải lấy lại mỗi ngày.
+- **Xác thực tên miền Zalo ngay trong form.** Dán tên file `zalo_verifier...html` Zalo đưa, bấm Lưu mã, Javis phục vụ đúng file đó để bạn bấm Xác thực bên Zalo. Hướng dẫn từng bước ở tài liệu 35.
+
+## [0.411.0] - 2026-10-30
+### Cải thiện
+- **Javis chỉ hỏi bạn khi thật sự cần.** Khu "Cần bạn xử lý" thành "Javis đang hỏi bạn", chỉ còn câu hỏi, xin phép và kết quả chờ duyệt; việc tạm dừng vì lỗi kỹ thuật chuyển sang khu "Javis đang tự lo", báo nhẹ không rung chuông và nói rõ bạn không cần làm gì.
+- **Nhắn thêm cho việc ở mọi trạng thái.** Việc đã xong, tạm dừng hay đang chờ đều có nút Nhắn thêm (ví dụ "viết lại đoạn 2 ngắn hơn"), việc chạy tiếp trên kết quả cũ chứ không làm lại từ đầu; việc trong hàng có thêm nút Chạy ngay.
+- **Biết việc xong đã được kiểm hay chưa.** Thẻ việc ghi Đã kiểm hoặc Chưa kiểm kèm thời gian chạy, việc chưa kiểm có nút Kiểm lại.
+- **Thông minh và nhẹ hơn.** Việc bạn giao tay 3 lần trong 60 ngày được gợi ý thành lịch tự chạy, việc mới tự đến đúng trợ lý và việc nhỏ chạy nhẹ; trang chỉ tải lại khi có thay đổi và Lịch sử hiện việc mới nhất trước.
+
+## [0.410.0] - 2026-10-30
+### Sửa lỗi
+- **Việc hết lượt dùng không còn bị chấm Xong.** Trước đây Claude báo hết lượt bằng một câu Javis chưa quen mặt chữ (như "You're out of extra usage") hay báo lỗi API giữa chừng thì việc vẫn vào cột Xong, "kết quả" chính là câu báo lỗi. Giờ lượt kết thúc lỗi là lỗi: việc tự hẹn chạy lại lúc gói mở, hoặc nằm ở Cần bạn xử lý kèm lý do.
+- **Việc nền hết lượt Claude thì chuyển sang nhà dự phòng** trong Thứ tự dùng, như Codex vẫn làm, nếu chưa kịp làm gì. Đã làm dở thì dừng và báo, không chạy lại kẻo gửi hai lần.
+- **Trả lời câu hỏi ngay trên thẻ việc được rồi.** Trang Việc tự làm mới mỗi 3 giây và xoá sạch chữ bạn đang gõ trong ô trả lời. Giờ ô giữ nguyên chữ cho tới khi bạn gửi, và nút bấm không còn kẹt xám khi máy chủ trả lỗi.
+
+## [0.409.0] - 2026-10-30
+### Sửa lỗi
+- **Nút ghi âm thành chữ trên điện thoại: bấm X và nút dừng ăn trở lại.** Trước đây lần ghi đầu chạy được, từ lần sau bấm X hay ô vuông đều không có tác dụng, đồng hồ cứ chạy mãi. Nguyên nhân chính: dừng ghi xong Javis tự đặt con trỏ vào ô nhập nên bàn phím bật lên, lần ghi kế tiếp iPhone hạ bàn phím nhưng để cả trang lệch đi, cái chạm vào X rơi trúng ô nhập (hiện bóng "AutoFill") chứ không trúng nút. Giờ lúc ghi âm ô nhập không giữ con trỏ, dừng ghi không bật bàn phím (chạm vào ô khi muốn sửa), và trang tự về đúng chỗ khi bàn phím hạ.
+- **Thanh ghi âm không còn treo.** Trình duyệt không báo đã dừng thì sau 1,5 giây Javis tự kết thúc và giữ chữ đã nghe; bấm dừng lần hai là kết thúc ngay. Bấm X lúc đang chuyển thành chữ thì thanh đóng liền, không phải chờ máy chủ. Máy chủ chuyển chữ quá 45 giây thì Javis thôi chờ và đóng thanh.
+
+## [0.408.0] - 2026-10-29
+### Cải thiện
+- **Chuông thông báo gọn hơn: đọc rồi là ẩn đi.** Danh sách chỉ còn thông báo chưa đọc. Bấm **Đọc tất cả** là danh sách trống ngay. Muốn xem lại thì bấm dòng **Xem N thông báo đã đọc** ở cuối.
+- **Nút X trên từng thông báo** để xoá hẳn nó khỏi hàng đợi, không cần mở ra đọc.
+
+### Sửa lỗi
+- **Bấm "Không cần báo" là thông báo đó rời danh sách ngay.** Trước đây nó vẫn nằm nguyên trong chuông dù Javis đã ghi nhận. Dòng Javis Core học được gì hiện một lần ở đầu danh sách.
+- **Việc nền trả lời "không có gì để báo" không còn rơi vào chuông.** Javis chỉ nhận ra dấu `[SILENT]` khi nó đứng đầu câu trả lời, nên câu kiểu "Tôi sẽ kiểm tra các lượt POSCake bị lỗi. [SILENT]" vẫn thành một thông báo. Giờ dấu đứng đầu hay đứng cuối đều được, cho cả nhắc hẹn lẫn webhook.
+
+## [0.407.0] - 2026-10-29
+### Cải thiện
+- **Store có ô Sắp xếp.** Chọn Đề xuất (mặc định, gói Khuyên dùng lên đầu), Mới cập nhật, hoặc Tên A-Z. Javis nhớ lựa chọn của bạn trên máy này.
+- **Mô tả dài trên thẻ Store gọn trong ba dòng, kết thúc bằng dấu "…".** Trước đây chữ tràn thêm vài dòng rồi bị cắt ngang giữa chừng. Bấm nút (i) cạnh tên để đọc đủ.
+
+## [0.406.0] - 2026-10-29
+### Cải thiện
+- **Trang Models lần đầu vào dễ bắt đầu hơn.** Chưa có nhà cung cấp nào đăng nhập thì mục **Kết nối thêm nhà cung cấp** nằm trên cùng và mở sẵn danh sách các nhà, bấm là kết nối được ngay. Trước đây mục này nằm cuối trang và phải bấm mới xổ ra.
+- **Căn thẳng hàng trang Models.** Nút **Đổi model** giờ cao bằng và thẳng hàng với nút mức suy nghĩ (Off) bên cạnh. Trên điện thoại, tiêu đề mỗi khối không còn bị bóp thành hai cột: nút (i) nằm ngay cạnh tên, dòng mô tả xuống dòng riêng.
+
+## [0.405.0] - 2026-10-29
+### Cải thiện
+- **Sơ đồ và hình phóng to, kéo được trên cả máy tính và điện thoại.** Khung xem Sơ đồ, hình SVG và ảnh mở trong trình sửa giờ lăn chuột hoặc chụm hai ngón để phóng to, thu nhỏ, giữ chuột hoặc một ngón để kéo. Có nút **+**, **−**, **Vừa khung** và chạm đúp để phóng to nhanh. Trước đây sơ đồ rộng chỉ hiện bé xíu trên điện thoại mà không phóng to được.
+
+## [0.404.0] - 2026-10-29
+### Cải thiện
+- **Tab Kênh gọn hơn.** Thẻ thông tin của nick (trạng thái, bot trực, số hội thoại, Ghi hội thoại, Nhập tin cũ, Xem hội thoại, Mở Kết nối) không còn chiếm chỗ trên đầu danh sách. Bấm nút **Thông tin** cạnh ô "A.I. trực" là thẻ hiện lên dạng popup, y như cũ. Nick đang lỗi thì nút có chấm đỏ.
+- Nút "Cài đặt bot" chuyển vào cuối popup đó.
+- Bỏ các câu hướng dẫn trên danh sách "Nhóm và người". Nơi chưa có A.I. trực thì công tắc "A.I. ở đây" mờ đi, bấm vào sẽ nhắc chọn A.I. trực ở ô phía trên.
+
+## [0.403.0] - 2026-10-29
+### Thêm mới
+- **Javis Core chỉ huy thông báo.** Mỗi thông báo có nhóm (Nhắc lịch, Câu hỏi chờ bạn, Chatbot và khách, Kết nối và đăng nhập, Sự cố, Kết quả việc...) và mức: bình thường, đáng chú ý hoặc khẩn.
+- **Mặc định chỉ tin khẩn mới báo:** nhắc lịch, câu hỏi chờ bạn, khách cần người thật, chatbot lỗi, Javis không dùng được, trang bạn theo dõi thay đổi. Tin khác vẫn nằm trong chuông ở ngăn **Đã lọc**, không chấm đỏ, không đẩy lên điện thoại, không gửi Telegram. Việc giao từ một khung chat vẫn báo về đúng khung chat đó.
+- Tab **Bộ lọc** trong chuông: mỗi nhóm chọn Tất cả, Đáng chú ý trở lên, Chỉ tin khẩn hoặc Tắt; xem loại tin có luật riêng; hoàn tác thay đổi.
+- Mỗi thông báo có hai nút **Nên báo** và **Không cần báo**. Muốn chấm bằng emoji thì bấm **Mở trong Javis Core** rồi thả emoji lên tin đó trong chat như mọi câu trả lời. Javis Core tự chỉnh theo đó, nói một câu trong chat của nó, và không bao giờ tự giấu tin khẩn.
+- Tin cùng loại báo tới lần thứ 3 trong 6 tiếng thì các lần sau bị lọc là "lặp lại".
+- Nói trong chat Javis Core, ví dụ "tắt thông báo đăng nhập Zalo", là Javis Core đổi ngay bằng công cụ mới `javis_notify`.
+
+## [0.402.0] - 2026-10-29
+### Sửa lỗi
+- **Javis Core chọn được model.** Mặc định Core theo model chính, đổi model chính là Core đổi theo ngay. Chọn model khác trên thanh model của một chat Core là ghim cho cả Core: mọi chat Core dùng model đó cho tới khi bạn chọn "Theo model của khung chat chính". Trước đây chat Core tự đóng băng ở model của ngày nó được tạo.
+- **Bớt thông báo đăng nhập báo sai:**
+  - Câu trả lời bình thường có nhắc chữ "not logged in" không còn làm Javis báo "Javis chưa dùng được".
+  - Báo hỏng rồi thì khởi động lại không báo lại.
+  - Kết nối đang tải lần đầu sau khi khởi động không bị tính là hỏng.
+  - Một việc định kỳ hỏng nhiều lần chỉ thành một sự cố "cần bạn", không báo lại ở mỗi lần hỏng.
+  - Báo Zalo bị giành phiên không lặp lại sau mỗi lần khởi động.
+
+## [0.401.0] - 2026-10-29
+### Sửa lỗi
+- **Thống kê Chatbot tách số theo từng tài khoản.** Trước đây phần trăm "câu trả lời do A.I. lo" gộp mọi nick, nên nick có người gõ tay kéo tụt phần trăm của nick chỉ có A.I. trả lời.
+- Cạnh nút kỳ có ô **chọn tài khoản**. Chọn một nick thì cả trang chỉ tính nick đó. Javis nhớ lựa chọn này.
+- Bảng theo kênh đổi thành **A.I. và trả lời tay theo tài khoản**: mỗi nick một thanh hai màu, kèm phần trăm A.I. lo của riêng nick đó.
+- "Bạn đã trả lời" đổi thành **Trả lời tay**, vì số này gồm cả tin người khác gõ trên điện thoại của nick.
+
+## [0.400.0] - 2026-10-29
+### Sửa lỗi
+- **Canva và các kết nối đăng nhập OAuth không còn rớt giữa phiên.** Khi token sắp hết hạn, nhiều lệnh cùng lúc từng tự gia hạn bằng cùng một mã, mà Canva chỉ nhận mã đó một lần nên chặn luôn phiên đăng nhập. Giờ chỉ một lệnh đi gia hạn, các lệnh khác dùng chung token mới.
+- Gọi tool giữa cuộc chat luôn dùng token mới nhất. Lỡ máy chủ từ chối token (lỗi 401) thì Javis tự gia hạn và thử lại một lần, không bắt bạn kết nối lại.
+- Token đổi không còn cắt ngang việc đang chạy dở, ví dụ một thiết kế Canva đang tạo.
+
+## [0.399.0] - 2026-10-29
+### Cải thiện
+- **Thống kê Chatbot cho thấy A.I. giúp bạn được gì.** Đầu trang là khối lợi ích: A.I. đã trả lời thay bạn bao nhiêu tin, lo bao nhiêu phần trăm câu trả lời, ước tính bạn được rảnh bao nhiêu giờ, và trả lời bao nhiêu tin lúc bạn nghỉ (21h đến 7h).
+- **Thêm chỉ số mới:** số khách được phục vụ và khách mới, tốc độ trả lời đầu tiên của A.I. so với bạn, biểu đồ giờ khách nhắn nhiều nhất trong ngày.
+- **Tab Kênh và Thống kê gọn hơn**, cùng cỡ chữ và kiểu nút với tab Hội thoại.
+- **Nút (i) giải thích giờ mở thành popup** ngay cạnh nút (trên điện thoại là bảng trượt từ dưới lên), không còn xổ chữ ra làm xô lệch trang. Áp dụng cho mọi nút (i) trong Javis.
+
+## [0.398.0] - 2026-10-29
+### Sửa lỗi
+- **Trả lời khách trên điện thoại: Enter là xuống dòng.** Ở trang Chatbot, bấm Enter trên bàn phím điện thoại trước đây gửi tin luôn, không cách nào viết được dòng thứ hai. Giờ Enter xuống dòng như khung chat chính, muốn gửi thì bấm nút gửi. Trên máy tính giữ nguyên: Enter gửi, Shift+Enter xuống dòng.
+- Lúc đang đọc chính tả trong khung chat, Enter trên điện thoại cũng là xuống dòng, không gửi bản ghi nữa.
+
+## [0.397.0] - 2026-10-29
+### Cải thiện
+- **Trang Chatbot trên điện thoại: chỗ đọc tin rộng gấp đôi.** Mở một cuộc chat là nó chiếm cả màn hình: một hàng đầu gồm nút quay lại, tên khách và nút chế độ màu tím. Bấm nút đó để chọn A.I. trả lời, A.I. soạn hay Tôi trả lời, mỗi cái kèm một dòng giải thích. Ô nhập gọn còn một hàng với hai nút tròn.
+- **Trên điện thoại** bỏ chữ "Chatbot" ở đầu trang, bốn tab chỉ còn icon.
+- **Trên máy tính chữ nhỏ và gọn hơn.** Mỗi khách 2 dòng, vẫn có số tin của cả cuộc chat và số chưa đọc; dòng thứ ba chỉ hiện khi có tag.
+- **Bốn nút lọc hay gãy chữ** (Cần bạn, A.I. đang xử lý...) gộp thành **một nút thả xuống**, luôn hiện số "Cần bạn". Mỗi lựa chọn có một dòng nói rõ nghĩa.
+- **Ba chế độ trả lời nằm ngay đầu cuộc chat.** Thanh màu bên dưới chỉ hiện khi cần bạn làm gì đó. Tag của khách hiện cạnh tên, có nút "+ Tag".
+- **Bảng Thông tin đóng sẵn**, bấm nút ⓘ mới mở, Javis nhớ lựa chọn của bạn. Tin nhắn nằm trong một cột giữa dễ đọc.
+- Nút "A.I. trả lời" ở ô nhập đổi tên thành **"A.I. soạn"** cho đúng việc nó làm: A.I. viết sẵn, bạn bấm Gửi mới đi. Bản nháp hiện ngay trong khung ô nhập.
+
 ## [0.396.0] - 2026-10-29
 ### Cải thiện
 - **Nhóm chat giờ giữ 1.000 tin gần nhất trong Hòm thư, thay vì 100.** Nhóm đông người nói nhiều cũng xem lại được mấy ngày chat. Chat riêng với khách vẫn lưu hết như cũ.
 - Tin đã bị cắt trước đây không tự quay lại; từ giờ nhóm tích dần tới 1.000 tin rồi mới bắt đầu xoá tin cũ nhất.
+
 
 ## [0.394.0] - 2026-10-29
 ### Sửa lỗi
