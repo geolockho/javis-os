@@ -46,3 +46,6 @@ Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `req
 - [[Cấp kubeconfig theo namespace có duyệt admin]] - Cấp quyền kubeconfig cho dev nên dựa trên danh sách namespace được phép (whiteli
 - [[Cookie secret của oauth2-proxy phải đúng 16, 24 hoặc 32 byte]] - oauth2-proxy từ chối `cookie_secret` không đúng độ dài và in thông báo `cookie_s
 - [[Gọi API xuyên cluster qua gateway HTTPS mTLS]] - Khi hai cluster Kubernetes nằm ở nhà cung cấp cloud khác nhau, không nên giả địn
+- [[Điều khiển và hỗ trợ lái trên VinFast VF 6]] - ## Chọn số và giữ xe
+
+- Cụm chọn số có P, R, N và D; cần đạp phanh khi chuyển số
