@@ -1,4 +1,4 @@
-# Javis Memory - Index
+﻿# Javis Memory - Index
 
 > Index of Javis's long-term memory. One line = one memory, pointing to a file in `facts/`.
 > This file is loaded at the start of every question so Javis remembers the context.
@@ -132,4 +132,7 @@
 - [Chốt lịch tạo issue và log work Jira lúc 18h](facts/lich-jira-hang-ngay-18h-hai-tai-khoan.md) - Người dùng chốt quy trình Jira ngày làm việc cho hophu và hoangviet từ 2026-11-02; MCP hoangviet được xác nhận full và bật ngày 2026-10-30.
 - [Muốn giảm thao tác cấp quyền GitLab cho user mới](facts/quan-ly-quyen-gitlab-cho-user-moi.md) - Yêu cầu thăm dò ngày 2026-10-30; chưa chốt giữa web tool và cách cấp quyền khác.
 - [Đang cân nhắc phương án qua Đông Hưng nếu mưa trong chuyến Bình Liêu](facts/phuong-an-du-phong-mua-binh-lieu-dong-hung.md) - Trong chuyến Bình Liêu 6-8/11/2026, người dùng muốn có phương án B nếu mưa và đang cân nhắc đi qua cửa khẩu sang Trung Quốc.
-- [Muốn nghe phản hồi Javis bằng giọng nói](facts/muon-nghe-phan-hoi-javis-bang-giong-noi.md) - Người dùng muốn có thể nghe phản hồi của Javis bằng giọng nói.
+- [Muốn nghe phản hồi Javis bằng giọng nói](facts/muon-nghe-phan-hoi-javis-bang-giong-noi.md) - Muốn nghe phản hồi bằng giọng nói; từ 2026-10-31 tập nói tiếng Anh, giọng đặt là Ava (en-US).
+- [Phương án sạc Bình Liêu nếu trạm kín chưa chốt](facts/phuong-an-sac-binh-lieu-neu-tram-ban.md)
+- [Kết quả xét nghiệm hỗ trợ sinh sản được trao đổi ngày 2026-11-01](facts/ket-qua-xet-nghiem-sinh-san-2026-11-01.md) - Bản đọc trong chat ghi tinh dịch đồ, nhóm AB+ và AMH 3,37; chủ thể phiếu máu và đơn vị AMH chưa xác nhận.
+- [Lịch báo cáo tài nguyên fsel-prod từ 8h đến 18h và tổng kết cuối ngày](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-11-02.md) - Báo cáo tài nguyên fsel-prod chạy mỗi 2 giờ trong khung 8h-18h, kèm một bản tổng kết cuối ngày như cũ.
