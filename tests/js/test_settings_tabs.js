@@ -24,7 +24,7 @@ const ctx = {
   TRANG_CUOI_KEY: "javis_last_page", localStorage: { setItem() {} },
   window: {}, document: { body: { classList: { toggle() {} } } },
   _pageLeave: null, renderPage: id => rendered.push([id, nav.settingsTab]),
-  refreshModelUi() {}, parkQuickSet() {}, recomputeGraph() {},
+  refreshModelUi() {}, parkQuickSet() {}, recomputeGraph() {}, _tabHoiThoaiCho: "",
 };
 vm.createContext(ctx);
 vm.runInContext(fn("navigateTo"), ctx);
@@ -57,10 +57,11 @@ const parent = { replaceChild(fresh) {
   assert.equal(controls.parentNode, holder, "controls were detached before being parked");
   oldBody = fresh;
 } };
-oldBody = { cloneNode: () => ({ parentNode: parent }), parentNode: parent };
+oldBody = { cloneNode: () => ({ parentNode: parent, removeAttribute() {} }), parentNode: parent };
 controls.parentNode = oldBody;
 const renderCtx = {
   body: () => oldBody, _renderGen: 0, STUDIO_PAGES: [],
+  NHOM_TRANG: {}, window: {},   // 0.417.0: renderPage first looks up the page's lazy code group (nap-cham.js)
   document: { getElementById: id => id === "quickSet" ? controls : id === "quickSetHolder" ? holder : null },
   renderSettingsPage() {}, renderSettings() {},
 };

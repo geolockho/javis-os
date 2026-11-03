@@ -105,7 +105,7 @@ SYSTEM_PROMPT = (
     "  " + UI_MARKER + " open_page <id trang>   (mở một tab. Viết ID tiếng Anh; trong ngoặc là nhãn "
     "người dùng nhìn thấy và hay đọc lên: home (Javis), chat (trò chuyện), files (tệp tin), "
     "learn (tự học), terminal, workspace (cộng sự, trợ lý, quy trình), chatbots (chatbot), "
-    "skills (kỹ năng), plugins (công cụ), kanban (việc), selfimprove (việc định kỳ), "
+    "skills (kỹ năng), plugins (công cụ), tasks (nhiệm vụ: việc, việc định kỳ, nhắc hẹn), "
     "mcp (kết nối), packs (Javis Store), channels (kênh), models, usage (mức dùng), "
     "settings (cài đặt), pet (linh vật), logs (cập nhật), account (tài khoản))\n"
     "  " + UI_MARKER + " open_group <id nhóm>   (BUNG một mục đang gập trên thanh bên mà không đổi "
@@ -860,7 +860,8 @@ class GrokVoiceBrain(VoiceBrain):
             got = False
             async for ev in self.cli.query(content):
                 t = ev.get("type")
-                if t == "text" and ev.get("content"):
+                # `delta` (0.438.6): Grok Build phát chữ từng mẩu, nên giọng đọc bắt đầu sớm thay vì chờ hết lượt.
+                if t in ("text", "delta") and ev.get("content"):
                     got = True
                     yield ev["content"]
                 elif t == "final":

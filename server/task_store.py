@@ -1335,7 +1335,7 @@ class TaskStore:
             rows = self._db.execute(
                 f"""SELECT id, title, intent, created_at FROM tasks
                     WHERE brain_root=? AND lane<>'team' AND created_at>=?
-                      AND created_by IN ({','.join('?' for _ in self.HINT_SOURCES)})
+                      AND (created_by IN ({','.join('?' for _ in self.HINT_SOURCES)}) OR created_by LIKE 'bot:%')
                     ORDER BY created_at DESC LIMIT ?""",
                 (root, since, *self.HINT_SOURCES, self.HINT_SCAN),
             ).fetchall()
@@ -1948,6 +1948,25 @@ class TaskStore:
                 self._event(task_id, "team_taken_over", f"taken over by {worker_id}")
             self._db.commit()
             return cur.rowcount == 1
+
+    def team_set_retry_at(self, task_id: str, at: float) -> None:
+        """0.436.0: when a job blocked by a temporary error runs again on its own (`team_retry`). The team lane reuses
+        the Kanban `not_before` column; 0 clears it. The claim of the team queue does not read it: only the retry tick
+        does, and only for jobs blocked with `team_retry.BLOCK_KIND`."""
+        with self._lock:
+            self._db.execute("UPDATE tasks SET not_before=? WHERE id=? AND lane='team'",
+                             (float(at or 0.0), str(task_id)))
+            self._db.commit()
+
+    def team_retry_due(self, kind: str, at: float, limit: int = 50) -> list[dict]:
+        """Jobs blocked with `kind` whose retry time has come, oldest first."""
+        with self._lock:
+            rows = self._db.execute(
+                """SELECT * FROM tasks WHERE lane='team' AND status='team_blocked' AND block_kind=?
+                   AND not_before > 0 AND not_before <= ? ORDER BY not_before LIMIT ?""",
+                (str(kind), float(at), max(1, min(500, int(limit)))),
+            ).fetchall()
+        return [self._task_from_row(r) for r in rows]
 
     def teams_with_waiting(self) -> list[str]:
         with self._lock:

@@ -202,6 +202,15 @@
         '<path fill="#fff" d="M6.4 14.3l3.06-4.86a1.2 1.2 0 0 1 1.74-.32l2.43 1.82 2.23-1.69c.3-.23.69.13.49.45' +
         'l-3.06 4.86a1.2 1.2 0 0 1-1.74.32l-2.43-1.82-2.23 1.69c-.3.23-.69-.13-.49-.45z"/>',
     },
+    // Meta (0.438.0): the infinity mark. The Facebook Messenger card on the Connections page uses it, since one
+    // connection there covers messages, comments and posting; the Messenger channel itself keeps its own bubble.
+    // 0.438.2 (owner, 01/11/2026): the hand-drawn stroke looked wrong, so this is the official gradient mark from the
+    // owner's file, background removed, as a 128px PNG inside the same 24x24 svg box.
+    meta: {
+      nhan: "Meta",
+      mau: "#0866FF",
+      than: '<image href="/static/logos/meta.png" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>',
+    },
     // Discord (0.85.0): the controller-face mark on blurple.
     discord: {
       nhan: "Discord",

@@ -1230,6 +1230,17 @@ function handleMessage(data) {
     try { if (window.JavisChatReactions) window.JavisChatReactions.onFrame(data, { bubble: t && t.bubble }); } catch (e) {}
     return;
   }
+  if (data.type === "external_message") {
+    // 0.440.0: an outside AI posted into this chat through Javis Gate (server/chat_bridge.py). The server stored the
+    // message already; the tab looking at the chat draws the bubble now, then the answer streams in like any turn.
+    if (isActive) {
+      appendUserMessage(data.content || "", [], Date.now());
+      recordTurn("user", chuNguoiGo(data.content || ""), null, null);
+      scrollBottom(true);
+    }
+    notifySessions();
+    return;
+  }
   if (data.type === "push") {
     // Tin do việc chạy NỀN đẩy vào (việc Kanban / loop / nhắc hẹn xong), không thuộc lượt
     // hỏi-đáp nào. KHÔNG đụng turns[sid]: lượt đang chạy (nếu có) vẫn stream bình thường,
@@ -2117,7 +2128,8 @@ function veTinDaLuu(m, brainCua, sidCua) {
     const _vongCu = window.JavisLenh && window.JavisLenh.docVong ? window.JavisLenh.docVong(m.content || "") : null;
     if (_vongCu) { appendGoalRound(_vongCu, false); return { role: "user", text: _sach, atts: [], ts, goalRound: _vongCu }; }
     const _atts = docDinhKem(m.content || "");
-    const el = appendUserMessage(_sach, _atts, ts);
+    // 0.440.0: the Javis Gate sender ("from ChatGPT") is read from the stored text, which still has its block.
+    const el = appendUserMessage(_sach, _atts, ts, nguonGate(m.content || ""));
     if(m.voice_metadata && m.voice_metadata.response_policy==='ack_only' && !m.voice_metadata.answer_requested) renderVoiceReceipt(el,{...m.voice_metadata,session_id:savedSessionId});
     return { role: "user", text: _sach, atts: _atts, ts, voice_metadata:m.voice_metadata };
   }
@@ -2330,7 +2342,17 @@ function lastUserText() {
 // "[SKILL: " là khối do chat-slash.js dựng khi người dùng gõ lệnh "/". Gỡ nó ra thì bong bóng
 // hiện ĐÚNG câu họ đã gõ, thay vì câu máy dựng quanh câu đó - khách báo đúng chuyện này 16/09.
 // Giữ MỘT DÒNG: test_dinh_kem_khong_roi.js bóc đúng dòng này ra để chạy docDinhKem bằng node.
-const _KHOI_NGU_CANH = ["[FILE ĐANG MỞ trong trình sửa của Javis:", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: ", "[CHẾ ĐỘ KẾ HOẠCH:", "[MỤC TIÊU:"];
+const _KHOI_NGU_CANH = ["[FILE ĐANG MỞ trong trình sửa của Javis:", "[File đính kèm", "[NGỮ CẢNH GIAO DIỆN:", "[SKILL: ", "[CHẾ ĐỘ KẾ HOẠCH:", "[MỤC TIÊU:", "[GỬI QUA JAVIS GATE:"];
+// 0.440.0: a message an outside AI (ChatGPT, Claude...) posted through Javis Gate starts with
+// "[GỬI QUA JAVIS GATE: <name>. ...]" (server/chat_bridge.py). The block is stripped like the others;
+// this reads the name back so the bubble can say who sent it.
+const _KHOI_GATE = _KHOI_NGU_CANH[_KHOI_NGU_CANH.length - 1];   // the Javis Gate block, last in the list
+function nguonGate(text) {
+  const t = String(text == null ? "" : text).replace(/^\s+/, "");
+  if (!t.startsWith(_KHOI_GATE + " ")) return "";
+  const m = /^([^.\]\n]{1,40})/.exec(t.slice(_KHOI_GATE.length + 1));
+  return m ? m[1].trim() : "";
+}
 
 // Gỡ mấy khối đó ra để lấy lại ĐÚNG câu người dùng đã gõ.
 //
@@ -2442,7 +2464,8 @@ function vaAnhHong(root) {
   });
 }
 
-function appendUserMessage(text, attachments, ts) {
+function appendUserMessage(text, attachments, ts, via) {
+  const nguon = via || nguonGate(text);
   text = chuNguoiGo(text);
   const div = document.createElement("div");
   div.className = "msg msg-user";
@@ -2454,8 +2477,10 @@ function appendUserMessage(text, attachments, ts) {
     ? `<div class="utext${isLong ? " clamped" : ""}">${window.JavisQuote ? window.JavisQuote.utextHtml(text, escapeHtml) : escapeHtml(text)}</div>` +
       (isLong ? window.JavisActs.clampButtonHtml(false) : "")
     : "";
-  div.innerHTML = `<div class="bubble">${textHtml}${attHtml}</div>` +
+  const nhanNguon = nguon ? `<div class="msg-via">${escapeHtml(window.t("chat.via_gate", { src: nguon }))}</div>` : "";
+  div.innerHTML = `${nhanNguon}<div class="bubble">${textHtml}${attHtml}</div>` +
     actsHtml("user", ts === undefined ? Date.now() : ts, !!(text || "").trim());
+  if (nguon) div.classList.add("msg-gate");
   vaAnhHong(div);
   chatAppend(div); scrollBottom(true);
 }
@@ -2998,6 +3023,9 @@ async function initGraph() {
   if (!window.ForceGraph) { graphStats.innerHTML = ic("triangle-alert", { cls: "ic-warn" }) + " " + window.t("app.graph_lib_err"); return; }
   javisGraph = new JavisGraph(c2d);   // resize() gọi bên trong load()
   await reloadGraph();
+  // 0.415.0: mở app thẳng vào một trang quản lý (trang nhớ từ lần trước) thì console.js đã hỏi "có nên chạy đồ thị không"
+  // TRƯỚC khi đồ thị kịp dựng, nên đồ thị cứ vẽ 60 khung/giây sau lưng trang đó. Hỏi lại khi nó đã có.
+  try { if (window.JavisRecomputeGraph) window.JavisRecomputeGraph(); } catch (e) {}
 }
 
 // Click node trong graph → Javis mở & thao tác note đó trong vault
@@ -3529,6 +3557,9 @@ function initStarfield() {
   function draw(now) {
     requestAnimationFrame(draw);
     if (document.hidden) return;
+    // 0.415.0: một trang quản lý (Cộng sự, Cài đặt...) đang che màn chính thì nền sao không ai nhìn thấy; vẽ tiếp chỉ đốt
+    // CPU, và đo kích thước ở dưới còn ép trình duyệt tính lại bố cục mỗi lần. Khung cuối vẫn nằm trên canvas khi quay về.
+    if (document.body.classList.contains("in-console")) return;
     // Nền 2D từng tự dựng gradient + grid ở 60 FPS dù não đứng yên. 15 FPS lúc nghỉ vẫn
     // đủ cho sao nhấp nháy chậm; khi có giọng/đang nghĩ nâng lên 30 FPS.
     const lvl = voice.getLevel();
@@ -4009,16 +4040,12 @@ window.JavisAttach = {
   note: (s) => { attachNote = String(s || ""); renderChips(); },
 };
 
-// Dán ảnh (Ctrl+V) + dán VĂN BẢN SIÊU DÀI thành file .txt đính kèm (kiểu Claude):
-// bài dài nhồi thẳng vào ô chat vừa khó đọc vừa nặng khung hội thoại - biến thành
-// file thì Javis đọc trọn vẹn còn màn hình chỉ hiện một chip gọn.
-const PASTE_TXT_CHARS = 1500;   // vượt MỘT trong hai ngưỡng là thành file
-const PASTE_TXT_LINES = 25;
+// Dán ảnh (Ctrl+V) thành file đính kèm. Dán CHỮ thì giữ chữ: tới 12.000 ký tự / 150 dòng vẫn dán
+// thẳng vào ô chat như thường. Vượt ngưỡng thì chat-paste.js hiện cả đoạn và HỎI: dán vào chat,
+// đính kèm .txt hay huỷ (0.430.1). Trước đây quá 1.500 ký tự là tự thành file, chủ không còn thấy
+// mình đã dán gì.
 function pasteAsTxt(text) {
-  const d = new Date(), p = n => String(n).padStart(2, "0");
-  const name = `van-ban-dan-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.txt`;
-  const f = new File([new Blob([text], { type: "text/plain" })], name, { type: "text/plain" });
-  uploadFile(f);
+  uploadFile(window.JavisPaste.textFile(text));
 }
 document.addEventListener("paste", (e) => {
   const items = e.clipboardData?.items;
@@ -4029,14 +4056,14 @@ document.addEventListener("paste", (e) => {
       if (f) { chupFile(f).then(uploadFile); e.preventDefault(); }   // 0.65.30: chép ngay, như lúc thả
     }
   }
-  // Văn bản dài: CHỈ khi đang dán vào ô chat - không cướp paste của các ô khác
-  // (form Kết nối, đặt tên brain...). Ô chat ngắn vẫn dán chữ bình thường.
+  // Chỉ ô chat. Các ô khác (form Kết nối, đặt tên brain...) giữ Ctrl+V bình thường.
   if (e.defaultPrevented || e.target !== chatInput) return;
+  const paste = window.JavisPaste;
   const txt = e.clipboardData.getData("text/plain") || "";
-  if (txt.length > PASTE_TXT_CHARS || txt.split("\n").length > PASTE_TXT_LINES) {
-    e.preventDefault();
-    pasteAsTxt(txt);
-  }
+  if (!paste || !paste.isLong(txt)) return;   // chữ vừa phải: để trình duyệt tự dán, Ctrl+Z vẫn chạy
+  e.preventDefault();
+  const range = { start: chatInput.selectionStart, end: chatInput.selectionEnd };
+  paste.offer(txt, (value) => paste.insertAt(chatInput, range, value), pasteAsTxt);
 });
 
 // Kéo-thả file
@@ -4923,6 +4950,13 @@ if (document.getElementById("wzFinish")) {
         // khẩu (quá ngắn...) nên kéo về đúng ô mật khẩu.
         if (!d.ok) { return _soiOTrong(document.getElementById("wzPass"), d.error || window.t("app.wz_pw_err")); }
       }
+      // Timezone: what "today" means for every report and reminder from the first chat on. Saved after the account so the
+      // call is authorised. Not a stop: the account already exists by now, and a refusal (a name the server's tz database
+      // lacks, which the browser list makes very unlikely) leaves the default, still changeable in Settings.
+      const tzSel = document.getElementById("wzTz");
+      if (tzSel && tzSel.value) {
+        await fetch("/settings", { method: "POST", body: _fd({ section: "locale", data: JSON.stringify({ tz: tzSel.value }) }) });
+      }
       await fetch("/settings", { method: "POST", body: _fd({ section: "general", data: JSON.stringify({ workspace_name: ws, setup_done: true }) }) });
       const _PM = { "anthropic-cli": "sonnet", "openai-oauth": "gpt-5.5", "openrouter": "openai/gpt-4o-mini" };
       const _mp = { main: { provider: prov, model: _PM[prov] || "sonnet" } };
@@ -4933,6 +4967,26 @@ if (document.getElementById("wzFinish")) {
     } catch (e) { err.textContent = window.t("app.err_net"); btn.disabled = false; btn.textContent = window.t("app.wz_start"); }
   });
 }
+
+// Wizard - timezone (0.443.0). Starts on the browser's own timezone, which is right for almost everyone installing on
+// their own computer; on a VPS the server clock is usually UTC, which is exactly why this asks the browser and not the server.
+(function () {
+  const sel = document.getElementById("wzTz");
+  if (!sel || !window.JavisTz) return;
+  const now = document.getElementById("wzTzNow");
+  function showNow() {
+    if (now) now.textContent = sel.value ? window.t("tz.now_there").replace("{time}", JavisTz.nowIn(sel.value)) : "";
+  }
+  function fill() {
+    const keep = sel.value || JavisTz.detect() || "Asia/Ho_Chi_Minh";
+    sel.innerHTML = JavisTz.options(keep);
+    sel.value = keep;
+    showNow();
+  }
+  sel.addEventListener("change", showNow);
+  fill();
+  window.addEventListener("javis:i18n", fill);
+})();
 
 // Wizard - chọn nhà cung cấp (card radio) + hiện ô key OpenRouter + gợi ý cách kết nối
 (function () {

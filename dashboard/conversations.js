@@ -2181,6 +2181,8 @@
           (k.kind === "account" ? '<button type="button" class="s-btn-ghost ht-di-ket-noi">' + esc(window.t("ht.mo_ket_noi")) + '</button>' : "") +
           '</div>';
       }).join("") + '</div>' : "") +
+      '<div class="cb-hint ht-card-hint" id="htCardHint" hidden></div>' +
+      '<div id="htTokenPart">' +
       '<label id="htTokenLabel"></label>' +
       '<div class="cb-row"><input id="htToken" type="password" placeholder="' + esc(window.t("cb.ph_token")) + '">' +
         '<button class="s-btn-ghost" id="htCheck" type="button">' + esc(window.t("cb.kiem_tra")) + '</button></div>' +
@@ -2188,6 +2190,7 @@
       '<div class="cb-hint ht-webhook" id="htWebhook" hidden></div>' +
       '<label>' + esc(window.t("ht.lb_nhan_tk")) + '</label>' +
       '<input id="htLabel" placeholder="' + esc(window.t("ht.ph_nhan_tk")) + '">' +
+      '</div>' +
       '<div class="ht-form-acts">' +
         '<button class="s-btn-ghost ht-close" type="button">' + esc(window.t("common.cancel")) + '</button>' +
         '<button class="s-btn ht-save" type="button">' + esc(window.t("common.save")) + '</button>' +
@@ -2199,11 +2202,41 @@
     box.querySelectorAll(".ht-di-ket-noi").forEach(function (n) {
       n.onclick = function () { dong(); try { window.JavisNav.go("mcp"); } catch (e) {} };
     });
+    // Vietnamese interface opens docs/, every other language docs/en/ (same rule as the owner channel guides).
+    function guideUrl(k) {
+      var h = (k && k.huong_dan) || {};
+      var vi = window.JavisI18n && window.JavisI18n.lang() === "vi";
+      var f = vi ? (h.vi || h.en) : (h.en || h.vi);
+      if (!f) return "";
+      return "https://github.com/blogminhquy/javis-os/blob/main/docs/" + (vi && h.vi ? "" : "en/") + f;
+    }
     function apKenh(id) {
       chon = id; uname = ""; meta = {};
       var k = kenhCua(id);
-      box.querySelector("#htTokenLabel").textContent = "Token " + k.nhan;
+      var lab = box.querySelector("#htTokenLabel");
+      lab.textContent = "Token " + k.nhan;
+      // A step-by-step guide for channels whose setup takes many clicks (Messenger, 0.436.1). On the label, not in the
+      // hint under the field, because the hint is replaced by the result of Check.
+      var g = guideUrl(k);
+      if (g) lab.insertAdjacentHTML("beforeend", ' · <a class="ht-guide" href="' + esc(g) + '" target="_blank" rel="noopener">'
+        + esc(window.t("ht.huong_dan")) + " ↗</a>");
       box.querySelector("#htTokenNote").textContent = (k.lay_token || "") + " " + window.t("cb.token_rieng");
+      // A channel with its own card on the Connections page (Messenger, 0.436.2): connecting there is quicker and a Page
+      // connected there is already in the channel list, so nobody should connect the same Page twice.
+      // 0.438.3 (owner, 01/11/2026): for such a channel the form stops here. No token field, webhook or Save, only the
+      // way to its card, which also keeps the paste-a-token fallback.
+      var hint = box.querySelector("#htCardHint");
+      hint.hidden = !k.the_ket_noi;
+      hint.innerHTML = k.the_ket_noi ? esc(window.t("ht.the_ket_noi", { kenh: k.nhan })) +
+        ' <button type="button" class="s-btn ht-mo-the">' + esc(window.t("ht.mo_the", { kenh: k.nhan })) + '</button>' : "";
+      box.querySelector("#htTokenPart").hidden = !!k.the_ket_noi;
+      box.querySelector(".ht-save").hidden = !!k.the_ket_noi;
+      var mo = hint.querySelector(".ht-mo-the");
+      if (mo) mo.onclick = function () {
+        dong();
+        try { window.JavisNav.go("mcp"); } catch (e) {}
+        setTimeout(function () { try { window.JavisMessenger && window.JavisMessenger.openForm(null); } catch (e) {} }, 400);
+      };
       box.querySelectorAll(".cb-kenh-o").forEach(function (n) { n.classList.toggle("on", n.dataset.k === id); });
       hienWebhook(k);
     }
@@ -2267,7 +2300,9 @@
         meta = { vao_duoc_nhom: r.vao_duoc_nhom, account_type: r.account_type || "" };
         note.innerHTML = ic("check", { cls: "ic-ok" }) + " " + esc(window.t("cb.dung_bot")) + " <b>" +
           esc((k.tien_to_ten || "") + uname) + "</b> (" + esc(r.bot_name || "") + ")" +
-          (r.vao_duoc_nhom === false
+          // Only a Zalo Bot on a basic plan can be kept out of groups; Messenger, WhatsApp and Zalo OA have no groups at
+          // all, so the Zalo sentence read as nonsense there (owner, 2026-11-01).
+          (r.vao_duoc_nhom === false && chon === "zalo"
             ? '<br><span class="cb-warn">' + esc(window.t("cb.zalo_khong_nhom", { goi: r.account_type || window.t("cb.goi_co_ban") })) + '</span>'
             : "");
         var lb = box.querySelector("#htLabel");

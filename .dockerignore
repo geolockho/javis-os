@@ -103,6 +103,10 @@ server/javis.log
 Thumbs.db
 desktop.ini
 
+# Desktop installers (packaging/) are built on Windows/macOS runners, never inside the image.
+packaging/
+dist/
+
 # Include all brain contents, but never nested Git metadata or runtime locks.
 !brains/**
 brains/**/.git

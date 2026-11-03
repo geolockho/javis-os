@@ -7,6 +7,7 @@ Javis KHÔNG gọi Anthropic API trực tiếp. Mọi reasoning + tool calling �
 """
 import brain_seed_i18n   # file hạt giống của brain mới theo ngôn ngữ người dùng
 import brain_label   # tên hiển thị của brain, tách khỏi thư mục (0.219.0)
+import brain_order   # thứ tự brain trong bảng chọn: chủ tự sắp, còn lại theo tên hiển thị (0.431.0)
 import localefmt   # múi giờ theo cấu hình, thay UTC+7 nhúng cứng
 import html as html_mod   # escape lời báo lỗi OAuth trên trang callback (biến cục bộ `html` che tên module)
 import posixpath
@@ -149,6 +150,7 @@ import owner_channels   # owner's control channels on Slack and WhatsApp (0.71.0
 import whatsapp_bot     # WhatsApp transport + webhook router (0.71.0)
 import messenger_bot    # Messenger transport + webhook router (0.134.0)
 import messenger_setup  # Messenger connect wizard and health check (0.311.0)
+import messenger_oauth  # Log in with Facebook for the Messenger card (0.434.0)
 import zalo_oa_bot      # Zalo OA transport + webhook router (0.412.0)
 import channel_context   # metadata kênh + gom file trả về kênh chat (port gateway hermes-agent)
 import lang as lang_mod   # chốt ngôn ngữ trả lời cho một lượt
@@ -282,6 +284,10 @@ _AUTH_PUBLIC_EXACT = ("/", "/favicon.ico", "/auth/status", "/auth/login", "/auth
                       # /messenger/webhook (0.134.0): same contract as WhatsApp, the signature is
                       # checked in the route under the app secrets of the Messenger accounts.
                       "/messenger/webhook",
+                      # /messenger/oauth/callback (0.434.0): Facebook sends the browser back here; the
+                      # unguessable `state` from an authenticated /messenger/oauth/start is the check.
+                      # /messenger/privacy: the policy page Meta must reach to switch the app to Live.
+                      "/messenger/oauth/callback", "/messenger/privacy",
                       # /zalo-oa/webhook (0.412.0): Zalo calls it with no cookie; the route checks
                       # X-ZEvent-Signature under the OA secret keys of the Zalo OA accounts.
                       "/zalo-oa/webhook")
@@ -404,7 +410,40 @@ DASHBOARD_PATH = Path(__file__).parent.parent / "dashboard"
 # Windows/mimetypes không biết .webp -> StaticFiles trả text/plain; khai rõ để logo webp đúng kiểu ảnh.
 import mimetypes
 mimetypes.add_type("image/webp", ".webp")
-app.mount("/static", StaticFiles(directory=str(DASHBOARD_PATH)), name="static")
+# Office files (#898): a slim image without /etc/mime.types does not know .xlsx/.docx/.pptx, so /files/raw sent them as
+# application/octet-stream and the browser could not tell what it was saving.
+for _mt, _ext in (("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
+                  ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+                  ("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx")):
+    mimetypes.add_type(_mt, _ext)
+import tinh_gon  # noqa: E402
+
+
+class _TinhGonStatic(StaticFiles):
+    """StaticFiles, trừ .js/.css của dashboard thì gửi bản nén gọn (tinh_gon.py, 0.416.0).
+
+    ETag là crc32 của chính bản gửi đi, và 304 so theo nó; không gửi Last-Modified để trình duyệt khỏi hỏi lại bằng
+    ngày sửa file (ngày đó nói về bản gốc, không phải bản nén). Mọi thứ khác (ảnh, json, file .min.*) đi đường cũ."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        if resp.status_code != 200 or not tinh_gon.nen_duoc(path):
+            return resp
+        full = getattr(resp, "path", None)
+        if not full:
+            return resp
+        try:
+            data, crc = tinh_gon.ban_phuc_vu(Path(full), path)
+        except OSError:
+            return resp
+        etag = '"' + crc + '"'
+        from starlette.datastructures import Headers as _Headers
+        if _Headers(scope=scope).get("if-none-match") == etag:
+            return Response(status_code=304, headers={"etag": etag})
+        return Response(data, media_type=resp.media_type, headers={"etag": etag})
+
+
+app.mount("/static", _TinhGonStatic(directory=str(DASHBOARD_PATH)), name="static")
 
 
 class _NenTinh:
@@ -1160,16 +1199,19 @@ _ASSET_FP: dict = {}          # đường dẫn -> {"khoa": (mtime, size), "crc"
 
 def _asset_fp_one(rel: str) -> str:
     """crc32 của MỘT file tĩnh trong dashboard/. "" nếu không đọc được.
-    Nhớ theo (mtime, size) nên gọi lại nhiều lần vẫn rẻ; file đổi là tự băm lại."""
+    Nhớ theo (mtime, size) nên gọi lại nhiều lần vẫn rẻ; file đổi là tự băm lại.
+
+    0.416.0: băm đúng các bytes máy chủ GỬI ĐI (bản đã nén gọn của tinh_gon), không phải file trên đĩa. freshness.js
+    băm thứ trình duyệt nhận được, nên hai bên phải băm cùng một thứ, không thì gác cổng báo oan mọi file là cũ. Hệ quả
+    tốt: sửa riêng chú thích không đổi bản gửi đi, nên không bắt ai tải lại file đó (zlib.crc32 nằm trong tinh_gon)."""
     try:
         f = DASHBOARD_PATH / rel
         st = f.stat()
-        khoa = (st.st_mtime_ns, st.st_size)
+        khoa = (st.st_mtime_ns, st.st_size, tinh_gon.bat())
         ent = _ASSET_FP.get(rel)
         if ent and ent["khoa"] == khoa:
             return ent["crc"]
-        import zlib
-        crc = format(zlib.crc32(f.read_bytes()) & 0xFFFFFFFF, "08x")
+        _data, crc = tinh_gon.ban_phuc_vu(f, rel)
         _ASSET_FP[rel] = {"khoa": khoa, "crc": crc}
         return crc
     except OSError:
@@ -2708,6 +2750,17 @@ def _note_pin_limit(engine_hint: str, reset_epoch: float = 0.0, now: float = Non
     _PIN_LIMITED[prov] = until
 
 
+def _plan_main_signed_in(provider: str) -> None:
+    """Account 1 of a plan card just finished signing in (0.420.2). The owner may have signed in as ANOTHER account
+    after the old one ran out, so the old account's rest and the plan's out-of-quota mark go. Signing in the same
+    empty account again costs nothing: the next turn hits the limit before writing a word and moves on (spec 6.4)."""
+    try:
+        model_routing.clear_rest(provider, plan_accounts.MAIN)
+    except Exception as e:  # noqa: BLE001 - a sign-in must never fail on this
+        print(f"[plan accounts] clear rest {provider}: {type(e).__name__}: {e}", file=sys.stderr)
+    _PIN_LIMITED.pop(provider, None)
+
+
 def _note_api_limit(mcfg, prov: str, key: str, raw: str = "", seconds: float = 0.0) -> None:
     """An API key ran out of quota in a chat turn: that key rests (0.354.0), so the turn and the next ones run on the
     provider's next key, or on the next card when it has none."""
@@ -2821,9 +2874,25 @@ def _chat_next_route(mcfg, failed: str, failed_key: str = "", tried=(), failed_a
 
 
 def _pin_limited_until(provider: str, now: float = None) -> float:
-    """Epoch until which `provider` is out of quota for pinned chats, 0 when it is usable."""
-    until = float(_PIN_LIMITED.get(str(provider or ""), 0) or 0)
-    return until if until > (time.time() if now is None else now) else 0.0
+    """Epoch until which `provider` is out of quota for pinned chats, 0 when it is usable.
+
+    0.420.1: the mark is set when no account of a plan could run. An account signed in or switched on since then
+    (the owner adds one right after account 1 runs out) lifts it at once instead of at account 1's reset time;
+    before, every chat kept skipping the plan card and landed on a backup card that was not signed in."""
+    prov = str(provider or "")
+    now = time.time() if now is None else now
+    until = float(_PIN_LIMITED.get(prov, 0) or 0)
+    if until <= now:
+        return 0.0
+    try:
+        if plan_accounts.in_use(prov):
+            m = cfgmod.read_settings().get("model") or {}
+            if plan_accounts.has_extra(m, prov) and plan_accounts.usable(m, prov, now):
+                _PIN_LIMITED.pop(prov, None)
+                return 0.0
+    except Exception as e:  # noqa: BLE001 - keep the mark when the account list cannot be read
+        print(f"[plan accounts] pin {prov}: {type(e).__name__}: {e}", file=sys.stderr)
+    return until
 
 
 def _chat_provider_for_session(mcfg, row):
@@ -4609,6 +4678,7 @@ def oauth_openai_poll():
     if d.get("status") == "connected":
         # Vừa đăng nhập ChatGPT xong: đèn báo não phải xanh NGAY, không chờ vòng probe.
         connect_health.engine_reconnected("codex")
+        _plan_main_signed_in("openai-oauth")
     return d
 
 
@@ -4631,6 +4701,7 @@ async def oauth_openai_browser_finish(request: Request):
     d = openai_oauth.finish_browser(callback)
     if d.get("status") == "connected":
         connect_health.engine_reconnected("codex")   # đăng nhập xong đèn xanh ngay
+        _plan_main_signed_in("openai-oauth")
     return d
 
 
@@ -4999,13 +5070,24 @@ async def grok_login_start():
     đứng hỏi máy chủ tới khi người dùng bấm xong trên web, nên Javis không nhận lại mã nào cả.
     Giao diện gọi tiếp `/grok/login-poll` để biết đã xong chưa.
     """
+    global _GROK_MAIN_LOGIN_PENDING
+    _GROK_MAIN_LOGIN_PENDING = True
     return await asyncio.to_thread(grok_cli.login_start)
+
+
+# 0.420.2: set by login-start, so only a sign-in started here (not a page merely asking) lifts the quota mark.
+_GROK_MAIN_LOGIN_PENDING = False
 
 
 @app.get("/grok/login-poll")
 def grok_login_poll():
     """Bước 2: vòng đăng nhập tới đâu rồi. Giao diện hỏi lặp lại cái này sau login-start."""
-    return grok_cli.login_trang_thai()
+    global _GROK_MAIN_LOGIN_PENDING
+    d = grok_cli.login_trang_thai()
+    if d.get("connected") and _GROK_MAIN_LOGIN_PENDING:
+        _GROK_MAIN_LOGIN_PENDING = False
+        _plan_main_signed_in("grok-cli")
+    return d
 
 
 @app.post("/grok/logout")
@@ -5089,10 +5171,30 @@ def claude_login_code(code: str = Form("")):
     """Nhận code user dán sau khi mở link đăng nhập."""
     d = auth_login_ui_code(code)
     if d.get("ok"):
-        warm_pool.POOL.drop_kind("claude")   # 0.387.0: a warm `claude` keeps the login it started with
-        # Vừa đăng nhập xong: đèn báo não phải xanh NGAY, không chờ vòng probe 10 phút
-        # (banner 'chưa kết nối Model AI' treo sau khi đã kết nối là lỗi khách báo 27/08).
-        connect_health.engine_reconnected("claude")
+        _claude_main_signed_in()
+    return d
+
+
+def _claude_main_signed_in():
+    """The main Claude account just signed in, by a pasted code or in the browser on its own."""
+    claude_cli._LOGIN["finalized"] = True
+    warm_pool.POOL.drop_kind("claude")   # 0.387.0: a warm `claude` keeps the login it started with
+    # Vừa đăng nhập xong: đèn báo não phải xanh NGAY, không chờ vòng probe 10 phút
+    # (banner 'chưa kết nối Model AI' treo sau khi đã kết nối là lỗi khách báo 27/08).
+    connect_health.engine_reconnected("claude")
+    _plan_main_signed_in("anthropic-cli")
+
+
+@app.get("/claude/login-poll")
+def claude_login_poll():
+    """Has the sign-in from /claude/login-start finished without a code? On a machine with a browser the CLI opens
+    the sign-in itself and gets the answer over localhost; the web page then only says "You're all set up" and shows
+    no code to paste (owner report 02/11/2026). The card asks here every few seconds while it shows the code box."""
+    if (claude_cli._LOGIN.get("env") or {}).get("CLAUDE_CONFIG_DIR"):
+        return {"ok": True, "waiting": False, "connected": False}   # an extra account's sign-in, polled elsewhere
+    d = claude_cli.auth_login_ui_poll()
+    if d.get("connected") and not claude_cli._LOGIN.get("finalized"):
+        _claude_main_signed_in()
     return d
 
 
@@ -5272,7 +5374,7 @@ tools_routes.register(app, tools_routes.ToolsDeps(
 # ---- Đường HTTP của plugin (0.64.26) ----
 #
 # Lõi chỉ CHUYỂN request; luật nằm ở plugins_host (ai được mở đường, đường nào công khai, đường
-# nào không cookie). Sinh ra để "Javis trong ChatGPT" rời lõi thành một gói trong kho, nhưng cố
+# nào không cookie). Sinh ra để "Javis trong ChatGPT" (nay là Javis Gate) rời lõi thành một gói trong kho, nhưng cố
 # ý làm chung: webhook của dịch vụ ngoài là cùng một nhu cầu.
 _EXT_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -5866,7 +5968,15 @@ async def settings_set(section: str = Form(...), data: str = Form("{}")):
             lc["ui_lang_nguon"] = "tu_dong" if patch.get("tu_dong") else "chon"
             _doi_ngon_ngu_hat_giong(lc["ui_lang"])
         if "tz" in patch:
-            lc["tz"] = str(patch["tz"] or "").strip() or "Asia/Ho_Chi_Minh"
+            raw = str(patch["tz"] or "").strip()
+            name = localefmt.valid_tz(raw) if raw else "Asia/Ho_Chi_Minh"
+            if not name:
+                # Refuse instead of storing it: localefmt would fall back to UTC+7 without a word, and the picker would
+                # keep showing a timezone Javis is not using.
+                return JSONResponse({"ok": False, "error": localefmt.chu(
+                    "Máy chủ không nhận ra múi giờ \"{tz}\"", "The server does not recognise the timezone \"{tz}\"",
+                    tz=raw[:64])}, status_code=400)
+            lc["tz"] = name
         if "currency" in patch:
             lc["currency"] = str(patch["currency"] or "").strip().upper() or "VND"
     elif section == "general":
@@ -7452,7 +7562,12 @@ def _list_brains_sync() -> dict:
                         "is_default": is_default})
     except Exception as e:
         return {"dir": str(base), "brains": [], "error": str(e)}
-    return {"dir": str(base), "brains": out}
+    # 0.431.0: the owner's order first (brain picker, Reorder), then by display label read like a person does.
+    try:
+        order = (cfgmod.read_settings() or {}).get(brain_order.SETTINGS_KEY) or []
+    except Exception:
+        order = []
+    return {"dir": str(base), "brains": brain_order.sort(out, order)}
 
 
 @app.get("/brains")
@@ -7460,6 +7575,20 @@ async def list_brains():
     """Liệt kê mọi brain trong BRAINS_DIR (mỗi folder con = 1 brain) + số note .md.
     Dropdown chọn brain đổ từ đây (server-side) thay vì localStorage."""
     return await asyncio.to_thread(_list_brains_sync)
+
+
+@app.post("/brains/order")
+async def brain_set_order(order: str = Form("[]")):
+    """Save the order of the brain list (0.431.0, the brain picker's Reorder mode). `order` is a JSON list of brain
+    FOLDER names, first on top. Stored in settings.json, so every device shows the same order; a brain left out is
+    listed after the ordered ones, by its display label."""
+    try:
+        raw = json.loads(order or "[]")
+    except json.JSONDecodeError:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Thứ tự không hợp lệ", "Invalid order")}, status_code=400)
+    ten = brain_order.clean(raw)
+    await asyncio.to_thread(cfgmod.update_settings, {brain_order.SETTINGS_KEY: ten})
+    return {"ok": True, "order": ten}
 
 
 @app.post("/brains/new")
@@ -7751,7 +7880,27 @@ def _ghi_luat_chu(brain, slug, rules):
     dòng sau 15 bài học khác."""
     _ghi_muc_bo_nho_agent(brain, slug, agent_rules.OWNER_RULES_HEADER, rules, None)
 
+def _agent_run_task_text(task) -> str:
+    """The owner's own request, without the blocks Javis put in front of it (#934).
+
+    A chat turn reaches the agent with a recall block ([NHỚ LẠI TỪ CÁC CUỘC TRÒ CHUYỆN TRƯỚC: ...]) and the dashboard's
+    context blocks ([NGỮ CẢNH GIAO DIỆN: ...], open file, attachments) in front. Logged as they were, old chat excerpts
+    landed in agents/<slug>/runs/ and came back as fresh memories. Nothing left after stripping keeps the original."""
+    raw = str(task or "")
+    try:
+        clean = raw
+        for _ in range(4):   # the recall block sits in front of the dashboard's blocks, but take either order
+            nxt = share_render.chu_nguoi_go(chat_recall.strip_block(clean.lstrip()))
+            if nxt == clean:
+                break
+            clean = nxt
+    except Exception:
+        clean = raw
+    return clean or raw
+
+
 def _log_agent_run(brain, slug, task, out):
+    task = _agent_run_task_text(task)
     try:
         d = _brain_memory_dir(brain) / "agents" / slug / "runs"
         d.mkdir(parents=True, exist_ok=True)
@@ -8999,8 +9148,11 @@ def raw_file_response(brain: str, path: str, dl: bool = False):
     if dl:
         return FileResponse(str(f), filename=f.name)   # ép tải (giữ tên, kể cả tên tiếng Việt)
     mt, _ = mimetypes.guess_type(f.name)
-    resp = FileResponse(str(f), media_type=mt or "application/octet-stream")
-    resp.headers["Content-Disposition"] = "inline"      # hiển thị trong trình duyệt, không ép tải
+    # inline WITH the file name (#898): a browser that cannot show the type (.xlsx) saves it, and with a bare "inline"
+    # it named the file after the last URL segment ("raw", no extension). Starlette writes a non-ASCII name as
+    # RFC 5987 filename*=utf-8''..., so an accented name stays a valid header.
+    resp = FileResponse(str(f), media_type=mt or "application/octet-stream", filename=f.name,
+                        content_disposition_type="inline")   # hiển thị trong trình duyệt, không ép tải
     resp.headers["X-Content-Type-Options"] = "nosniff"
     return resp
 
@@ -12669,6 +12821,38 @@ async def _send_voice_file(chat_id, path, brain) -> tuple:
     return await _TG_BOT.send_file(path, chat=cid)
 
 
+import my_tasks as my_tasks_mod
+import gcal_read
+
+
+async def _habit_coach_ask(prompt: str) -> str:
+    """Habit coach (0.427.0): one text-only turn on the background model, like the page watch summary."""
+    if os.environ.get("JAVIS_NO_REAL_JUDGE_ENGINE") == "1":
+        raise RuntimeError("JAVIS_NO_REAL_JUDGE_ENGINE")
+    cli = _reply_policy_sandbox_engine("You write short, warm habit lines as Javis's star mascot. Answer with JSON only.",
+                                       "habit-coach", cwd_name="habit_coach_cwd")
+    base = cli
+    cli = aux_engine.strip_tools(_aux_swap(cli, mode="suggest", tag="habit-coach"), base)
+    if not cli.is_available():
+        raise RuntimeError("background engine not ready")
+    final = ""
+    async for ev in cli.query(prompt):
+        if ev.get("type") == "final":
+            final = ev.get("content", "") or ""
+        elif ev.get("type") == "error":
+            raise RuntimeError(str(ev.get("content") or "engine error")[:200])
+    return final
+
+
+# The owner's own tasks for the Tasks page, tab "Mine" (0.423.0): one JSON store per brain.
+my_tasks_feature = my_tasks_mod.register(app, my_tasks_mod.MyTasksDeps(
+    brain_root=_brain_root, atomic_write_text=_atomic_write_text,
+    # Habit reminders (0.424.0) go out like a reminder's report: inbox, Telegram, push.
+    scheduler_brains=_background_brains,
+    notify=lambda chat_id, text, brain="", dedup="": _notify_owner(chat_id, text, kind="report", source="habit", brain=brain, dedup=dedup),
+    tz=reminders_mod.VN_TZ,
+    # 0.427.0: habit lines written by Core, and read-only Google Calendar events.
+    ask=_habit_coach_ask, calendar=gcal_read.events))
 reminders_feature = reminders_mod.register(app, reminders_mod.RemindersDeps(
     brain_root=_brain_root,
     atomic_write_text=_atomic_write_text,
@@ -12786,6 +12970,28 @@ watch_feature = web_watch.register(app, web_watch.WebWatchDeps(
     summarize=_watch_summarize,
     channels=_kenh_con_thieu,
 ))
+
+# 0.428.0: stats for both tabs of the Tasks page (task_stats.py): what Javis did next to what the owner did.
+import task_stats  # noqa: E402
+
+
+def _stats_agent_names(brain: str) -> dict:
+    try:
+        return {a.get("slug"): a.get("name") or a.get("slug") for a in agents_index(brain, kem_prompt=False) if a.get("slug")}
+    except Exception:
+        return {}
+
+
+# 0.429.0: which chatbot made a job (bot_jobs.py), so the Tasks page and its stats show a bot's jobs under it.
+import bot_jobs  # noqa: E402
+
+bot_jobs_feature = bot_jobs.register(app, bot_jobs.BotJobsDeps(
+    brain_root=_brain_root, list_bots=chatbot_store.list_bots, turns=chatbot_log._nap,
+    task_store=lambda: tasks_feature.store, loops=loop_feature.list_loops), tz=reminders_mod.VN_TZ)
+
+task_stats_feature = task_stats.register(app, task_stats.TaskStatsDeps(
+    brain_root=_brain_root, my_tasks=lambda: my_tasks_feature, task_store=lambda: tasks_feature.store,
+    tz=reminders_mod.VN_TZ, agent_names=_stats_agent_names, bot_jobs=bot_jobs_feature.map))
 
 # 0.251.0: login vault (login_vault.py). The owner's sign-in cookies, encrypted, reused by javis_login and by
 # page watches. Its routes need a real dashboard session: an API token can neither read nor add a sign-in.
@@ -12939,7 +13145,7 @@ async def viec_all():
             loops = []
         try:
             rems = []
-            for v in reminders_feature.pending_views(path):
+            for v in reminders_feature.live_views(path):
                 v["brain_name"], v["brain_path"] = name, path
                 rems.append(v)
         except Exception:
@@ -13960,6 +14166,7 @@ async def _start_scheduler():
                 # 3b) Nhắc hẹn từ chat: tới giờ → bắn Telegram (mode task: chạy engine rồi báo)
                 try:
                     await reminders_feature.tick()
+                    await my_tasks_feature.tick()   # habit reminders (0.424.0)
                     # 0.202.0: prompt-cache keep-warm (off unless switched on, see cache_keepwarm.py).
                     asyncio.create_task(_KEEPWARM.tick())
                 except Exception as rte:
@@ -14124,6 +14331,8 @@ async def _start_scheduler():
         chatbot_runtime.wire(answer=_tg_answer, brain_root=_brain_root,
                              read_agent=lambda b, slug: _read_md(_agents_dir(b) / f"{slug}.md"),
                              session_probe=_manual_session_probe, session_undo=_manual_session_undo,
+                             # 0.433.0: hear what is said in a video a customer sends (same Groq key as voice messages).
+                             transcribe=_stt_nghe,
                              # Lượt bot hỏng: khách không nhận gì, chủ nghe ở chuông thông báo (chủ repo 15/10/2026).
                              # 0.403.0: urgent: a customer is waiting for a person, or got no answer at all.
                              notify=lambda text: _bo_vao_hom_thu("", text, kind="system", source="chatbot",
@@ -16020,10 +16229,10 @@ async def voice_options(brains: int = 1):
                 item["models"] = _models_items(grok_cli.list_models() or []) if item["available"] else []
             except Exception:
                 item["models"] = []
-            item["hint"] = (localefmt.chu("Mỗi câu một lượt grok headless, nối lại mạch cũ nên có ký ức. Trả lời về "
-                                          "một cục chứ không stream từng chữ.",
+            item["hint"] = (localefmt.chu("Mỗi câu một lượt grok headless, nối lại mạch cũ nên có ký ức. Chữ về "
+                                          "từng mẩu nên đọc được ngay khi Grok đang viết.",
                                           "One headless grok turn per sentence, resuming the thread so it remembers. "
-                                          "Replies arrive in one block rather than streaming word by word.")
+                                          "Text arrives piece by piece, so speech starts while Grok writes.")
                             if item["available"]
                             else localefmt.chu("Chưa cài Grok Build (grok). Xem trang Models.",
                                                "Grok Build (grok) is not installed. See the Models page."))
@@ -16837,6 +17046,15 @@ async def websocket_endpoint(ws: WebSocket):
         await ws.close(code=1008)
         return
     await ws.accept()
+    await _chat_socket(ws)
+
+
+async def _chat_socket(ws):
+    """Vòng nhận tin của khung chat, tách khỏi `websocket_endpoint` (0.440.0) chỉ để server
+    tự gọi được nó: Javis Gate (`chat_bridge`) đưa tin của ChatGPT/Claude vào hội thoại bằng
+    một kết nối ẢO đi đúng con đường này, nên lượt đó chạy y hệt khi chủ gõ tay (chữ chạy trên
+    mọi tab, nút Dừng, lưu kho, ghi nhật ký tự học). Cổng đăng nhập vẫn nằm ở endpoint: chỉ mã
+    trong tiến trình mới gọi thẳng được hàm này."""
     # WebSocket chỉ là subscriber. Job chat sống trong _CHAT_RUNTIME nên đóng/F5 tab
     # không huỷ job; kết nối mới nhận snapshot để xem hoặc Stop tiếp.
     conn_tag = f"chat:{uuid.uuid4().hex[:8]}"
@@ -17307,6 +17525,11 @@ async def websocket_endpoint(ws: WebSocket):
                                 "detail": tool_label.chi_tiet(ev),
                                 "content": localefmt.chu(f"⚙ Đang gọi: {ev.get('name', '')}",
                                                          f"⚙ Calling: {ev.get('name', '')}")}))
+                        elif et == "delta":
+                            # 0.438.6: chữ xem trước, hiện ngay từng mẩu; `final` mới là câu trả lời.
+                            if ev.get("content"):
+                                await ws.send_text(json.dumps({
+                                    "type": "stream", "content": ev["content"], "tts": False}))
                         elif et == "final":
                             final_text = ev.get("content") or ""
                         elif et == "usage":
@@ -17383,6 +17606,11 @@ async def websocket_endpoint(ws: WebSocket):
                                 "detail": tool_label.chi_tiet(ev),
                                 "content": localefmt.chu(f"⚙ Đang gọi: {ev.get('name', '')}",
                                                          f"⚙ Calling: {ev.get('name', '')}")}))
+                        elif et == "delta":
+                            # 0.438.6: chữ xem trước, hiện ngay từng mẩu; `final` mới là câu trả lời.
+                            if ev.get("content"):
+                                await ws.send_text(json.dumps({
+                                    "type": "stream", "content": ev["content"], "tts": False}))
                         elif et == "final":
                             final_text = ev.get("content") or ""
                         elif et == "usage":
@@ -17855,11 +18083,19 @@ async def websocket_endpoint(ws: WebSocket):
                                         "detail": tool_label.chi_tiet(ev),
                                         "content": f"⚙ MCP: {ev.get('name', '')}",
                                     }))
+                                elif ev["type"] == "delta":
+                                    # 0.438.5: chữ xem trước của vòng tool, hiện ngay từng mẩu. Không cộng
+                                    # vào final_text: câu trả lời thật đến ở sự kiện `text` cuối vòng.
+                                    if ev.get("content"):
+                                        await ws.send_text(json.dumps({
+                                            "type": "stream", "content": ev["content"], "tts": False,
+                                        }))
                                 elif ev["type"] == "text":
                                     final_text += ev["content"]
-                                    await ws.send_text(json.dumps({
-                                        "type": "stream", "content": ev["content"], "tts": False,
-                                    }))
+                                    if not ev.get("streamed"):   # đã hiện qua `delta` thì đừng in lại
+                                        await ws.send_text(json.dumps({
+                                            "type": "stream", "content": ev["content"], "tts": False,
+                                        }))
                                 elif ev["type"] == "error":
                                     if not _limit_hit:
                                         await ws.send_text(json.dumps({
@@ -19228,6 +19464,21 @@ async def websocket_endpoint(ws: WebSocket):
     finally:
         # Chỉ bỏ subscriber; job server tiếp tục chạy và tự lưu kết quả.
         _CHAT_RUNTIME.remove_client(client_id)
+
+
+# Javis Gate (0.440.0): AI bên ngoài nhắn vào hội thoại qua đúng vòng chat ở trên. Lambda để test
+# thay `_CHAT_RUNTIME` sau khi nạp vẫn trúng.
+import chat_bridge  # noqa: E402
+
+async def _gate_luu_luot(sid, brain, tin, tra_loi):
+    """Ghi chép của Javis Gate (0.441.0): lưu tin của chủ rồi đi ĐÚNG đường lưu một lượt chat (`_persist_turn`:
+    Lịch sử, nhật ký hội thoại, vòng tự học), mà không chạy engine nào."""
+    st = get_store()
+    st.append_message(sid, "user", tin)
+    return await _persist_turn(st, sid, brain, tin, tra_loi)
+
+
+chat_bridge.gan(lambda ws: _chat_socket(ws), lambda: _CHAT_RUNTIME, _gate_luu_luot)
 
 
 # ============================================================
@@ -22127,6 +22378,11 @@ async def _tg_answer(text, meta=None, progress=None, channel="telegram", bot=Non
     # group. A dedicated bot is never the owner, whatever its permission level; every other
     # caller of this shell is an owner surface (admin channels, CLI, voice).
     _luot = turn_context.from_meta(channel, meta, la_chu=not bot)
+    if bot:
+        # 0.429.0: jobs this turn creates (reminders, loops, Kanban) are stamped with the bot, so the Tasks page
+        # shows them under the bot's assistant instead of Javis Core.
+        # A plain string, so a hook reading the turn (a shallow copy) cannot edit it for the next reader.
+        _luot["bot_id"] = str(bot["id"])
     # ĐA PHIÊN: định tuyến theo chat_id → ngữ cảnh của mỗi tài khoản tách biệt.
     chat_id = str((meta or {}).get("chat_id") or "default")
     if bot:
@@ -24305,9 +24561,15 @@ async def _stt_nghe(data, ten=""):
     # Cùng bộ từ vựng và lớp sửa nghe nhầm như mic trên dashboard (nghe_sua): tin thoại Telegram
     # hay Zalo nói "David" cũng phải ra "Javis" trước khi vào bộ não.
     _tv = nghe_sua.tu_vung(_cfg)
-    res = await stt.groq_nghe(data, ten, key,
-                              ngon_ngu=(lang_registry.get(_ma).stt if _ma else ""),
-                              hotwords=nghe_sua.goi_y_whisper(_tv))
+    # 0.435.0: not Groq only any more. Every ear the owner has is tried in turn (Groq, OpenAI, Gemini, then the
+    # offline Whisper from the Tools page); one missing or failing hands over to the next (`stt.listen_any`).
+    _m = _cfg.get("model") or {}
+    import local_stt
+    res = await stt.listen_any(data, ten, {"groq": key, "openai": _m.get("openai_api_key") or "",
+                                           "gemini": _m.get("gemini_api_key") or ""},
+                               ngon_ngu=(lang_registry.get(_ma).stt if _ma else ""),
+                               hotwords=nghe_sua.goi_y_whisper(_tv),
+                               local=local_stt.transcribe if local_stt.installed() else None)
     if res.get("ok") and res.get("text"):
         res["text"] = nghe_sua.sua(res["text"], _tv)
     return res
@@ -24685,7 +24947,7 @@ def _ms_account_view(a: dict) -> dict:
     meta = a.get("meta") or {}
     return {"id": a.get("id"), "label": a.get("label"), "page_id": a.get("external_id"),
             "page_name": meta.get("bot_name", ""), "app_id": meta.get("app_id", ""),
-            "brain": a.get("brain", ""),
+            "brain": a.get("brain", ""), "comments": messenger_bot.comment_mode(a.get("id", "")),
             "bots": [{"id": b["id"], "name": b.get("name"), "enabled": bool(b.get("enabled"))} for b in bots]}
 
 
@@ -24701,14 +24963,42 @@ def _ms_bot_running(account_id: str, page_id: str) -> bool:
                 or any(b.get("enabled") for b in chatbot_store.bots_using_account(account_id)))
 
 
+def _ms_save_account(request: Request, page_id: str, app_id, app_secret, res: dict, label="", brain="",
+                     extra_meta=None) -> tuple:
+    """Store (or update) the Messenger account of one Page after `messenger_setup.connect` succeeded,
+    and restart the bots that use it. Returns (account id, error, updated). Shared by the paste
+    wizard and Log in with Facebook (0.434.0)."""
+    secret = f"{page_id} {res['page_token']} {str(app_secret or '').strip()}"
+    meta = {"bot_name": res.get("page_name", ""), "app_id": str(app_id or "").strip(),
+            "webhook_url": _ms_webhook_url(request), **(extra_meta or {})}
+    old = channel_accounts.owner_of(page_id, "messenger")
+    if old:
+        aid = old["id"]
+        ok, loi = channel_accounts.update_account(aid, {"token": secret, "external_id": page_id,
+                                                        "meta": {**(old.get("meta") or {}), **meta}})
+        if not ok:
+            return "", loi, True
+        for b in chatbot_store.bots_using_account(aid):
+            if b.get("enabled"):
+                chatbot_runtime.start_bot(b["id"])
+        return aid, "", True
+    aid, loi = channel_accounts.create_account({
+        "channel": "messenger", "token": secret, "external_id": page_id, "meta": meta,
+        "label": str(label or "").strip() or res.get("page_name", "") or page_id,
+        "brain": str(brain or "").strip()})
+    return aid, loi or "", False
+
+
 @app.get("/messenger/setup")
 async def messenger_setup_info(request: Request, brain: str = ""):
     """What the wizard needs before the owner types anything: the webhook address, whether it is
     HTTPS, the verify token, and the Messenger accounts already saved."""
     url = _ms_webhook_url(request)
     accs = channel_accounts.list_accounts(channel="messenger", brain=str(brain or "").strip())
+    base = url[: -len("/messenger/webhook")]
     return {"ok": True, "webhook_url": url, "https": url.startswith("https://"),
-            "verify_token": _ms_verify_token(), "accounts": [_ms_account_view(a) for a in accs]}
+            "verify_token": _ms_verify_token(), "accounts": [_ms_account_view(a) for a in accs],
+            "oauth_redirect": base + messenger_oauth.CALLBACK_PATH, "privacy_url": base + messenger_oauth.PRIVACY_PATH}
 
 
 @app.post("/messenger/connect")
@@ -24725,34 +25015,156 @@ async def messenger_connect(request: Request):
     if not res.get("ok"):
         return JSONResponse({"ok": False, "error": res.get("error", ""), "step": res.get("step", "")},
                             status_code=400)
-    secret = f"{page_id} {res['page_token']} {str(body.get('app_secret') or '').strip()}"
-    meta = {"bot_name": res.get("page_name", ""), "app_id": str(body.get("app_id") or "").strip(),
-            "webhook_url": _ms_webhook_url(request)}
-    old = channel_accounts.owner_of(page_id, "messenger")
-    if old:
-        aid = old["id"]
-        ok, loi = channel_accounts.update_account(aid, {"token": secret, "external_id": page_id,
-                                                        "meta": {**(old.get("meta") or {}), **meta}})
-        if not ok:
-            return JSONResponse({"ok": False, "error": loi}, status_code=400)
-        for b in chatbot_store.bots_using_account(aid):
-            if b.get("enabled"):
-                chatbot_runtime.start_bot(b["id"])
-    else:
-        aid, loi = channel_accounts.create_account({
-            "channel": "messenger", "token": secret, "external_id": page_id, "meta": meta,
-            "label": str(body.get("label") or "").strip() or res.get("page_name", "") or page_id,
-            "brain": str(body.get("brain") or "").strip()})
-        if loi:
-            return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    aid, loi, updated = _ms_save_account(request, page_id, body.get("app_id"), body.get("app_secret"), res,
+                                         body.get("label"), body.get("brain"))
+    if loi:
+        return JSONResponse({"ok": False, "error": loi}, status_code=400)
     a = channel_accounts.get_account(aid) or {}
+    return {"ok": True, "updated": updated, "account": _ms_account_view(a), "check": _ms_with_bot_row(res, aid, page_id),
+            "repair_errors": res.get("repair_errors", [])}
+
+
+def _ms_with_bot_row(res: dict, aid: str, page_id: str) -> dict:
     chk = res.get("check") or {}
     chk.setdefault("items", []).append(messenger_setup._item(
         "bot", True if _ms_bot_running(aid, page_id) else None, ("Có bot đang trực", "A bot is answering"), "",
         ("Vào Chatbot, Bot, tạo hoặc bật bot cho kênh này.",
          "Open Chatbot, Bots and create or turn on a bot for this channel.")))
-    return {"ok": True, "updated": bool(old), "account": _ms_account_view(a), "check": chk,
-            "repair_errors": res.get("repair_errors", [])}
+    return chk
+
+
+# ---- Log in with Facebook (0.434.0) ----
+# The card sends App ID + App secret, opens the returned Facebook address in a new tab, polls
+# /messenger/oauth/result until the Pages arrive, then posts the ticked Pages to /finish. The user
+# token stays inside `messenger_oauth`; nothing here returns a token.
+def _ms_base(request: Request) -> str:
+    return web_security.external_base(
+        request.url.scheme, request.url.netloc,
+        request.headers.get("x-forwarded-proto", ""), request.headers.get("x-forwarded-host", ""))
+
+
+@app.post("/messenger/oauth/start")
+async def messenger_oauth_start(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    res = await messenger_oauth.start(body.get("app_id"), body.get("app_secret"),
+                                      _ms_base(request) + messenger_oauth.CALLBACK_PATH,
+                                      str(body.get("brain") or ""), str(body.get("label") or ""))
+    if not res.get("ok"):
+        return JSONResponse(res, status_code=400)
+    return res
+
+
+@app.get("/messenger/oauth/callback")
+async def messenger_oauth_callback(state: str = Query(""), code: str = Query(""), error: str = Query(""),
+                                   error_description: str = Query("")):
+    res = await messenger_oauth.callback(state, code, error, error_description)
+    if res.get("ok"):
+        title = localefmt.chu("✓ Đã đăng nhập Facebook", "✓ Signed in with Facebook")
+        body = localefmt.chu(f"Tìm thấy {len(res['pages'])} Fanpage. Quay lại tab Javis để chọn Trang muốn nối, "
+                             "tab này tự đóng.",
+                             f"Found {len(res['pages'])} Page(s). Go back to the Javis tab to pick the Pages to "
+                             "connect, this tab closes by itself.")
+    else:
+        title = localefmt.chu("⚠ Chưa đăng nhập được", "⚠ Sign-in did not finish")
+        body = str(res.get("error", ""))
+    html = ("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, "
+            "initial-scale=1'><title>Javis</title></head><body style='font-family:system-ui,sans-serif;font-size:18px;"
+            "background:#111;color:#eee;text-align:center;padding:72px 16px'>"
+            f"<h2>{html_mod.escape(title)}</h2><p>{html_mod.escape(body)}</p>"
+            + ("<script>setTimeout(function(){try{window.close()}catch(e){}},1500)</script>" if res.get("ok") else "")
+            + "</body></html>")
+    return HTMLResponse(html)
+
+
+@app.get("/messenger/oauth/result")
+async def messenger_oauth_result(state: str = ""):
+    return messenger_oauth.result(state)
+
+
+@app.post("/messenger/oauth/finish")
+async def messenger_oauth_finish(request: Request):
+    """Connect every ticked Page of a ready login. One result per Page, so one failure does not
+    hide the others; the login is kept while any Page failed, so the owner can retry."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    state = str(body.get("state") or "")
+    p = messenger_oauth.take(state)
+    if not p:
+        return JSONResponse(messenger_oauth.result(state) | {"ok": False}, status_code=400)
+    known = {x["id"]: x for x in p.get("pages") or []}
+    ids = [str(i) for i in (body.get("page_ids") or []) if str(i) in known]
+    if not ids:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Hãy tick ít nhất một Fanpage.",
+                                                                 "Tick at least one Page.")}, status_code=400)
+    mode = str(body.get("comments") or messenger_bot.COMMENT_MODE_DEFAULT)
+    if mode not in messenger_bot.COMMENT_MODES:
+        mode = messenger_bot.COMMENT_MODE_DEFAULT
+    url = _ms_webhook_url(request)
+    out = []
+    import httpx
+    async with httpx.AsyncClient(timeout=25) as c:
+        for pid in ids:
+            res = await messenger_setup.connect(pid, p["app_id"], p["app_secret"], p["user_token"], url,
+                                                _ms_verify_token(), client=c)
+            if not res.get("ok"):
+                out.append({"page_id": pid, "page_name": known[pid]["name"], "ok": False,
+                            "error": res.get("error", "")})
+                continue
+            aid, loi, updated = _ms_save_account(request, pid, p["app_id"], p["app_secret"], res,
+                                                 known[pid]["name"] if not p.get("label") else p["label"],
+                                                 p.get("brain", ""), {"comments": mode, "login": "facebook"})
+            if loi:
+                out.append({"page_id": pid, "page_name": known[pid]["name"], "ok": False, "error": loi})
+                continue
+            out.append({"page_id": pid, "page_name": res.get("page_name") or known[pid]["name"], "ok": True,
+                        "updated": updated, "account": _ms_account_view(channel_accounts.get_account(aid) or {}),
+                        "check": _ms_with_bot_row(res, aid, pid), "repair_errors": res.get("repair_errors", [])})
+    if all(r["ok"] for r in out):
+        messenger_oauth.forget(state)
+    return {"ok": any(r["ok"] for r in out), "results": out}
+
+
+@app.post("/messenger/comments")
+async def messenger_comments_mode(request: Request):
+    """Set how one Page's comments are handled: off, inbox (the owner answers) or reply (the bot too)."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    aid = str(body.get("account_id") or "").strip()
+    mode = str(body.get("mode") or "")
+    a = channel_accounts.get_account(aid)
+    if not a or a.get("channel") != "messenger":
+        return JSONResponse({"ok": False, "error": localefmt.chu("Không có tài khoản Messenger này",
+                                                                 "No such Messenger account")}, status_code=404)
+    if mode not in messenger_bot.COMMENT_MODES:
+        return JSONResponse({"ok": False, "error": localefmt.chu("Chế độ bình luận không hợp lệ",
+                                                                 "Invalid comment mode")}, status_code=400)
+    ok, loi = channel_accounts.update_account(aid, {"meta": {**(a.get("meta") or {}), "comments": mode}})
+    if not ok:
+        return JSONResponse({"ok": False, "error": loi}, status_code=400)
+    return {"ok": True, "account": _ms_account_view(channel_accounts.get_account(aid) or a)}
+
+
+@app.get("/messenger/privacy")
+async def messenger_privacy():
+    """Privacy policy and data deletion page for the owner's Meta app (needed to go Live)."""
+    try:
+        brand = str(cfgmod.read_settings().get("workspace_name") or "") or "Javis OS"
+    except Exception:
+        brand = "Javis OS"
+    pages = []
+    try:
+        pages = [(a.get("meta") or {}).get("bot_name") or a.get("label") or ""
+                 for a in channel_accounts.list_accounts(channel="messenger")]
+    except Exception:
+        pages = []
+    return HTMLResponse(messenger_oauth.privacy_html(brand, pages))
 
 
 @app.post("/messenger/check")
@@ -26271,6 +26683,23 @@ def _team_gate_support(provider):
                                       api_providers=tuple(aux_engine.API_PROVIDERS))
 
 
+def _team_gate_choices(current, settings):
+    """Labels of the connected providers a refused gated step can switch to on THIS machine, `current` left out: on
+    Docker (Codex without its sandbox) the advice must not send the owner back to Codex. Grok Build and Antigravity are
+    refused by team_gate.provider_support everywhere, so they are not probed."""
+    out = []
+    for prov in (aux_engine.CLAUDE, aux_engine.CODEX) + tuple(aux_engine.API_PROVIDERS):
+        if prov == current:
+            continue
+        try:
+            if not _team_gate_support(prov)["ok"] or not aux_engine.availability({"provider": prov}, settings)[0]:
+                continue
+        except Exception:  # noqa: BLE001 - a broken probe only drops that provider from the advice
+            continue
+        out.append(_TG_NHAN_NGAN.get(prov) or {"ollama-local": "Ollama Local"}.get(prov, prov))
+    return out
+
+
 def _team_record_usage(provider: str, model: str, outcome, *, execution=None, status=None, expected_requests=None) -> None:
     """Count one team member turn in the usage ledger, like a chat turn (Settings > Usage, usage-events.jsonl).
 
@@ -26331,7 +26760,8 @@ def _team_engine_for(team, agent_key, role):
         if gate_id:
             sup = _team_gate_support(prov)
             if not sup["ok"]:
-                raise team_runner.EngineUnavailable(team_gate.unsupported_text(sup["reason"]))
+                raise team_runner.EngineUnavailable(team_gate.unsupported_text(
+                    sup["reason"], assistant=info.get("name") or "", choices=tuple(_team_gate_choices(prov, settings))))
         vault = str(_brain_root(root))
         cwd = ""
         try:
@@ -26415,6 +26845,14 @@ def _team_engine_for(team, agent_key, role):
                 outcome.note(ev)
             res = outcome.result()
             usage_status = "completed"
+        except Exception as ex:
+            # 0.436.0 (team_retry): a failed turn tells the runner how many tools it called. Zero is the only count that
+            # lets a Work/Help step run again on its own; a text-only turn has no tools at all.
+            try:
+                ex.team_tool_calls = int(getattr(outcome, "tool_calls", 0) or 0)
+            except Exception:  # noqa: BLE001 - some exception types refuse new attributes: then it stays unknown
+                pass
+            raise
         except asyncio.CancelledError:
             usage_status = "cancelled"
             try:
@@ -28336,6 +28774,29 @@ agent_review.register_routes(app, agent_review.LearnRouteDeps(
 async def model_fast_state():
     """Last Fast mode state each brain reported (on, cooldown, fallback), for the bolt tooltip (0.164.0)."""
     return {"states": fast_mode.states()}
+
+
+# Hộp đen lỗi giao diện (0.416.0): đăng ký SAU route cuối để bảng route cũ giữ nguyên thứ tự.
+@app.post("/client-errors")
+async def client_errors_post(request: Request, payload: dict = Body(None)):
+    """Hộp đen lỗi giao diện (0.416.0): dashboard/loi-may-khach.js gửi lỗi JS của trình duyệt về đây, xem loi_may_khach."""
+    import loi_may_khach
+    n = await asyncio.to_thread(loi_may_khach.ghi, payload or {}, request.headers.get("user-agent", ""))
+    return {"ok": True, "saved": n}
+
+
+@app.get("/client-errors")
+async def client_errors_get():
+    import loi_may_khach
+    return {"errors": await asyncio.to_thread(loi_may_khach.danh_sach)}
+
+
+@app.post("/client-errors/clear")
+async def client_errors_clear():
+    import loi_may_khach
+    await asyncio.to_thread(loi_may_khach.xoa_het)
+    return {"ok": True}
+
 
 
 if __name__ == "__main__":
