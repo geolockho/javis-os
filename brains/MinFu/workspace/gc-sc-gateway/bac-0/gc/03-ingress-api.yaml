@@ -1,0 +1,34 @@
+# Một Ingress MỖI HOST ở gc. Host phải TRÙNG với Ingress trên sc.
+# Bậc 0: gc nhận HTTPS từ Internet (cert public tự nạp vào Secret api-example-com-tls), đẩy sang sc bằng HTTP thường.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-edge
+  namespace: edge
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # --- timeout tính thêm RTT liên cloud, retry chỉ khi lỗi kết nối ---
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-tries: "2"
+    # --- bảo vệ biên ---
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts: ["api.example.com"]
+    secretName: api-example-com-tls      # TLS phiên 1: client <-> gc. Secret do bạn tự tạo/nạp sẵn trên gc
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sc
+            port:
+              number: 80

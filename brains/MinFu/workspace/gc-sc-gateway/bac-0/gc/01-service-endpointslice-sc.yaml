@@ -1,0 +1,33 @@
+# "sc" nhìn từ gc: một Service không selector, endpoint là IP internal LB của sc, cổng 80.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: edge
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sc
+  namespace: edge
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: sc-1
+  namespace: edge
+  labels:
+    kubernetes.io/service-name: sc
+addressType: IPv4
+ports:
+- name: http
+  port: 80
+  protocol: TCP
+endpoints:
+- addresses: ["10.20.0.50"]   # TODO: IP internal LB của sc (lấy từ svc ingress-nginx-internal)
+  conditions:
+    ready: true

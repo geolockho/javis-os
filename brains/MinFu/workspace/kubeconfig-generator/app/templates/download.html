@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    .center { max-width: 560px; margin: 40px auto 0; padding: 32px; text-align: center; }
+    .center .ico { font-family: ui-monospace, Consolas, monospace; font-size: 30px; color: var(--accent); margin-bottom: 8px;
+      text-shadow: 0 0 14px color-mix(in srgb, var(--accent) calc(var(--glow) * 100%), transparent); }
+    .center p { color: var(--muted); }
+    .cmd { display: flex; align-items: center; gap: 8px; margin-top: 18px; text-align: left; background: var(--panel-2);
+      border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px 8px 12px; }
+    .cmd code { flex: 1; background: none; border: 0; padding: 0; color: var(--text); }
+    .cmd code::before { content: "$ "; color: var(--accent); }
+    .tool { margin: 16px auto 0; max-width: 560px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; justify-content: space-between; text-align: left; }
+    .tool p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+    .warn-list { text-align: left; margin: 18px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+{% endblock %}
+
+{% block content %}
+<div class="panel center">
+  <div class="ico">⤓ kubeconfig</div>
+  <h1>Tải kubeconfig</h1>
+  <p>Link chỉ dùng được một lần, bởi đúng người đã xin, trong thời hạn hiệu lực.</p>
+  <form id="dl" method="post" action="/dl">
+    <input type="hidden" name="token" id="token">
+    <button class="btn btn-pri btn-lg" type="submit" id="btn">Tải kubeconfig</button>
+  </form>
+  <p id="note" class="small"></p>
+  <ul class="warn-list">
+    <li>Lưu file ở chỗ riêng, không commit, không gửi qua chat.</li>
+    <li>Quyền chỉ đọc, tự hết hạn theo thời hạn đã xin.</li>
+  </ul>
+  <div class="cmd"><code id="cmd">kubectl --kubeconfig &lt;file&gt; get pods</code>
+    <button class="btn btn-sm" type="button" data-copy-target="cmd">Copy</button></div>
+</div>
+
+<div class="panel tool">
+  <div>
+    <strong>Lens (Windows)</strong>
+    <p>Giao diện xem cluster, mở file kubeconfig vừa tải bằng Add Cluster. Không bắt buộc, dùng kubectl vẫn được.</p>
+  </div>
+  <a class="btn" href="https://api.k8slens.dev/binaries/Lens%20Setup%202026.10.261408-latest.exe" target="_blank" rel="noopener noreferrer">Tải Lens</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var t = (location.hash || '').replace(/^#/, '');
+  // Xoá token khỏi thanh địa chỉ và lịch sử
+  if (t) history.replaceState(null, '', location.pathname);
+  var btn = document.getElementById('btn'), note = document.getElementById('note');
+  if (!t) { btn.disabled = true; note.textContent = 'Link không có mã tải. Hãy tạo link mới ở trang chính.'; return; }
+  document.getElementById('token').value = t;
+  document.getElementById('dl').addEventListener('submit', function () {
+    setTimeout(function () { btn.disabled = true; note.textContent = 'Đã gửi. Nếu tải lỗi, tạo link mới ở trang chính.'; }, 0);
+  });
+})();
+</script>
+{% endblock %}

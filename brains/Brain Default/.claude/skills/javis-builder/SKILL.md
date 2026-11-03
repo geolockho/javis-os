@@ -50,11 +50,15 @@ slug: <ascii>
 role: <vai trò 1 câu>
 tags: [Marketing, Viết nội dung]   # một hay nhiều tag; ví dụ Marketing, Bán hàng, Nội dung, Vận hành, Tài chính, AI, Năng suất, Cá nhân
 skills: [slug-skill]      # [] nếu chưa gán; chỉ gán skill đã có trong skills/
-model: ""                 # "" mặc định | sonnet|opus|haiku|fable (Claude) | gpt-5.5|gpt-5.4|gpt-5.3-codex (ChatGPT/Codex)
+model: ""                 # "" = dùng model chính | tên model, vd sonnet, gpt-5.5, claude-sonnet-5-5, gemini-2.5-pro
+model_provider: ""        # "" = suy theo tên model | anthropic-cli, openai-oauth, anthropic-api, openai, openrouter, gemini...
 updated: <YYYY-MM-DD>
 ---
 <system prompt: cách làm việc, nguyên tắc, định dạng đầu ra mong muốn>
 ```
+Gán hay đổi model cho trợ lý: ưu tiên tool `javis_team` op=set_agent_model (slug, model, model_provider). Tool tự kiểm
+model_provider hợp lệ và chạy trên MỌI engine, kể cả engine API. Cùng một tên model có ở hai nhà (claude-* có ở Claude Code
+lẫn Anthropic API) thì PHẢI ghi model_provider.
 
 **Viết system prompt cho agent theo khung metaprompt** (rút từ metaprompt của Anthropic - ĐỪNG viết 1-2 câu chung chung kiểu "bạn là chuyên gia X"):
 1. Vai + mục tiêu: 1 câu nêu vai, 1 câu nêu kết quả tốt trông như thế nào.
@@ -129,6 +133,12 @@ updated: <YYYY-MM-DD>
 ```
 Nếu workflow tham chiếu agent chưa tồn tại -> TẠO agent đó trước.
 
+### Nhóm chat -> tool `javis_team` (KHÔNG ghi file tay, KHÔNG điều khiển trình duyệt)
+Người dùng muốn một nhóm chat gồm vài trợ lý: gọi `javis_team` op=create một lần, `members` là slug trợ lý có sẵn, `new_agents`
+là trợ lý cần tạo mới (`name`, `role`, `prompt`, `model`, `model_provider` nếu muốn model riêng), `leader` là slug hay tên trưởng
+nhóm. Sửa: op=update, add_member, remove_member, set_leader, set_agent_model. Xoá: op=archive trước, op=delete kèm confirm=true chỉ
+khi người dùng nói rõ là xoá. Xem trước trợ lý đang có bằng op=list_agents để khỏi tạo trùng.
+
 ### Loop -> `Javis/loops/<slug>.md`
 
 **Việc LẶP MỚI: ưu tiên GỌI TOOL `javis_schedule`** (op=create, name/prompt/schedule - vd
@@ -158,7 +168,18 @@ updated: <YYYY-MM-DD>
 <mô tả nhiệm vụ: mỗi vòng loop làm ĐÚNG việc này - đây chính là prompt của loop, viết tự-đủ>
 ```
 
-### Plugin -> mặc định TOÀN CỤC `<JAVIS_STATE_DIR>/plugins/<slug>/` (chung mọi brain); riêng 1 brain thì `<vault>/plugins/<slug>/`. 2 file: plugin.yaml + plugin.py
+### Plugin -> tool `javis_plugin` op=write (KHÔNG ghi file tay, KHÔNG đưa file zip cho người dùng)
+Cài thẳng vào app, mọi engine đều gọi được: `javis_plugin` op=write, slug, `files` = {đường dẫn tương đối: nội dung}
+(lần tạo cần ít nhất plugin.yaml + plugin.py), `scope` = "global" (mặc định, chung mọi brain, nằm ở
+`<JAVIS_STATE_DIR>/plugins/<slug>/`) hoặc "brain" (riêng brain này, `<vault>/plugins/<slug>/`).
+- Trước khi tạo: op=list xem đã có plugin nào trùng việc chưa; có thì op=read rồi sửa plugin đó.
+- Sửa: op=read lấy file hiện tại, op=write chỉ gửi file đổi; `remove` = danh sách file cần xoá.
+- Tool tự từ chối lỗi cú pháp Python, đường dẫn lạ, đuôi file lạ, slug trùng plugin hệ thống: đọc câu ERROR, sửa, gửi lại.
+- Plugin mới, hoặc bản sửa đổi mã (.py) hay đổi tools/hooks/min_mode, luôn nằm TẮT. Javis KHÔNG bật được;
+  nói rõ với người dùng: đọc mã rồi bật ở trang Plugins. Sửa chỉ phần mô tả thì giữ nguyên trạng thái.
+- op=delete chỉ gỡ plugin do chính tool này tạo và đang tắt; còn lại để người dùng gỡ ở trang Plugins.
+
+Nội dung hai file chính:
 `plugin.yaml`:
 ```
 name: <Tên tiếng Việt>
@@ -166,8 +187,8 @@ slug: <ascii>
 version: 1.0.0
 description: <tool này làm gì, khi nào engine nên gọi>
 author: <ai tạo>
-enabled: false            # LUÔN tạo ở trạng thái TẮT
-min_mode: readonly        # readonly=chỉ đọc/tính (mặc định) | safe=có ghi | full=hành động thật
+enabled: false            # LUÔN tắt (tool tự ép, ghi true cũng thành false)
+min_mode: readonly        # BẮT BUỘC: readonly=chỉ đọc/tính | safe=có ghi | full=hành động thật
 tools: [<ten_tool>]
 hooks: []                 # vd [post_tool_call] nếu dùng hook
 ```
@@ -196,7 +217,8 @@ ctx có `ctx.vault_root`, `ctx.data_dir` (state riêng plugin, không đụng va
   user yêu cầu trực tiếp -> tạo bật luôn nhưng phải kiểm trùng + `description` nêu rõ năng lực,
   phân biệt được với skill khác (mô tả mơ hồ làm Javis chọn skill sai). Đừng tạo skill trùng
   chức năng skill đã có.
-- Plugin user (toàn cục lẫn vault) chạy CODE PYTHON THẬT trong tiến trình server -> tạo `enabled: false`,
-  `min_mode: readonly`, và NÓI RÕ với user: plugin chỉ chạy khi họ đặt env `JAVIS_ENABLE_USER_PLUGINS=true`
-  rồi khởi động lại (rào chống chạy code lạ). Plugin làm hành động ra ngoài thì khai `min_mode: full` cho đúng, hub xét theo mức quyền của chỗ gọi.
+- Plugin user (toàn cục lẫn vault) chạy CODE PYTHON THẬT trong tiến trình server -> tạo qua `javis_plugin`
+  (tool tự để `enabled: false`), `min_mode` đúng việc tool làm, và NÓI RÕ với user: plugin nằm tắt cho tới khi họ bật nó trong app. Từ 15/10/2026
+  Javis cho tải plugin người dùng mặc định; máy nào muốn chặn hẳn thì đặt env `JAVIS_ENABLE_USER_PLUGINS=false`
+  rồi khởi động lại. Plugin làm hành động ra ngoài thì khai `min_mode: full` cho đúng, hub xét theo mức quyền của chỗ gọi.
 - Sau khi tạo, KHÔNG tự chạy thứ có side-effect; để user xem trước.

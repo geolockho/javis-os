@@ -1,0 +1,25 @@
+# Ingress ỨNG DỤNG đang có. Bậc 1: thêm khối tls dùng cert nội bộ + whitelist. CHƯA đòi client cert.
+# Rule/backend giữ nguyên.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: app
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.10.0.0/16"   # TODO: dải IP gc mà sc nhìn thấy
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts: ["api.example.com"]           # = SNI mà gc gửi (proxy-ssl-name)
+    secretName: api-example-com-internal-tls   # do ClusterIssuer internal-ca cấp (sc/03)
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 8080

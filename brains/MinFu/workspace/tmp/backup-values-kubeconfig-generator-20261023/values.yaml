@@ -1,0 +1,161 @@
+fsel:
+  replicaCount: 1
+
+  image:
+    repository: registry.fsel.edu.vn/other-services/kubeconfig-generator
+    pullPolicy: IfNotPresent
+    tag: main-8800a2ec-191026
+  imagePullSecrets:
+    - name: gitlab-fsel-secret
+
+  fullnameOverride: "kubeconfig-generator"
+
+  extraEnvs: []
+  extraEnvFrom:
+    - secretRef:
+        name: kubeconfig-generator-env
+  extraVolumeMounts:
+    - name: clusters
+      mountPath: /etc/kubeconfig-generator/clusters
+      readOnly: true
+    - name: group-map
+      mountPath: /etc/kubeconfig-generator/group-map   # mount cả thư mục để ConfigMap cập nhật được
+      readOnly: true
+    - name: tmp
+      mountPath: /tmp
+  extraVolumes:
+    - name: clusters
+      secret:
+        secretName: kubeconfig-generator-clusters
+        defaultMode: 0400
+    - name: group-map
+      configMap:
+        name: kubeconfig-generator-group-map
+    - name: tmp
+      emptyDir:
+        sizeLimit: 16Mi
+
+  extraContainers:
+    - name: oauth2-proxy
+      image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+      args:
+        - --http-address=0.0.0.0:4180
+        - --upstream=http://127.0.0.1:8000/
+        - --provider=gitlab
+        - --oidc-issuer-url=https://gitlab.fsel.edu.vn
+        - --scope=openid profile email
+        - --email-domain=*
+        - --redirect-url=https://kubeconfig-generator.fsel.edu.vn/oauth2/callback
+        - --reverse-proxy=true
+        - --real-client-ip-header=X-Real-IP
+        - --pass-user-headers=true
+        - --pass-access-token=false
+        - --set-authorization-header=false
+        - --cookie-secure=true
+        - --cookie-samesite=lax
+        - --cookie-expire=8h
+        - --skip-provider-button=true
+        - --skip-auth-route=GET=^/healthz$
+        - --skip-auth-route=GET=^/readyz$
+        - --skip-auth-strip-headers=true
+        - --silence-ping-logging=true
+        # Quyền xin namespace không dựa vào group. Ai đăng nhập được GitLab thì vào được trang,
+        # admin duyệt từng request. Muốn hẹp hơn thì giới hạn domain email ở --email-domain.
+      env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom: { secretKeyRef: { name: kubeconfig-generator-oauth2, key: client-id } }
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom: { secretKeyRef: { name: kubeconfig-generator-oauth2, key: client-secret } }
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom: { secretKeyRef: { name: kubeconfig-generator-oauth2, key: cookie-secret } }
+      ports:
+        - name: http
+          containerPort: 4180
+      securityContext:
+        runAsUser: 65532
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      readinessProbe:
+        httpGet: { path: /readyz, port: http }   # đi qua proxy tới app, kiểm cả DB
+        periodSeconds: 10
+      livenessProbe:
+        httpGet: { path: /ping, port: http }
+        periodSeconds: 20
+      resources:
+        requests: { cpu: 20m, memory: 32Mi }
+        limits: { memory: 128Mi }
+
+  serviceAccount:
+    create: true
+
+  imageUpdater:
+    enabled: true
+    allowTags: 'regexp:^main.*'
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  ingress:
+    enabled: true
+    className: "nginx-public"
+    annotations:
+      external-dns.alpha.kubernetes.io/target: "101.99.7.167"
+      nginx.ingress.kubernetes.io/cors-allow-headers: DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Timeline,IdToken,X-Token,X-Time,Client-ID,Token,formdata,transaction-name,access-control-allow-origin,tenant_id,auth0-client,platform-ids
+      nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: 5120m
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, PATCH"
+      nginx.ingress.kubernetes.io/whitelist-source-range: 14.0.22.111,101.99.7.167,192.223.15.213,10.0.0.0/16,172.16.0.0/24
+      nginx.ingress.kubernetes.io/server-snippet: |
+        client_header_buffer_size 1000k;
+        large_client_header_buffers 4 1000k;
+      
+    hosts:
+      - host: kubeconfig-generator.fsel.edu.vn
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - kubeconfig-generator.fsel.edu.vn
+        secretName: fsel-edu-vn-tls-wildcard
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 30m
+      memory: 50Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+
+  tolerations:
+    - effect: NoSchedule
+      key: appnodes-staging
+      operator: Exists
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node_role
+                operator: In
+                values:
+                  - appnodes-staging
+
+

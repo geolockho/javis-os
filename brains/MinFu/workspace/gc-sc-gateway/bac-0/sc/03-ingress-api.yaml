@@ -1,0 +1,27 @@
+# Ingress ỨNG DỤNG đang có. Bậc 0: KHÔNG cần khối tls cho đường từ gc, chỉ thêm whitelist.
+# Rule/backend giữ nguyên.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: app
+  annotations:
+    # chỉ nhận từ dải IP của gc. Lần apply đầu có thể bỏ dòng này, gọi thử, đọc "client" trong log sc rồi mới điền.
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.10.0.0/16"   # TODO
+    # gc gửi X-Forwarded-Proto: https và sc đã bật use-forwarded-headers, nên bình thường không bị 308.
+    # Nếu vẫn thấy 308 khi gọi từ gc thì bỏ comment dòng dưới.
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  # Nếu Ingress này đang có khối tls cho LB public thì cứ giữ, không ảnh hưởng đường HTTP từ gc.
+  rules:
+  - host: api.example.com      # PHẢI trùng host trong Ingress ở gc
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 8080

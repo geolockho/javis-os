@@ -1,0 +1,21 @@
+# LB internal THỨ HAI trỏ vào cùng pod ingress-nginx đang chạy. LB public cũ giữ nguyên.
+# Annotation tạo internal LB khác nhau theo nhà cung cấp: tra docs FKE / ncc của sc.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-internal
+  namespace: ingress-nginx
+  annotations:
+    # TODO: thay bằng annotation thật của ncc, ví dụ dạng
+    # service.beta.kubernetes.io/<ncc>-load-balancer-internal: "true"
+    service.beta.kubernetes.io/TODO-internal-lb: "true"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local   # giữ IP nguồn (node gc sau SNAT / NAT VPN) để whitelist được
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+  ports:
+  - name: https
+    port: 443
+    targetPort: https

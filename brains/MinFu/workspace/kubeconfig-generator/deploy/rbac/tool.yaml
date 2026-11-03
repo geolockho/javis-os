@@ -1,0 +1,69 @@
+# RBAC của tool, GIỐNG NHAU trên cả hai cluster (fsel-prod, fsel-local). Apply một lần, không đổi khi mở namespace.
+#
+# Tool KHÔNG có RoleBinding nào ở đây. RoleBinding "kubeconfig-generator-issuer" trong từng namespace dev
+# do Kyverno sinh khi admin gắn label kubeconfig-generator/enabled=true|draining (deploy/kyverno/).
+# Không có RoleBinding đó thì ClusterRole issuer bên dưới không có hiệu lực ở đâu cả.
+#
+# Không tạo object Namespace: kube-public phải có sẵn, để `kubectl delete -f` không xoá namespace dùng chung.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeconfig-generator
+  namespace: kube-public
+automountServiceAccountToken: false
+---
+# Token dài hạn CHỈ cho chính tool (để dựng kubeconfig của tool). Token cấp cho dev luôn là TokenRequest có hạn.
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: kubeconfig-generator-token
+  namespace: kube-public
+  annotations:
+    kubernetes.io/service-account.name: kubeconfig-generator
+---
+# Đọc namespace: get (kiểm tồn tại) và list (đọc label kubeconfig-generator/enabled để dựng danh mục)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeconfig-generator-namespace-reader
+rules:
+- apiGroups: ['']
+  resources: [namespaces]
+  verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeconfig-generator-namespace-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeconfig-generator-namespace-reader
+subjects:
+- kind: ServiceAccount
+  name: kubeconfig-generator
+  namespace: kube-public
+---
+# Quyền cấp phát. Chỉ có hiệu lực ở namespace có RoleBinding do Kyverno sinh. TUYỆT ĐỐI không bind bằng
+# ClusterRoleBinding: create serviceaccounts/token toàn cluster = sinh được token của SA admin trong kube-system.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeconfig-generator-issuer
+rules:
+- apiGroups: ['']
+  resources: [serviceaccounts]
+  verbs: [get, list, create, delete]
+- apiGroups: ['']
+  resources: [serviceaccounts/token]
+  verbs: [create]
+- apiGroups: [rbac.authorization.k8s.io]
+  resources: [rolebindings]
+  verbs: [get, list, create, delete]
+# `bind`: K8s chặn tạo RoleBinding tới role mà người tạo không tự có đủ quyền (chống leo thang).
+# Tool không có quyền của `view`, nên cần `bind`, và chỉ trên đúng các ClusterRole trong ALLOWED_CLUSTER_ROLES.
+- apiGroups: [rbac.authorization.k8s.io]
+  resources: [clusterroles]
+  verbs: [bind]
+  resourceNames: [view]

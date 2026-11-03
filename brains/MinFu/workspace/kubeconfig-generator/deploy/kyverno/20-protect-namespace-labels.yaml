@@ -1,0 +1,98 @@
+# Label kubeconfig-generator/enabled là cổng cấp quyền (policy 10 sinh RoleBinding cho tool theo nó),
+# nên phải chặn người không phải admin tự mở cổng.
+#
+# 1. only-admins-change: chỉ admin cluster được thêm/sửa/gỡ label kubeconfig-generator/enabled và annotation
+#    kubeconfig-generator/role. Mặc định "admin" = người có ClusterRole cluster-admin (ArgoCD thường cũng có).
+#    Muốn cho một group riêng, mở comment `subjects` bên dưới.
+# 2. valid-value: label chỉ nhận true | draining. Áp cho mọi người, kể cả admin.
+# 3. drain-before-disable: không được gỡ thẳng từ true. Phải chuyển sang draining, đợi job dọn của tool thu hồi
+#    hết (<= CLEANUP_INTERVAL, mặc định 5 phút), rồi mới gỡ. Gỡ thẳng thì Kyverno xoá RoleBinding của tool
+#    ngay, tool không còn quyền xoá SA đã cấp, token của dev sống tới hết hạn.
+#    Xoá hẳn namespace thì không bị chặn (xoá namespace là xoá luôn SA và token).
+#
+# failurePolicy mặc định Fail: Kyverno chết thì mọi thay đổi label namespace bị chặn. Cố ý chọn vậy vì đây là
+# cổng bảo mật. validationFailureAction ở spec: Kyverno 1.13+ báo deprecated, vẫn chạy.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: kubeconfig-generator-protect-namespace-labels
+  annotations:
+    policies.kyverno.io/title: Bảo vệ label kubeconfig-generator trên namespace
+    policies.kyverno.io/subject: Namespace
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+  - name: only-admins-change
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+    exclude:
+      any:
+      - clusterRoles: [cluster-admin]
+      # - subjects:
+      #   - kind: Group
+      #     name: <group admin của cluster>
+    preconditions:
+      all:
+      - key: "{{ request.operation || 'BACKGROUND' }}"
+        operator: AnyIn
+        value: [CREATE, UPDATE]
+    validate:
+      message: >-
+        Chỉ admin cluster được thêm, sửa hoặc gỡ label kubeconfig-generator/enabled
+        và annotation kubeconfig-generator/role trên namespace.
+      deny:
+        conditions:
+          any:
+          - key: "{{ request.object.metadata.labels.\"kubeconfig-generator/enabled\" || '' }}"
+            operator: NotEquals
+            value: "{{ request.oldObject.metadata.labels.\"kubeconfig-generator/enabled\" || '' }}"
+          - key: "{{ request.object.metadata.annotations.\"kubeconfig-generator/role\" || '' }}"
+            operator: NotEquals
+            value: "{{ request.oldObject.metadata.annotations.\"kubeconfig-generator/role\" || '' }}"
+
+  - name: valid-value
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+    preconditions:
+      all:
+      - key: "{{ request.operation || 'BACKGROUND' }}"
+        operator: AnyIn
+        value: [CREATE, UPDATE]
+    validate:
+      message: "Label kubeconfig-generator/enabled chỉ nhận true hoặc draining."
+      deny:
+        conditions:
+          all:
+          - key: "{{ request.object.metadata.labels.\"kubeconfig-generator/enabled\" || '' }}"
+            operator: AnyNotIn
+            value: ["", "true", "draining"]
+
+  - name: drain-before-disable
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+    preconditions:
+      all:
+      - key: "{{ request.operation || 'BACKGROUND' }}"
+        operator: Equals
+        value: UPDATE
+    validate:
+      message: >-
+        Không gỡ thẳng label kubeconfig-generator/enabled=true. Chuyển sang draining
+        (kubectl label ns <ns> kubeconfig-generator/enabled=draining --overwrite), đợi tool thu hồi hết
+        kubeconfig đã cấp (tối đa 5 phút), rồi mới gỡ label.
+      deny:
+        conditions:
+          all:
+          - key: "{{ request.oldObject.metadata.labels.\"kubeconfig-generator/enabled\" || '' }}"
+            operator: Equals
+            value: "true"
+          - key: "{{ request.object.metadata.labels.\"kubeconfig-generator/enabled\" || '' }}"
+            operator: AnyNotIn
+            value: ["true", "draining"]

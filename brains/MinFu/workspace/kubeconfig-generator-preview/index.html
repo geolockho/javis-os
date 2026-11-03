@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cấp kubeconfig</title>
+  <script>
+    // Đặt theme trước khi vẽ trang để không bị nháy sáng
+    try { var t = localStorage.getItem('kg-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+  <style>
+    :root, [data-theme=dark] {
+      --bg:#0a0e13; --panel:#10161e; --panel-2:#151d27; --line:#1f2a37; --line-2:#2b3a4b;
+      --text:#d7e1ec; --muted:#7f90a4; --accent:#22d3ee; --accent-ink:#03161c;
+      --ok:#34d399; --warn:#fbbf24; --err:#f87171; --info:#60a5fa; --gray:#94a3b8;
+      --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 10px 28px rgba(0,0,0,.35);
+      --dot:rgba(148,163,184,.07); --glow:.35;
+      color-scheme: dark;
+    }
+    [data-theme=light] {
+      --bg:#f3f5f8; --panel:#ffffff; --panel-2:#f6f8fb; --line:#e2e7ed; --line-2:#cdd6e0;
+      --text:#17202b; --muted:#5d6b7b; --accent:#0e7490; --accent-ink:#ffffff;
+      --ok:#047857; --warn:#b45309; --err:#dc2626; --info:#1d4ed8; --gray:#64748b;
+      --shadow:0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.06);
+      --dot:rgba(15,23,42,.05); --glow:0;
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.5;
+      color: var(--text); background-color: var(--bg);
+      background-image: radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 0); background-size: 22px 22px;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, .mono, kbd { font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace; font-size: 12.5px; }
+    code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+    kbd { border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .small { font-size: 12.5px; }
+    .inline { display: inline; }
+    [hidden] { display: none !important; }
+
+    /* ---------- header */
+    .topbar {
+      position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 6px;
+      padding: 10px 24px; border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(8px);
+    }
+    .brand { display: flex; align-items: center; gap: 8px; margin-right: 18px; color: var(--text); font-weight: 600; }
+    .brand:hover { text-decoration: none; }
+    .brand .prompt { color: var(--accent); font-family: ui-monospace, Consolas, monospace; text-shadow: 0 0 10px color-mix(in srgb, var(--accent) calc(var(--glow) * 100%), transparent); }
+    .brand .sub { color: var(--muted); font-weight: 400; }
+    .nav a { color: var(--muted); padding: 6px 10px; border-radius: 6px; }
+    .nav a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
+    .nav a.active { color: var(--text); background: var(--panel-2); box-shadow: inset 0 -2px 0 var(--accent); }
+    .who { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); }
+    .icon-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; font-size: 15px; }
+    .icon-btn:hover { border-color: var(--line-2); }
+
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px; }
+    h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -.01em; }
+    h2 { font-size: 15px; margin: 36px 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+    .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+
+    /* ---------- panel, nút, ô nhập */
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font: inherit; font-size: 13.5px; font-weight: 500;
+      border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); cursor: pointer; white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--muted); text-decoration: none; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn-pri:hover { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+    .btn-danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, var(--line)); background: transparent; }
+    .btn-danger:hover { border-color: var(--err); background: color-mix(in srgb, var(--err) 10%, transparent); }
+    .btn-ghost { background: transparent; }
+    .btn-sm { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
+    .btn-lg { padding: 11px 22px; font-size: 15px; border-radius: 10px; }
+    input[type=text], input[type=search] {
+      font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); min-width: 0;
+    }
+    input:focus-visible, .btn:focus-visible, .icon-btn:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ---------- badge trạng thái */
+    .badge {
+      --c: var(--gray); display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px;
+      font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--c);
+      border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--c) calc(var(--glow) * 60%), transparent);
+    }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+    .b-pending { --c: var(--warn); }
+    .b-approved, .b-issuing { --c: var(--info); }
+    .b-issued, .b-ok { --c: var(--ok); }
+    .b-rejected, .b-revoked, .b-revoke_failed, .b-error { --c: var(--err); }
+    .b-cancelled, .b-expired { --c: var(--gray); }
+    .b-pending::before, .b-issuing::before { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .25; } }
+
+    /* ---------- bảng */
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; background: var(--panel-2); white-space: nowrap; }
+    tbody tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.empty { text-align: center; padding: 28px; color: var(--muted); }
+    .target { white-space: nowrap; }
+    .target .cl { color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+
+    /* ---------- đếm ngược */
+    .countdown { margin-top: 8px; }
+    .countdown .bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+    .countdown .bar span { display: block; height: 100%; width: 100%; background: var(--ok); border-radius: 4px; transition: width .9s linear; box-shadow: 0 0 8px color-mix(in srgb, var(--ok) calc(var(--glow) * 100%), transparent); }
+    .countdown .cd-text { margin-top: 4px; font-size: 12.5px; }
+    .countdown .cd-left { font-family: ui-monospace, Consolas, monospace; color: var(--ok); }
+    .countdown.cd-warn .bar span { background: var(--warn); }
+    .countdown.cd-warn .cd-left { color: var(--warn); }
+    .countdown.cd-over .cd-left { color: var(--gray); }
+
+    /* ---------- toast */
+    .toasts { position: fixed; top: 64px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 8px; max-width: min(420px, calc(100vw - 40px)); }
+    .toast {
+      --c: var(--ok); display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px;
+      background: var(--panel); border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line)); box-shadow: var(--shadow);
+      border-left: 3px solid var(--c); animation: slide .2s ease-out;
+    }
+    .toast.err { --c: var(--err); }
+    .toast .t-body { flex: 1; }
+    .toast button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
+    .toast.hide { opacity: 0; transform: translateX(16px); transition: all .25s; }
+    @keyframes slide { from { opacity: 0; transform: translateX(16px); } }
+
+    @media (max-width: 720px) {
+      .topbar { flex-wrap: wrap; padding: 10px 14px; }
+      .who .email { display: none; }
+      main { padding: 20px 14px 48px; }
+    }
+    
+    /* ---------- wizard */
+    .wizard { padding: 22px 24px; }
+    .step { position: relative; padding: 0 0 22px 44px; }
+    .step::before { content: ""; position: absolute; left: 14px; top: 30px; bottom: 4px; width: 2px; background: var(--line); }
+    .step[data-step="expiration"]::before { display: none; }
+    .step-no {
+      position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+      font-family: ui-monospace, Consolas, monospace; font-weight: 600; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--muted);
+    }
+    .step.done .step-no { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) calc(var(--glow) * 100%), transparent); }
+    .step-title { font-weight: 600; font-size: 15px; line-height: 30px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .step-title .hint { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+
+    .pick input { position: absolute; opacity: 0; pointer-events: none; }
+    .pick { position: relative; cursor: pointer; }
+
+    .cluster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .cluster-card .cc {
+      display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 10px;
+      border: 1px solid var(--line-2); background: var(--panel-2); transition: border-color .15s, box-shadow .15s;
+    }
+    .cluster-card:hover .cc { border-color: var(--muted); }
+    .cluster-card input:checked + .cc { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) calc(var(--glow) * 60%), transparent); }
+    .cluster-card input:focus-visible + .cc { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .cc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .cc-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .cc-meta { font-size: 12.5px; color: var(--muted); }
+    .tag { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; letter-spacing: .08em; padding: 1px 6px; border-radius: 4px; border: 1px solid; }
+    .tag-prod { color: var(--err); border-color: color-mix(in srgb, var(--err) 50%, transparent); }
+
+    .ns-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .ns-tools input { width: 280px; max-width: 100%; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; max-height: 220px; overflow-y: auto; padding: 2px; }
+    .chip span {
+      display: inline-block; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel-2);
+      transition: all .12s;
+    }
+    .chip:hover span { border-color: var(--muted); }
+    .chip input:checked + span { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .seg { display: inline-flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+    .seg .pick span { display: block; padding: 7px 16px; border-right: 1px solid var(--line-2); background: var(--panel-2); }
+    .seg .pick:last-child span { border-right: 0; }
+    .seg .pick:hover span { color: var(--accent); }
+    .seg .pick input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .seg .pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+    .wiz-foot {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+      margin: 4px -24px -22px; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--panel-2); border-radius: 0 0 12px 12px;
+    }
+    .summary { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--muted); }
+    .summary b { color: var(--text); font-weight: 600; }
+    .summary .ph { color: var(--muted); opacity: .7; }
+
+    /* ---------- card request */
+    .req-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .req-card { padding: 16px; display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--line-2); }
+    .req-card.s-issued { border-top-color: var(--ok); }
+    .req-card.s-approved, .req-card.s-issuing { border-top-color: var(--info); }
+    .req-card.s-pending { border-top-color: var(--warn); }
+    .req-card.s-rejected, .req-card.s-revoked, .req-card.s-revoke_failed { border-top-color: var(--err); }
+    .rc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .rc-id { color: var(--muted); }
+    .rc-target { font-size: 15px; }
+    .rc-target .cl { color: var(--muted); }
+    .rc-meta { font-size: 12.5px; color: var(--muted); }
+    .rc-reason { font-size: 12.5px; color: var(--err); background: color-mix(in srgb, var(--err) 8%, transparent); border-radius: 6px; padding: 6px 8px; }
+    .rc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+    .link-ready { display: flex; gap: 6px; margin-top: 8px; width: 100%; }
+    .link-ready input { flex: 1; font-size: 12px; }
+    .link-note { width: 100%; font-size: 12px; color: var(--muted); }
+    .link-err { width: 100%; font-size: 12.5px; color: var(--err); }
+    .empty-state { padding: 36px; text-align: center; color: var(--muted); }
+    .empty-state .big { font-family: ui-monospace, Consolas, monospace; font-size: 22px; color: var(--line-2); margin-bottom: 6px; }
+
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="/"><span class="prompt">❯_</span><span>kubeconfig<span class="sub">.generator</span></span></a>
+  <nav class="nav">
+    <a href="/" class="active">Yêu cầu của tôi</a>
+    
+  </nav>
+  <div class="who">
+    <span class="email mono">dev.a@fpt.com</span>
+    <button class="icon-btn" type="button" id="theme-btn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">◐</button>
+    <a class="btn btn-sm btn-ghost" href="/oauth2/sign_out">Đăng xuất</a>
+  </div>
+</header>
+
+<div class="toasts" id="toasts">
+  <div class="toast ok" role="status"><span class="t-body">Đã gửi request #41, chờ admin duyệt</span><button type="button" aria-label="Đóng">×</button></div>
+  
+</div>
+
+<main>
+  
+
+<div class="page-head">
+  <div>
+    <h1>Xin kubeconfig read-only</h1>
+    <div class="muted">Quyền chỉ đọc (ClusterRole <code>view</code>) trong đúng một namespace. Thời hạn tính từ lúc tải file.</div>
+  </div>
+</div>
+
+
+<form class="panel wizard" method="post" action="/requests" id="wizard">
+  <div class="step done" data-step="cluster">
+    <span class="step-no">1</span>
+    <div class="step-title">Chọn cluster</div>
+    <div class="cluster-grid">
+      
+      <label class="pick cluster-card">
+        <input type="radio" name="cluster" value="fsel-local" required checked>
+        <span class="cc">
+          <span class="cc-top"><span class="cc-name mono">fsel-local</span></span>
+          <span class="cc-meta">9 namespace đang mở</span>
+        </span>
+      </label>
+      
+      <label class="pick cluster-card">
+        <input type="radio" name="cluster" value="fsel-prod" required >
+        <span class="cc">
+          <span class="cc-top"><span class="cc-name mono">fsel-prod</span><span class="tag tag-prod">PROD</span></span>
+          <span class="cc-meta">4 namespace đang mở</span>
+        </span>
+      </label>
+      
+    </div>
+  </div>
+
+  <div class="step" data-step="namespace">
+    <span class="step-no">2</span>
+    <div class="step-title">Chọn namespace <span class="hint">gõ <kbd>/</kbd> để tìm nhanh</span></div>
+    <div class="ns-tools">
+      <input type="search" id="ns-search" placeholder="Tìm namespace…" autocomplete="off" aria-label="Tìm namespace">
+      <span class="muted small" id="ns-count"></span>
+    </div>
+    <div class="chips" id="ns-chips">
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="ticket">
+        <input type="radio" name="namespace" value="ticket" required><span class="mono">ticket</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="jira">
+        <input type="radio" name="namespace" value="jira" required><span class="mono">jira</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="payment">
+        <input type="radio" name="namespace" value="payment" required><span class="mono">payment</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="billing">
+        <input type="radio" name="namespace" value="billing" required><span class="mono">billing</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="search">
+        <input type="radio" name="namespace" value="search" required><span class="mono">search</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="report">
+        <input type="radio" name="namespace" value="report" required><span class="mono">report</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="notification">
+        <input type="radio" name="namespace" value="notification" required><span class="mono">notification</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="auth">
+        <input type="radio" name="namespace" value="auth" required><span class="mono">auth</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-local" data-name="gateway">
+        <input type="radio" name="namespace" value="gateway" required><span class="mono">gateway</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-prod" data-name="ticket">
+        <input type="radio" name="namespace" value="ticket" required><span class="mono">ticket</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-prod" data-name="jira">
+        <input type="radio" name="namespace" value="jira" required><span class="mono">jira</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-prod" data-name="notification">
+        <input type="radio" name="namespace" value="notification" required><span class="mono">notification</span>
+      </label>
+      
+      <label class="pick chip" data-cluster="fsel-prod" data-name="search">
+        <input type="radio" name="namespace" value="search" required><span class="mono">search</span>
+      </label>
+      
+    </div>
+    <p class="muted small" id="ns-empty" hidden>Không có namespace nào khớp.</p>
+  </div>
+
+  <div class="step done" data-step="expiration">
+    <span class="step-no">3</span>
+    <div class="step-title">Thời hạn</div>
+    <div class="seg" role="radiogroup" aria-label="Thời hạn">
+      
+      <label class="pick"><input type="radio" name="expiration" value="3600" data-label="1 giờ" required checked><span>1 giờ</span></label>
+      
+      <label class="pick"><input type="radio" name="expiration" value="28800" data-label="8 giờ" required ><span>8 giờ</span></label>
+      
+      <label class="pick"><input type="radio" name="expiration" value="86400" data-label="1 ngày" required ><span>1 ngày</span></label>
+      
+      <label class="pick"><input type="radio" name="expiration" value="259200" data-label="3 ngày" required ><span>3 ngày</span></label>
+      
+      <label class="pick"><input type="radio" name="expiration" value="604800" data-label="7 ngày" required ><span>7 ngày</span></label>
+      
+    </div>
+  </div>
+
+  <div class="wiz-foot">
+    <div class="summary" id="summary">
+      <span class="muted">dev.a@fpt.com</span> ❯ <b id="sum-cl">…</b>/<b id="sum-ns"><span class="ph">namespace?</span></b> · <b id="sum-exp">…</b> · view
+    </div>
+    <button class="btn btn-pri" type="submit" id="submit-btn">Gửi yêu cầu →</button>
+  </div>
+</form>
+
+
+<h2>Yêu cầu của tôi</h2>
+
+<div class="req-grid" id="rows">
+  
+  <article class="panel req-card s-issued">
+    <div class="rc-top"><span class="mono rc-id">#41</span><span class="badge b-issued">Đã cấp</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-local</span> / <strong>ticket</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 00:12</div>
+
+    
+      <div class="countdown" data-end="2026-10-26T16:12:05+00:00" data-start="2026-10-26T08:12:05+00:00">
+  <div class="bar"><span></span></div>
+  <div class="cd-text"><span class="cd-left">…</span><span class="muted"> · hết hạn 2026-10-26 23:12</span></div>
+</div>
+    
+
+    
+
+    
+  </article>
+  
+  <article class="panel req-card s-issued">
+    <div class="rc-top"><span class="mono rc-id">#40</span><span class="badge b-issued">Đã cấp</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-prod</span> / <strong>jira</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 01:12</div>
+
+    
+      <div class="countdown" data-end="2026-10-26T10:32:05+00:00" data-start="2026-10-26T02:32:05+00:00">
+  <div class="bar"><span></span></div>
+  <div class="cd-text"><span class="cd-left">…</span><span class="muted"> · hết hạn 2026-10-26 17:32</span></div>
+</div>
+    
+
+    
+
+    
+  </article>
+  
+  <article class="panel req-card s-approved">
+    <div class="rc-top"><span class="mono rc-id">#39</span><span class="badge b-approved">Đã duyệt, chờ tải</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-local</span> / <strong>payment</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 02:12</div>
+
+    
+      <div class="countdown" data-end="2026-10-27T06:12:05+00:00" data-start="">
+  
+  <div class="cd-text"><span class="cd-left">…</span><span class="muted"> · phải tải trước 2026-10-27 13:12</span></div>
+</div>
+    
+
+    
+
+    
+    <div class="rc-actions">
+      
+        <button class="btn btn-sm btn-pri" type="button" data-link="39">Tạo link tải</button>
+      
+      <form class="inline" method="post" action="/requests/39/cancel"><button class="btn btn-sm btn-ghost" type="submit">Huỷ</button></form>
+      <div id="link-39" class="link-slot" style="width:100%"></div>
+    </div>
+    
+  </article>
+  
+  <article class="panel req-card s-pending">
+    <div class="rc-top"><span class="mono rc-id">#38</span><span class="badge b-pending">Chờ duyệt</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-prod</span> / <strong>notification</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 03:12</div>
+
+    
+
+    
+
+    
+    <div class="rc-actions">
+      
+      <form class="inline" method="post" action="/requests/38/cancel"><button class="btn btn-sm btn-ghost" type="submit">Huỷ</button></form>
+      <div id="link-38" class="link-slot" style="width:100%"></div>
+    </div>
+    
+  </article>
+  
+  <article class="panel req-card s-rejected">
+    <div class="rc-top"><span class="mono rc-id">#37</span><span class="badge b-rejected">Bị từ chối</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-local</span> / <strong>billing</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 04:12</div>
+
+    
+
+    <div class="rc-reason">Lý do: Namespace prod, cần ticket change</div>
+
+    
+  </article>
+  
+  <article class="panel req-card s-expired">
+    <div class="rc-top"><span class="mono rc-id">#36</span><span class="badge b-expired">Hết hạn</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-local</span> / <strong>ticket</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 05:12</div>
+
+    
+      <div class="rc-meta">Hết hạn 2026-10-25 17:12</div>
+    
+
+    
+
+    
+  </article>
+  
+  <article class="panel req-card s-revoked">
+    <div class="rc-top"><span class="mono rc-id">#35</span><span class="badge b-revoked">Đã thu hồi</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-prod</span> / <strong>search</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 06:12</div>
+
+    
+
+    
+
+    
+  </article>
+  
+  <article class="panel req-card s-cancelled">
+    <div class="rc-top"><span class="mono rc-id">#34</span><span class="badge b-cancelled">Đã huỷ</span></div>
+    <div class="rc-target mono"><span class="cl">fsel-local</span> / <strong>report</strong></div>
+    <div class="rc-meta">Xin 8 giờ · gửi 2026-10-25 07:12</div>
+
+    
+
+    
+
+    
+  </article>
+  
+</div>
+
+
+</main>
+
+<script>
+(function () {
+  // --- theme sáng/tối, nhớ trong localStorage
+  var root = document.documentElement;
+  document.getElementById('theme-btn').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('kg-theme', next); } catch (e) {}
+  });
+
+  // --- toast: thông báo OK tự ẩn sau 6 giây, lỗi thì giữ tới khi đóng
+  function closeToast(t) { t.classList.add('hide'); setTimeout(function () { t.remove(); }, 260); }
+  document.querySelectorAll('#toasts .toast').forEach(function (t) {
+    t.querySelector('button').addEventListener('click', function () { closeToast(t); });
+    if (t.classList.contains('ok')) setTimeout(function () { closeToast(t); }, 6000);
+  });
+  // Bỏ ?msg= / ?err= khỏi thanh địa chỉ để F5 không hiện lại thông báo cũ
+  if (/[?&](msg|err)=/.test(location.search)) history.replaceState(null, '', location.pathname);
+
+  // --- copy vào clipboard (có đường lùi khi không phải HTTPS)
+  window.kgCopy = function (text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy') ? resolve() : reject(); } catch (x) { reject(x); }
+      ta.remove();
+    });
+  };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-copy-target]');
+    if (!b) return;
+    var src = document.getElementById(b.getAttribute('data-copy-target'));
+    if (!src) return;
+    var old = b.textContent;
+    window.kgCopy(src.value !== undefined && src.tagName === 'INPUT' ? src.value : src.textContent.trim())
+      .then(function () { b.textContent = 'Đã copy ✓'; }, function () { b.textContent = 'Copy lỗi'; })
+      .then(function () { setTimeout(function () { b.textContent = old; }, 1600); });
+  });
+
+  // --- đếm ngược tới lúc hết hạn
+  function left(ms) {
+    if (ms <= 0) return 'đã hết hạn';
+    var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    if (d) return 'còn ' + d + ' ngày ' + h + ' giờ';
+    if (h) return 'còn ' + h + ' giờ ' + m + ' phút';
+    if (m) return 'còn ' + m + ' phút ' + (s % 60) + ' giây';
+    return 'còn ' + s + ' giây';
+  }
+  function tick() {
+    var now = Date.now();
+    document.querySelectorAll('.countdown[data-end]').forEach(function (el) {
+      var end = Date.parse(el.getAttribute('data-end'));
+      if (isNaN(end)) return;
+      var start = Date.parse(el.getAttribute('data-start') || '');
+      var ms = end - now, t = el.querySelector('.cd-left'), bar = el.querySelector('.bar > span');
+      if (t) t.textContent = left(ms);
+      if (bar && !isNaN(start) && end > start) bar.style.width = (Math.max(0, Math.min(1, ms / (end - start))) * 100).toFixed(2) + '%';
+      el.classList.toggle('cd-warn', ms > 0 && ms < 3600 * 1000);
+      el.classList.toggle('cd-over', ms <= 0);
+    });
+  }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+
+<script>
+(function () {
+  var form = document.getElementById('wizard');
+  var dirty = false;
+
+  if (form) {
+    var search = document.getElementById('ns-search');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('#ns-chips .chip'));
+    var empty = document.getElementById('ns-empty'), count = document.getElementById('ns-count');
+    var step = function (name) { return form.querySelector('.step[data-step="' + name + '"]'); };
+    var val = function (name) { var x = form.querySelector('input[name="' + name + '"]:checked'); return x; };
+
+    function refresh() {
+      var cl = val('cluster'), cv = cl ? cl.value : '', q = (search.value || '').trim().toLowerCase(), shown = 0, inCluster = 0;
+      chips.forEach(function (chip) {
+        var input = chip.querySelector('input');
+        var mine = chip.getAttribute('data-cluster') === cv;
+        var match = mine && (!q || chip.getAttribute('data-name').toLowerCase().indexOf(q) !== -1);
+        if (mine) inCluster++;
+        chip.hidden = !match;
+        input.disabled = !mine;               // namespace của cluster khác không được gửi đi
+        if (!mine && input.checked) input.checked = false;
+        if (match) shown++;
+      });
+      // Cluster chỉ có đúng 1 namespace thì chọn sẵn
+      var visible = chips.filter(function (c) { return !c.hidden; });
+      if (inCluster === 1 && visible.length === 1) visible[0].querySelector('input').checked = true;
+
+      empty.hidden = shown !== 0;
+      count.textContent = q ? shown + '/' + inCluster : inCluster + ' namespace';
+
+      var ns = val('namespace'), ex = val('expiration');
+      step('namespace').classList.toggle('done', !!ns);
+      document.getElementById('sum-cl').textContent = cv || '…';
+      var sn = document.getElementById('sum-ns');
+      if (ns) { sn.textContent = ns.value; } else { sn.innerHTML = '<span class="ph">namespace?</span>'; }
+      document.getElementById('sum-exp').textContent = ex ? ex.getAttribute('data-label') : '…';
+    }
+
+    form.addEventListener('change', function (e) {
+      if (e.target.name === 'namespace' || e.target.name === 'cluster') dirty = true;
+      if (e.target.name === 'cluster') search.value = '';
+      refresh();
+    });
+    search.addEventListener('input', refresh);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); search.focus(); }
+      if (e.key === 'Escape' && document.activeElement === search) { search.value = ''; refresh(); }
+    });
+    form.addEventListener('submit', function (e) {
+      if (!val('namespace')) {
+        e.preventDefault();
+        step('namespace').scrollIntoView({behavior: 'smooth', block: 'center'});
+        search.focus();
+        return;
+      }
+      document.getElementById('submit-btn').disabled = true;
+    });
+    refresh();
+  }
+
+  // --- Tạo link tải
+  document.addEventListener('click', async function (e) {
+    var btn = e.target.closest && e.target.closest('[data-link]');
+    if (!btn) return;
+    var id = btn.getAttribute('data-link'), slot = document.getElementById('link-' + id);
+    btn.disabled = true;
+    slot.innerHTML = '';
+    try {
+      var r = await fetch('/api/requests/' + id + '/link', {method: 'POST', headers: {'Accept': 'application/json'}});
+      var data = await r.json();
+      if (!r.ok) { var er = document.createElement('div'); er.className = 'link-err'; er.textContent = data.detail || 'Lỗi'; slot.appendChild(er); return; }
+
+      var wrap = document.createElement('div'); wrap.className = 'link-ready';
+      var inp = document.createElement('input'); inp.type = 'text'; inp.readOnly = true; inp.className = 'mono'; inp.id = 'url-' + id; inp.value = data.url;
+      inp.addEventListener('focus', function () { inp.select(); });
+      var cp = document.createElement('button'); cp.type = 'button'; cp.className = 'btn btn-sm btn-pri'; cp.textContent = 'Copy link'; cp.setAttribute('data-copy-target', inp.id);
+      var op = document.createElement('a'); op.className = 'btn btn-sm btn-ghost'; op.href = data.url; op.target = '_blank'; op.rel = 'noopener noreferrer'; op.textContent = 'Mở';
+      wrap.appendChild(inp); wrap.appendChild(cp); wrap.appendChild(op);
+      var note = document.createElement('div'); note.className = 'link-note';
+      note.textContent = 'Hiệu lực ' + data.ttl + ', dùng 1 lần, chỉ bạn mở được. Không gửi link qua chat.';
+      slot.appendChild(wrap); slot.appendChild(note);
+      btn.textContent = 'Tạo link mới';
+    } catch (err) {
+      var ne = document.createElement('div'); ne.className = 'link-err'; ne.textContent = 'Lỗi mạng'; slot.appendChild(ne);
+    } finally { btn.disabled = false; }
+  });
+
+  // --- Tự làm mới khi trạng thái đổi. Không tải lại khi đang có link vừa tạo hoặc đang chọn dở form.
+  var last = JSON.stringify(["issued", "issued", "approved", "pending", "rejected", "expired", "revoked", "cancelled"]);
+  setInterval(async function () {
+    if (dirty || document.querySelector('.link-ready')) return;
+    try {
+      var r = await fetch('/api/my-requests', {headers: {'Accept': 'application/json'}});
+      if (!r.ok) return;
+      var now = JSON.stringify((await r.json()).map(function (x) { return x.status; }));
+      if (now !== last) { last = now; location.replace('/'); }
+    } catch (err) {}
+  }, 5000);
+})();
+</script>
+
+</body>
+</html>

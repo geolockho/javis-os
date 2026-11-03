@@ -1,0 +1,17 @@
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.next/
+.nuxt/
+.cache/
+dist/
+build/
+target/
+.worktrees/
+.DS_Store

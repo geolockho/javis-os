@@ -1,0 +1,184 @@
+{
+ "cf8a38f92453422fabd6e2fc291d6de9": [
+  {
+   "id": "20261023-111121-f36faf",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-111121-f36faf",
+   "commit": "4b1991183b01bcf546e80bf6320bfd050ca79b8a",
+   "luc": 1792728681.0415747,
+   "luot": 11,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261023-111448-32a1f3",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-111448-32a1f3",
+   "commit": "0f19df985b678fd26365ae639cc7d2ebdc398c52",
+   "luc": 1792728888.426549,
+   "luot": 12,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261023-114300-07276d",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-114300-07276d",
+   "commit": "db95937c1319c73c49c023395e60f98648b01724",
+   "luc": 1792730580.5811207,
+   "luot": 14,
+   "ly_do": "lệnh: Get-ChildItem -Force \"D:\\FSEL\\other-services\\kubeconfig-generator\" | Select-Obje"
+  },
+  {
+   "id": "20261023-132115-eb1612",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-132115-eb1612",
+   "commit": "6ac5a007b165b0ce14ff127f767539412d6c2d3e",
+   "luc": 1792736476.0222392,
+   "luot": 16,
+   "ly_do": "lệnh: pwd; ls -la \"D:/FSEL/other-services/kubeconfig-generator\" 2>&1; cat \"D:/FSEL/oth"
+  },
+  {
+   "id": "20261023-150325-5d8945",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-150325-5d8945",
+   "commit": "fb59aebe3400ec2e253fd8691a6168a0cf997260",
+   "luc": 1792742605.3620896,
+   "luot": 18,
+   "ly_do": "lệnh: cd D:/private01/javis-os/brains/MinFu/workspace/kubeconfig-generator && D:/FSEL/"
+  },
+  {
+   "id": "20261023-152854-4642da",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-152854-4642da",
+   "commit": "1088c202d2683fc9e084db4b2623b7495c6f44d6",
+   "luc": 1792744134.5666206,
+   "luot": 20,
+   "ly_do": "lệnh: cd workspace/kubeconfig-generator && find . -path ./.git -prune -o -path ./node_"
+  },
+  {
+   "id": "20261023-164625-014207",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-164625-014207",
+   "commit": "2933fb71d332c98bd1bfae7c12329444e553b4e4",
+   "luc": 1792748785.3274283,
+   "luot": 24,
+   "ly_do": "lệnh: pwd; ls; ls /d/FSEL/other-services/kubeconfig-generator/deploy/rbac 2>&1; ls \"D:"
+  },
+  {
+   "id": "20261023-171524-8e7cf8",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-171524-8e7cf8",
+   "commit": "9aa77000a1190a416790da26f7ede7be6c0fddf1",
+   "luc": 1792750524.0759099,
+   "luot": 27,
+   "ly_do": "lệnh: pwd; ls; ls /d/FSEL/other-services/kubeconfig-generator 2>&1 | head; ls /d/argoc"
+  },
+  {
+   "id": "20261023-180109-a186e4",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261023-180109-a186e4",
+   "commit": "368e343ce061886e084e8fece9ff35d399b14ea4",
+   "luc": 1792753269.1155338,
+   "luot": 28,
+   "ly_do": "lệnh: cd /d/argocd-deploy-clean/values/fsel-internal-tools/kubeconfig-generator 2>/dev"
+  },
+  {
+   "id": "20261026-150320-dafbee",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-150320-dafbee",
+   "commit": "bb54bde1108e46f7a97082437f5631893b29734d",
+   "luc": 1793001801.0223832,
+   "luot": 1,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261026-152420-99f370",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-152420-99f370",
+   "commit": "e8f7035deb15ef1ef6a80896e45c1d3188d38bb2",
+   "luc": 1793003060.533296,
+   "luot": 2,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261026-153528-46a6c7",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-153528-46a6c7",
+   "commit": "c2523ceade2e6cdf42636f24a83ac44068028974",
+   "luc": 1793003728.1980324,
+   "luot": 3,
+   "ly_do": "lệnh: for c in fsel-prod fsel-local; do echo \"=== $c\"; kubectl --context $c get deploy"
+  },
+  {
+   "id": "20261026-155111-36345c",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-155111-36345c",
+   "commit": "df969fce258c7387c9283f62109c8974756abc1b",
+   "luc": 1793004671.7806194,
+   "luot": 4,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261026-155500-336ebc",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-155500-336ebc",
+   "commit": "d7e0139c78d01d5bcaff2cd7104c48c447fcefa7",
+   "luc": 1793004901.0407557,
+   "luot": 5,
+   "ly_do": "lệnh: kubectl --context fsel-local -n fsel-internal-tools get pods -o wide; echo ---; "
+  },
+  {
+   "id": "20261026-162027-275c67",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-162027-275c67",
+   "commit": "ffedca11a058ec3a78ee7c0ea130ba511f8df37a",
+   "luc": 1793006427.2328498,
+   "luot": 7,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:/FSEL/other-"
+  },
+  {
+   "id": "20261026-162155-15c841",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-162155-15c841",
+   "commit": "4259d7849c64baccd2b8bc4c6fffe4cf06bf9e17",
+   "luc": 1793006515.2215893,
+   "luot": 8,
+   "ly_do": "lệnh: cat \"/d/argocd-deploy-clean/values/fsel-internal-tools/kubeconfig-generator/valu"
+  },
+  {
+   "id": "20261026-162453-6cb20b",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-162453-6cb20b",
+   "commit": "154afeac70ef827ee03f7b6b2536fb656222a38b",
+   "luc": 1793006693.5403044,
+   "luot": 10,
+   "ly_do": "lệnh: kubectl --context fsel-local -n fsel-internal-tools get pods -o wide; kubectl --"
+  },
+  {
+   "id": "20261026-162752-9c81db",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-162752-9c81db",
+   "commit": "ea23fe0ca93a7c257b6437817c16da5db0dc3c6b",
+   "luc": 1793006872.8494382,
+   "luot": 11,
+   "ly_do": "lệnh: python -c \"import secrets;s=secrets.token_hex(16);print(s,len(s))\" 2>/dev/null |"
+  },
+  {
+   "id": "20261026-171116-50ada7",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-171116-50ada7",
+   "commit": "ae133e002c61852801ce121ca5e220b8aa587d5b",
+   "luc": 1793009476.5669563,
+   "luot": 13,
+   "ly_do": "lệnh: cd workspace/kubeconfig-generator; if (Test-Path .venv\\Scripts\\python.exe) { .ve"
+  },
+  {
+   "id": "20261026-174445-72cfe6",
+   "ws": "D:\\private01\\javis-os\\brains\\MinFu",
+   "ref": "refs/javis/90958728e8b0180b/20261026-174445-72cfe6",
+   "commit": "e6d8b7350d3d838c039593972cf8fe0aff1eca7e",
+   "luc": 1793011485.8975182,
+   "luot": 14,
+   "ly_do": "lệnh: cd /d/FSEL/other-services/kubeconfig-generator 2>/dev/null || cd \"D:\\FSEL\\other-"
+  }
+ ]
+}

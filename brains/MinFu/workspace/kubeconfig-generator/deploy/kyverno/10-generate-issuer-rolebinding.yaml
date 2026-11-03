@@ -1,0 +1,69 @@
+# Sinh RoleBinding cho SA của tool trong mọi namespace có label kubeconfig-generator/enabled=true|draining.
+#
+# - Label do ADMIN gắn tay (policy 20-protect-namespace-labels.yaml chặn người khác sửa).
+# - `draining` vẫn giữ RoleBinding vì job dọn của tool cần quyền để xoá SA/token đã cấp.
+# - synchronize: true -> gỡ label (hoặc xoá namespace, xoá policy) thì Kyverno xoá RoleBinding; ai sửa/xoá tay
+#   RoleBinding thì Kyverno dựng lại.
+# - generateExisting: true -> áp cho cả namespace đã gắn label trước khi có policy.
+#   (Kyverno 1.11-1.12 đọc ở spec; bản mới hơn vẫn nhận nhưng báo deprecated, có thể chuyển xuống
+#   rules[].generate.generateExisting.)
+# - Exclude cứng namespace hệ thống và namespace chứa SA quyền cao: gắn nhầm label cũng không mở được.
+#   Danh sách này phải khớp BASE_FORBIDDEN_* trong app/config.py.
+#
+# Tương thích: fsel-prod chạy K8s 1.25 -> dùng Kyverno 1.11.x (chart 3.1.x). fsel-local chạy 1.34 -> dùng bản
+# Kyverno hỗ trợ 1.34. Policy chỉ dùng trường có từ 1.11.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: kubeconfig-generator-issuer-rolebinding
+  annotations:
+    policies.kyverno.io/title: kubeconfig-generator issuer RoleBinding
+    policies.kyverno.io/subject: Namespace, RoleBinding
+    policies.kyverno.io/description: >-
+      Namespace có label kubeconfig-generator/enabled=true|draining được cấp RoleBinding tới ClusterRole
+      kubeconfig-generator-issuer cho SA kube-public/kubeconfig-generator.
+spec:
+  generateExisting: true
+  rules:
+  - name: issuer-rolebinding
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+          selector:
+            matchExpressions:
+            - key: kubeconfig-generator/enabled
+              operator: In
+              values: ["true", "draining"]
+    exclude:
+      any:
+      - resources:
+          names:
+          - "*kube*"
+          - cd
+          - haproxy
+          - rabbitmq
+          - redis
+          - kyverno
+          - argocd
+          - fsel-internal-tools
+    generate:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      name: kubeconfig-generator-issuer
+      namespace: "{{request.object.metadata.name}}"
+      synchronize: true
+      data:
+        metadata:
+          labels:
+            # KHÔNG dùng app.kubernetes.io/managed-by=kubeconfig-generator: đó là label tool dùng để chọn
+            # SA/RoleBinding của dev khi xoá.
+            app.kubernetes.io/part-of: kubeconfig-generator
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: kubeconfig-generator-issuer
+        subjects:
+        - kind: ServiceAccount
+          name: kubeconfig-generator
+          namespace: kube-public

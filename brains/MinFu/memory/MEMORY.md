@@ -137,4 +137,5 @@
 - [Kết quả xét nghiệm hỗ trợ sinh sản được trao đổi ngày 2026-11-01](facts/ket-qua-xet-nghiem-sinh-san-2026-11-01.md) - Bản đọc trong chat ghi tinh dịch đồ, nhóm AB+ và AMH 3,37; chủ thể phiếu máu và đơn vị AMH chưa xác nhận.
 - [Lịch báo cáo tài nguyên fsel-prod từ 8h đến 18h và tổng kết cuối ngày](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-11-02.md) - Báo cáo tài nguyên fsel-prod chạy mỗi 2 giờ trong khung 8h-18h, kèm một bản tổng kết cuối ngày như cũ.
 - [Chốt giờ chạy hai việc Jira lúc 05:30](facts/lich-jira-hang-ngay-5h30-hai-tai-khoan.md) - Hai việc định kỳ Jira chuyển từ 18:00 sang 05:30 theo yêu cầu của người dùng.
-- [Chốt giờ chạy hai việc Jira lúc 17:30](facts/lich-jira-hang-ngay-17h30-hai-tai-khoan.md) - Lịch định kỳ của hai việc Jira được chốt lúc 17:30, thứ 2 đến thứ 6.
+- [Chốt giờ chạy hai việc Jira lúc 17:30](facts/lich-jira-hang-ngay-17h30-hai-tai-khoan.md) - Lịch định kỳ Jira chạy 17:30 ngày làm việc; người dùng giữ cấu hình mẫu issue sau khi đối chiếu FD-1/FD-2, label DevOps và due date theo ngày tạo vẫn là yêu cầu.
+

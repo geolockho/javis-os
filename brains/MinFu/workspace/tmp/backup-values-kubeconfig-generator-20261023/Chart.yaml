@@ -1,0 +1,11 @@
+apiVersion: v2
+name: auth
+description: Service auth it requests
+type: application
+
+version: 0.1.0
+
+dependencies:
+  - name: fsel
+    version: 0.2.0
+    repository: https://gitlab.fsel.edu.vn/api/v4/projects/111/packages/helm/stable

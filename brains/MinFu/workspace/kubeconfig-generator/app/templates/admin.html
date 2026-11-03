@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tab {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12.5px;
+      color: var(--muted); border: 1px solid var(--line); background: var(--panel);
+    }
+    .tab:hover { color: var(--text); border-color: var(--line-2); text-decoration: none; }
+    .tab.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--gray)); }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stat { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); min-width: 120px; }
+    .stat .v { font-family: ui-monospace, Consolas, monospace; font-size: 20px; font-weight: 600; }
+    .stat .l { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .stat.warn .v { color: var(--warn); } .stat.ok .v { color: var(--ok); }
+    .note { font-size: 12.5px; color: var(--muted); margin: -4px 0 12px; }
+    .sub-err { margin-top: 4px; font-size: 12px; color: var(--err); max-width: 280px; }
+    .sub-muted { margin-top: 4px; font-size: 12px; color: var(--muted); max-width: 280px; }
+    .role { margin-top: 3px; }
+    /* Từ chối: bấm mới mở ô lý do, đỡ tràn bảng */
+    details.pop { position: relative; }
+    details.pop > summary { list-style: none; }
+    details.pop > summary::-webkit-details-marker { display: none; }
+    details.pop[open] > summary { border-color: var(--err); }
+    /* Nằm ngay trong ô (không absolute) vì .table-wrap có overflow sẽ cắt mất popup */
+    .pop-body {
+      margin-top: 6px; width: 240px; padding: 10px;
+      background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: var(--shadow);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .pop-body input { width: 100%; }
+    .countdown { margin-top: 0; min-width: 170px; }
+{% endblock %}
+
+{% block content %}
+{% from "_macros.html" import badge, countdown %}
+{% set active_issued = issued | selectattr('status', 'equalto', 'issued') | list %}
+{% set failed = issued | selectattr('status', 'equalto', 'revoke_failed') | list %}
+<div class="page-head">
+  <div>
+    <h1>Quản trị request</h1>
+    <div class="muted">Duyệt, từ chối và thu hồi kubeconfig read-only.</div>
+  </div>
+  <div class="stats">
+    {% if not status or status == 'pending' %}
+    {% set pending = rows | selectattr('status', 'equalto', 'pending') | list %}
+    <div class="stat warn"><div class="v">{{ pending | length }}</div><div class="l">Chờ duyệt</div></div>
+    {% endif %}
+    <div class="stat ok"><div class="v">{{ active_issued | length }}</div><div class="l">Đang hiệu lực</div></div>
+    {% if failed %}<div class="stat"><div class="v" style="color:var(--err)">{{ failed | length }}</div><div class="l">Thu hồi lỗi</div></div>{% endif %}
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Lọc theo trạng thái">
+  <a href="/admin" class="tab {% if not status %}active{% endif %}">Tất cả</a>
+  {% for k, v in STATUS_LABELS.items() %}
+  <a href="/admin?status={{ k }}" class="tab b-{{ k }} {% if status == k %}active{% endif %}"><span class="dot"></span>{{ v }}</a>
+  {% endfor %}
+</nav>
+{% if not allow_self_approve %}<p class="note">Không được tự duyệt request của chính mình (<code>ALLOW_SELF_APPROVE=false</code>).</p>{% endif %}
+
+<div class="panel table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Người xin</th><th>Cluster / Namespace</th><th>Thời hạn</th>
+    <th>Gửi lúc</th><th>Trạng thái</th><th>Hết hạn</th><th>Người duyệt</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="mono muted">{{ r.id }}</td>
+      <td>{{ r.requester_email }}</td>
+      <td class="target mono"><span class="cl">{{ r.cluster }}</span> / {{ r.namespace }}<div class="role"><code>{{ r.role }}</code></div></td>
+      <td>{{ r.requested_seconds | duration }}</td>
+      <td class="muted">{{ r.created_at | dt }}</td>
+      <td>{{ badge(r.status) }}
+        {% if r.last_error %}<div class="sub-err">Lỗi: {{ r.last_error }}</div>{% endif %}
+        {% if r.reject_reason %}<div class="sub-muted">Lý do: {{ r.reject_reason }}</div>{% endif %}</td>
+      <td>{% if r.token_expires_at %}{{ r.token_expires_at | dt }}{% elif r.claim_deadline and r.status == 'approved' %}<span class="muted">nhận trước {{ r.claim_deadline | dt }}</span>{% endif %}</td>
+      <td class="muted">{{ r.decided_by or '' }}</td>
+      <td>
+        <div class="actions">
+        {% if r.status == 'pending' %}
+          <form class="inline" method="post" action="/admin/requests/{{ r.id }}/approve"><button class="btn btn-sm btn-pri" type="submit">Duyệt</button></form>
+          <details class="pop">
+            <summary class="btn btn-sm btn-danger">Từ chối</summary>
+            <form class="pop-body" method="post" action="/admin/requests/{{ r.id }}/reject">
+              <input type="text" name="reason" placeholder="Lý do (không bắt buộc)" maxlength="500">
+              <button type="submit" class="btn btn-sm btn-danger">Xác nhận từ chối #{{ r.id }}</button>
+            </form>
+          </details>
+        {% endif %}
+        {% if r.status in ('pending', 'approved', 'issued', 'revoke_failed') %}
+          <form class="inline" method="post" action="/admin/requests/{{ r.id }}/revoke"
+                onsubmit="return confirm('Thu hồi request #{{ r.id }}?')"><button type="submit" class="btn btn-sm btn-ghost btn-danger">Thu hồi</button></form>
+        {% endif %}
+        </div>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="9" class="empty">Không có request.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Kubeconfig đang hiệu lực</h2>
+<div class="panel table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Người xin</th><th>Cluster / Namespace</th><th>ServiceAccount</th><th>Tải lúc</th><th>Thời gian còn lại</th><th>Trạng thái</th><th></th></tr></thead>
+  <tbody>
+  {% for r in issued %}
+    <tr>
+      <td class="mono muted">{{ r.id }}</td><td>{{ r.requester_email }}</td>
+      <td class="target mono"><span class="cl">{{ r.cluster }}</span> / {{ r.namespace }}</td>
+      <td class="mono">{{ r.sa_name or '' }}</td><td class="muted">{{ r.issued_at | dt }}</td>
+      <td>{% if r.token_expires_at %}{{ countdown(r.token_expires_at, r.issued_at) }}{% endif %}</td>
+      <td>{{ badge(r.status) }}</td>
+      <td>{% if r.status in ('issued', 'revoke_failed') %}
+        <form class="inline" method="post" action="/admin/requests/{{ r.id }}/revoke"
+              onsubmit="return confirm('Thu hồi kubeconfig #{{ r.id }}?')"><button type="submit" class="btn btn-sm btn-ghost btn-danger">Thu hồi</button></form>
+      {% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="empty">Chưa có kubeconfig nào đang hiệu lực.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted small" style="margin-top:16px"><a href="/admin/debug/claims">Xem claim SSO (debug)</a></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Mở popup Từ chối này thì đóng popup khác; bấm ra ngoài thì đóng
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.pop[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
+  document.querySelectorAll('details.pop').forEach(function (d) {
+    d.addEventListener('toggle', function () { if (d.open) { var i = d.querySelector('input'); if (i) i.focus(); } });
+  });
+</script>
+{% endblock %}

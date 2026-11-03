@@ -1,0 +1,442 @@
+{
+  "workspace_name": "Javis OS",
+  "setup_done": true,
+  },
+  "branding": {
+    "logo_ext": "",
+    "logo_v": 0
+  },
+  "domain": {
+    "custom": "javis-os.duhocatlantic.com.vn",
+    "ssl_enabled": true
+  },
+  "locale": {
+    "ui_lang": "vi",
+    "reply_lang": "auto",
+    "tz": "Asia/Ho_Chi_Minh",
+    "currency": "VND"
+  },
+  "voice": {
+    "tts_provider": "edge",
+    "openai_tts_voice": "alloy",
+    "openai_tts_model": "gpt-4o-mini-tts",
+    "elevenlabs_key": "",
+    "elevenlabs_voice": "21m00Tcm4TlvDq8ikWAM",
+    "elevenlabs_model": "eleven_multilingual_v2",
+    "mode": "fast",
+    "brain_provider": "",
+    "brain_model": "",
+    "stt_provider": "browser",
+    "stt_model": "",
+    "live_provider": "gemini",
+    "live_model": "",
+    "live_voice": "",
+    "live_proactive": true,
+    "live_turn": "normal"
+  },
+  "model": {
+    "main": {
+      "provider": "anthropic-api",
+      "model": "claude-opus-5-5"
+    },
+    "auxiliary": {
+      "model": "claude-haiku-5-5",
+      "provider": "anthropic-cli"
+    },
+    "telegram": {
+      "provider": "",
+      "model": ""
+    },
+    "gia_goi_thang_usd": 0.0,
+    "ngan_sach_thang_usd": 0.0,
+    "tu_phanh": false,
+    "tran_5h": 0,
+    "bao_cao_tuan": "",
+    "reasoning": "high",
+    "fast": false,
+    "claude_auth": "subscription",
+    "claude_auto_update": true,
+    "openrouter_key": "",
+    "anthropic_api_key": "enc:gAAAAABq3r3c4bU4i3uXF5LjVq0ryHgDG4KdYQ8T4Sih2O1pxJLcKW9_7Isu_tR97xAE8quhfwcl-jYGM1TlRWtKm-dp9g1qP7ZeZjp4ywYd5xuzuBPuwRFvcTswm_SBkfDdbcouYzu9InEpltN_yHH4JqfQRO9a0TLyqjPAXSnGxQNAzQUyuUyfcUenQLNnjnX-Sadxu_FduPjz9yHRCuI_qlDd-opJ2A==",
+    "openai_api_key": "",
+    "gemini_api_key": "",
+    "groq_api_key": "",
+    "deepseek_api_key": "",
+    "ollama_key": "",
+    "openai_compat_base": "",
+    "openai_compat_key": "",
+    "anthropic_compat_base": "",
+    "anthropic_compat_key": "",
+    "ollama_local_endpoint": "http://127.0.0.1:11434",
+    "ollama_local_key": "",
+    "ollama_local_specs": {
+      "source": "unknown",
+      "ram_gb": 0,
+      "has_gpu": false,
+      "vram_gb": 0
+    },
+    "openai_oauth": {
+      "access_token": "enc:gAAAAABq3r3cOy7-gzBpT5FSyR_NLm3h7tDJ58Pa_nL8SFxMs00q2PflC9_27_bnhyWyKmzWRGaToh2VIONfx2LOnS_G_DbO34a8Yi5t2YJXPWgBDj4dQ7zCksBR9HEYex7HpfnHwPtMoiqUckzsBrY6JCxeiyTjEIh41vDUywI4uJxXk-imcH2lNyFOrG_05_6FQdYYhZG7FrHO188d7dk9IQxUJ33aevoaMyqQ_NPyl81Msuw6gwZl4IwRINzUv7xqeLSJ1GMsL9e4vJehAhu1OW05iBz3c5pO1qnXIFynIPu5KNHJypEO-m1kcsgysNu3U1rd9TLKlmLr-5KT1bs5VdxmsW3ZX9jgWzsxUA9WOo-1iLrQj986agH51hONmcfjERhP-TX6-ZhUVTXJivo7SGhW03Z5KYpYessvXjLtcAPGI3hmyKqf33hkw8kmhZc8A8xRqAiDwB2oGzxGOIagf_oD43d6KV9LGE0K2LnmMBitNoIoXLhjeWv1E_QUgpx0lYy5VcZJoAJV-hRDUFWxHDGozh1nJiFfOkaf_Y4UlkQWLF9HUoNT5aIlERHs8yO5eZtXMbS2V5EQgQ3OvQCBc3L-622OL1hnnbWCvgrk5iJzQgVA2I_xVkXVY7F9HFFTf6smGNJD_ME3lwgg5nSjxAPkUiLNxEgIqugzQLWP2C4ZFhVTFqDn4HwxMfbgh0LhFdgSGWZWyH2e2_sX_c6QpqMej_iXAyg_XLhn4-XdGAkiPFMwdn2rtc9O1-KIYf1AT8LWgh1fnohoeWLU0TPpLjE7VnTf_zhJuFuYLHd50pvaURnDTqE0vvxIXyQ_oXia8mbn_IvQ71LuKezBNQDxRipeRBvzZ0piQlMgeoyr-CjgM1haCwMUH30qRhmp6EO4-NY5c492xmsUKjDq11tzIV0EOROHyNm0zA25W2co3cj7ViFb_6Zw100kyWr8S6wSg1a2CHPHhW3UHpNILCUQTk2pRzyLrb0htFnap3h55pCR0ETffExrDYvDM_M67FJl3gTE0JphCO0MuToOeYzB4UeZQRPJt8pF3Wb6IPswEasSr9seFTWI0irC1BIxpraex2Bi_9Y5jjNxRnkHO1ZEbD2zyd5eQBA9cXQq1eJrFboss_yoJKoCG0SowDrDwbWw7-Dz8Ynjiyq6t2TgtzCt6cx5qbbF1a4nM0hX0CF__Q8ql1Btn3GaNs-Phfv0tCGXp0aPOXKwAQCy8ACRlmWR5if01oOcZs_crmB7CdowJm3wqRPcKozhQ42vt0FozgVodIPwo3IJa34XynBuIaKTFrDcgC2lZO8LjaCQVB1-0JqnpEbN1w1CZKWpbkqdriBvqNb2BLVO6WucivYMQA53LpdakZCMXth1z9HK9ebB3Tf1j2pjgx2rGoHTgmVo46YD3FhxsOUFUUaHfsQFWmN17MeuQuzq_9Km0UHC2niMwKMowDn9abK2DE1gKMJumXl87S60BHVHkJPczko1H7K_oRszcuK7hlBZ1MNId2TKr775qgqy4alafefaxz55g_iDKOIOGH-6n1m7H0XJxd7cJ8sSf46JPjwt1ViBd9s6uoxrrp0hx0hziZNeiHA7kcU3OweNSSBYsLuIaic-RBnSDi7RvVMzn5AnxWhrT-s_9aDfUzbZXMqYsZzmWPVtvw6OkFQqaSUOa9lUidHK-32V4v9a_30xCzWcJ4SZDsL0R1xqh3-2tTmJzD36mFtuojvzT-HGarLXuYQywjsoD6Ah2f0LT7N9gqVXE2AkWJUrMoMo6KoXwOyYKNAPKSUCLMpLCsBKAOM79s3_tkI4bZLAEdMdl4lHjiSgvbJYNjAS3oQezdWA0vmTzdtul7KqyXQjVLYFhe9Cokr-rb9WoX4zHQw-v7U6blNcMPe_1VDKMJsyHrw52PhymxIhwKexzFIPffVJoZOdibiiChfLIqYxn0vdpBGmkADWJ-qzkxzx8kKbR6iPEo5lp8EArhNx4InGg8mntrOOgX0CWX6UcG60CH29al6Jpm4wUdKEOunVVkua3JFJPCzFhlfVifXuLNbdbXM4Y8x8qZXVdwfLmhGBGLIs2r5oRzus-_gav1nZSWssl0O5gxbU-eJR26dy0cwdaIbCftba5Yvt-caB14thmfMlDw4TUemKmuo-K2Gxyq6pkOEApNtLxI7AWoyaZlHIR8Akb5HTuf2zujOt4qntGpNM3NYlZpSfCH9qAfISL99rdvWtcKCOP_TrRarC12dwLbUkCS2OQMFN0dvGmTinF5eoWF22F--iTQYZHHxSdK6FDYtv7FdSs1l3ajP0UtGa_-McA_ao-RoHmkqQaZE-RQsfIZXLZpYsHcK_O1TGJPNd07t63EKvnJ7op73KipRIaYGNhg58pbXmavsCOjp_pMjMAqhAtQ==",
+      "refresh_token": "enc:gAAAAABq3r3cT2sOZRemfaA2LDKyTsi_DBFNJ3dnDWVI33Q5bn6HZ9ZPIE_Fxo0-irKRJci8rhLkEc9b__P6eFmb9VgAS5tiBVOUtxAVOAHEaJTpj7S1ALrvqtqMYqYfb7HxzVIjPiB-YOiuEOLLXkHFQ-SoCZvSWzxPdyJ_C86_SGs48Y_r-NuiCb-EnQ8ZDlxnZscbjdFErs9yBAaU6JGZQiWmwn8gyvmRSC4rvERZn0pK56JENsfslxdvGu2xmPJdC4JWcL_UywSd-WMWrHGAunul9q1pyZ_x3tpilsqnXihYgUawbSIutwai7KGv4E_ANT3x15PkPG3YyzjJUtcD2jAhffRhS9WrykySYfn8Iyi_xATLNYE=",
+      "id_token": "enc:gAAAAABq3r3cU4e6Do1VLohI2sqQy78Nb7Qdrdgj9PAAvGVX54v7RHi9a73mv8FwyYSMeXaU_CzPmTFQOPTlvEGXoYdVITxtHWVRs9A3HxZ05NdmfcfP1a5PmzWh3nl0xPuzIGWgywHphDQXsBG7cuiI8N-vosZ1yt-V8G6j4asfu3HX1-3TTjNufZ-BaXi4zW_vinsNovl4ewJTgtyl3ayc4iNiyOz-EzUG4xVhMv-3PxIxrzZdjt_20-PJef2H7E03fSkUqyVgkNedojJEDK_b4xel0ZHQCMVqPGx7JF3qPNNqteEw0xzz1vIuW0g9pJ4_b2JdgTq8YVtFl0dAACvK3dn3n5fASkv9I3QL24NNMlSL2gFlMWTiF44nzDGAUpP7Abq3PI-oDQnV1JxWH_7vG_4JpUruaaGsNSmaT9igX415Y8JQfOXHeGAPAwiLoir_RvGwKJJz-vrWozCsU3zOWIU4m1II1MIG8C6lRjmyb549R7M5DqPINda5tH8QTorzzpyorAuVAHOiQozAktr0NjJfcl3xAmKHOUvEj4htg3OxkHS_nJG4KipWfZlsrQSNBB4RuaAbNC_eaM2X7v11SUjL0hRRdjIo2lphYa1qf40HFD58Jw22Z2SKArGbl9wuI93VyCvAZCd9KbdrvyPlj08ixa62BrhBdq7TPuSSU6Z0CmqmzQVkW7To2OkH9fjck_x1zmjUJXGRj6UKb0MY6QYcRsPmsU3QzgMw7Xz3zQ0d3wHIJ7L1WL0JB5yBM9_7TuwGeTmpqKTZqgLZelx8QfA0MrO6XCNSOR-1nKZ6Tvagm52zPgJmmj3GVA2B_6vTyD9PuJHCGiJr3LcY4B2pWVoAj5MFsSbVw2zaSl_XUHJLdzerS4URFyi3dvmAlgNys_wG0SmFQqv4FiOWbrW3vLPrOs9_bNXFO_vUjRKewnvrgjQidHF_uQKc3Tk5UWFAVPrxk4rP8KBuSDK-cE6thIa2FQ_buXWCuOvZ6LYHa2a7qnrdWzb8DdU-D4J_wpYS_EQulYvRsGyqgNxerm7As8rQzb8JZdZy3WPNwfOgO7egpBjNMUMIHIaSifAe_S6iqkNY948ytNuH0WOkppuvzpZncZCs5H2FP6zVErSrzAh0YpLIYHqBJ4YbYUhXCswB7Hmgo3oAOLbwr-NH-G9IVIjkuXkSxiL9hGkttyrZnrFeGZT6bJmRnLyZvgzXc-8T_2KkkCLYGdakgOUh6LYYouE-WSJeFaKZUZ2ZyIAGmYuK8YNT7RyCt1S3QMGxseqQ1HkjXzkQun2DArMIja1r-aAiz_XmwPhOowspep1RsrGCyN6VC8CNGJG9WtrpUEBgcTSr7gxpR_IHhENTdgpH4Qoy9D_Fe8VX86EUY6yXHE_WOxZi_SC3ULQeFuiLrirWERKCm9mgvcPMTg-DThTXISHixf5onZQNIXSKrMIInd0V5bsV-HRC4TLA6aK3Sx0dFS8JH-g9nKKeryLYyOnaC_xOSg2hOyGZVsgHbv2pAKtFM5VkJTbYz212m6k6UwIoq1Hb98ddOS-x4M0hrKmWc8iYDLxz9hD5Tnvu4bQ-Udbam4a6GEpMVbAYlb78sAlpEirmV5hgs2aNb7WKVAjVSzlrJ1C7sbV6lOYY9LivK00src5PaQwgf8sewAFOWxmm8S3HdB3d2FS4JyUIKAjF-xdCO9bqb-aQ8qh62IMaVcu-ukXPqWVcBjsRvGBMg6sCMBBScaK3v5tD3Fj88eDknsaPbmGzavbfB_lt0asMhoVNfyU90stMQPhNDpchehpPb5gMe7NP9x3FNGJrHcd0OLa7d2VpM7dc7tHrzr9P1wY0pjVgq_pSMbhh3Y9V3HwojNxdhuRWOYbRQSbU95rVBicLBSmiinnx_IVopi_L8rSmIWFMrf36Us31iqYj03y2Iq1GknOYwFI8I6YS1_lyYdbJXNcJZP5tVtr2vu_3FzQeN-z2dylM_vFeZgHD5rJK8XhSNc0eYOMPjAH8Q_loRPLoeZMLzC3GajPLq4LDw0IUEymG-_Amuchyt2Ee8m4e3zxwzqL774LsoPQJj6nKmuTlj3Ydud-zN0gFP9vAHIwmR6HAxlVrXs_Q1b9H7Co6cd_oyHykkrTMUwGniBPIayqjpTbDCtL52xogYldKQT0mvxxgvRFm0R5K3__uJh3ZplB8Ss_S_W-1yBIf8zPUyxnYg1EppjjQ_6eoIwA1ZaR2vlRMPvChcKxyD1vT3h3V1zrP3dRfUQkB_e59LWrSJHLuHVqH2ZY5C-ghyRp7CKx-kqgfaGDvID7EVIB4YWcm5ySC3jSJo_Ro4PYN_ojr5Sfa4Nzk8hL67YlRxOT9DS2OjG8PiOiL23qFmL3ONEnjTjw5Eq8lTz_OfCHEeg9GlsWaEfbqYQ==",
+      "account_id": "e125c234-6e06-42c2-9058-447eeaa664b1",
+      "plan": "plus",
+      "expires_at": 1793168940.0
+    },
+    "engine": "anthropic-api",
+    "claude_model": "claude-opus-5-5",
+    "openrouter_model": "openai/gpt-4o-mini",
+    "catalog": {
+      "claude": [
+        "haiku",
+        "sonnet",
+        "opus",
+        "fable",
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "claude-opus-5-5",
+        "claude-fable-5-1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
+        "claude-haiku-4-5-20251001"
+      ],
+      "anthropic-api": [
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "claude-opus-5-5",
+        "claude-fable-5-1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
+        "claude-haiku-4-5-20251001"
+      ],
+      "openai": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o3-mini"
+      ],
+      "gemini": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash"
+      ],
+      "groq": [
+        "llama-3.3-70b-versatile",
+        "qwen3-32b",
+        "openai/gpt-oss-120b"
+      ],
+      "deepseek": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ],
+      "openai-oauth": [
+        "gpt-6.1-sol",
+        "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna"
+      ],
+      "antigravity-cli": [],
+      "grok-cli": [],
+      "openrouter": [
+        "openai/gpt-4o-mini",
+        "anthropic/claude-3.5-sonnet",
+        "google/gemini-2.0-flash-001",
+        "deepseek/deepseek-chat"
+      ],
+      "ollama-local": [
+        "qwen3:4b-instruct"
+      ]
+    }
+  },
+  "image": {
+    "strip_c2pa": true
+  },
+  "packs": {
+    "store_url": "",
+    "tokens": {}
+  },
+  "media": {
+    "enabled": true,
+    "max_age_days": 30,
+    "max_mb": 300,
+    "staging_days": 3
+  },
+  "telegram": {
+    "enabled": false,
+    "token": "enc:gAAAAABq3r3cfsJjPcF2l70ZKxKSAKR6kMbst6xKsQdIE6Ui3jfqoznr243USFz6vWGOfxzMw5AgOjfqJVyq23pfCw2YfCwuvWTwYYJ-HoQIH73aRw4c2UGemriLHse1hLdanilFuYr_",
+    "chat_id": ""
+  },
+  "zalo_bot": {
+    "enabled": false,
+    "token": "",
+    "chat_id": ""
+  },
+  "slack": {
+    "enabled": true,
+    "bot_token": "enc:gAAAAABq3r3cZG1sSKR29nCFIkWE-n48KcFgggKrxSUIu5sY9m0tZEjfoD9yd3HDRv7be7_tXztXzdgYNnY2enoHVjokBYIiddKJeX-zDaHvmhEaq2t-FDONs2R3MP9VfPT0fWw_uFFboYrRVC2NcVeR8JhvhzVetg==",
+    "app_token": "enc:gAAAAABq3r3c2zlJL9DPvXXvvLLFCHD3gF8MaZ3MdZ8TISvfOxDiBcK2oqoNHdsu3bNP9j_5TbtnrAaup6LZejbB3URf9KAXiWL8Y5dnOjQYKeEAWmisrk2tvzVLGM4RWzhb_Wj3bT7iAsu3QU--9zUDS0jy5yWhMaalBgU0gQlX5zrbII70DXpWNU-QTF86UYAHsUV1Z_nvkmaxAmYN5ThCEN1PHXbwdw==",
+    "allow": "U0BG7LF6675"
+  },
+  "whatsapp": {
+    "enabled": false,
+    "phone_number_id": "",
+    "access_token": "",
+    "app_secret": "",
+    "allow": "",
+    "verify_token": "7jRPb-gk4WIcRcoM78HFdfgotRO-cZNj"
+  },
+  "messenger": {
+    "verify_token": ""
+  },
+  "discord": {
+    "enabled": false,
+    "bot_token": "",
+    "allow": ""
+  },
+  "lark": {
+    "enabled": false,
+    "app_id": "",
+    "app_secret": "",
+    "domain": "lark",
+    "allow": ""
+  },
+  "backup": {
+    "enabled": true,
+    "repo_url": "https://github.com/geolockho/javis-brain-backup.git",
+    "token": "enc:gAAAAABq3r3cbWn7maBcpVi1IXXCyVMTj48H5-wqKhlEUyPtbtduhwpkCug7um1bwtis7PWLvT0mKodLghNj9xpS3_PWT-w2MzRt5eak1jV8xaV3EHMDmtM_AytnV0cnGhTmCnw1_PQLXuMYH84FCjcF5iAtZoeDOa1EC1Re346NO-tPARppRE7PdRHeWVuxj0WN7MEaImwG",
+    "branch": "main",
+    "interval_hours": 24,
+    "sync_images": false,
+    "last_backup": 1792982492.8662324,
+    "last_status": "✓ Đồng bộ 2 chiều 09:41 26/10",
+    "last_report": {
+      "ts": 1792982492.8662324,
+      "ok": true,
+      "pushed": true,
+      "applied": 0,
+      "deleted": 0,
+      "conflicts": [],
+      "restored": false,
+      "error": ""
+    }
+  },
+  "dashboard": {
+    "graph_enabled": true,
+    "auto_resume": true
+  },
+  "mcp": {
+    "strict": false,
+    "hub": true,
+    "lazy_tools": "auto",
+    "lazy_threshold": 40,
+    "lazy_top_k": 8,
+    "lazy_char_budget": 6000,
+    "ambient_hint": true
+  },
+  "context_runtime": {
+    "mode": "canary",
+    "retention_days": 14,
+    "export_enabled": false,
+    "estimate_chars_per_token": 3.0,
+    "preset_choice": {
+      "level": "",
+      "source": "",
+      "at": ""
+    },
+    "canary": {
+      "policy_version": "fast-path-canary-v1",
+      "allocation_basis_points": 10000,
+      "salt": "fast-path-canary-v1",
+      "channels": [
+        "dashboard",
+        "telegram",
+        "cli"
+      ],
+      "provider_kinds": [
+        "api",
+        "oauth",
+        "cli"
+      ],
+      "registry_max_age_seconds": 900,
+      "estimator_safety_factor": 1.35,
+      "max_objective_chars": 12000,
+      "min_resolver_score": 0.45,
+      "quota_profiles": []
+    },
+    "readonly_canary": {
+      "policy_version": "readonly-single-step-v1",
+      "allocation_basis_points": 0,
+      "salt": "readonly-single-step-v1",
+      "channels": [
+        "dashboard"
+      ],
+      "provider_kinds": [
+        "api"
+      ],
+      "registry_max_age_seconds": 900,
+      "min_resolver_score": 0.45,
+      "estimator_safety_factor": 1.35,
+      "quota_profiles": [],
+      "capability_profiles": []
+    },
+    "orchestrator_canary": {
+      "policy_version": "readonly-orchestrator-v1",
+      "allocation_basis_points": 0,
+      "salt": "readonly-orchestrator-v1",
+      "channels": [
+        "dashboard"
+      ],
+      "provider_kinds": [
+        "api"
+      ],
+      "registry_max_age_seconds": 900,
+      "min_resolver_score": 0.32,
+      "estimator_safety_factor": 1.35,
+      "max_candidate_manifests": 8,
+      "max_cycles": 2,
+      "max_total_steps": 6,
+      "max_parallel": 3,
+      "max_model_rounds": 10,
+      "max_evidence": 8,
+      "max_task_input_tokens": 20000,
+      "max_task_output_tokens": 6000,
+      "max_cost_usd": 0.05,
+      "deadline_seconds": 90,
+      "max_deadline_extensions": 2,
+      "planner_output_tokens": 600,
+      "argument_output_tokens": 500,
+      "min_information_gain": 0.2,
+      "per_evidence_excerpt_chars": 2500,
+      "failure_repeat_limit": 2,
+      "quota_profiles": [],
+      "capability_profiles": []
+    },
+    "workflow_canary": {
+      "policy_version": "workflow-graph-canary-v1",
+      "allocation_basis_points": 0,
+      "salt": "workflow-graph-canary-v1",
+      "allowed_slugs": [],
+      "max_nodes": 24,
+      "max_parallel": 3,
+      "node_timeout_seconds": 300,
+      "max_nesting_depth": 1,
+      "allow_write_nodes": false
+    },
+    "agent_canary": {
+      "policy_version": "agent-replan-canary-v1",
+      "allocation_basis_points": 0,
+      "salt": "agent-replan-canary-v1",
+      "allowed_slugs": [],
+      "max_replan_rounds": 2,
+      "max_total_nodes": 24,
+      "max_nodes_per_replan": 3,
+      "failure_repeat_limit": 2
+    },
+    "model_router_canary": {
+      "policy_version": "model-router-canary-v1",
+      "allocation_basis_points": 0,
+      "salt": "model-router-canary-v1",
+      "step_kinds": [
+        "model_step"
+      ],
+      "allow_downgrade_on_risk": false,
+      "models": []
+    },
+    "context_sources": {
+      "quota_profiles": []
+    },
+    "subscription_context": {
+      "context_window": 180000,
+      "reserved_output_tokens": 8000
+    },
+    "api_context": {
+      "context_window": 32000,
+      "reserved_output_tokens": 4000
+    },
+    "learned_quota": {
+      "enabled": true,
+      "reserved_output_tokens": 1200,
+      "safety_factor": 0.85
+    },
+    "conversation_state_canary": {
+      "policy_version": "conversation-state-v1",
+      "allocation_basis_points": 10000,
+      "salt": "conversation-state-v1",
+      "channels": [
+        "dashboard"
+      ],
+      "provider_kinds": [
+        "api"
+      ],
+      "recent_messages": 6
+    },
+    "memory_canary": {
+      "policy_version": "sourced-memory-v1",
+      "allocation_basis_points": 10000,
+      "salt": "sourced-memory-v1",
+      "channels": [
+        "dashboard",
+        "telegram",
+        "cli"
+      ],
+      "provider_kinds": [
+        "api",
+        "cli",
+        "oauth"
+      ],
+      "max_items": 6,
+      "min_confidence": 0.38
+    },
+    "lazy_skill_canary": {
+      "policy_version": "lazy-skill-v1",
+      "allocation_basis_points": 10000,
+      "salt": "lazy-skill-v1",
+      "channels": [
+        "dashboard",
+        "telegram",
+        "cli"
+      ],
+      "provider_kinds": [
+        "api",
+        "cli",
+        "oauth"
+      ],
+      "max_body_chars": 12000
+    },
+    "write_canary": {
+      "policy_version": "write-single-step-v1",
+      "allocation_basis_points": 0,
+      "salt": "write-single-step-v1",
+      "channels": [
+        "dashboard"
+      ],
+      "provider_kinds": [
+        "api"
+      ],
+      "registry_max_age_seconds": 900,
+      "min_resolver_score": 0.55,
+      "estimator_safety_factor": 1.35,
+      "confirmation_ttl_seconds": 900,
+      "quota_profiles": [],
+      "capability_profiles": []
+    }
+  },
+  "remote_tunnel": {
+    "enabled": true,
+    "mode": "quick"
+  }
+}

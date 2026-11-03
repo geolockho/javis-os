@@ -1,0 +1,18 @@
+{# Macro dùng chung. Import TRONG block: {% from "_macros.html" import badge, iso %} #}
+
+{% macro badge(status) -%}
+<span class="badge b-{{ status }}">{{ STATUS_LABELS.get(status, status) }}</span>
+{%- endmacro %}
+
+{# ISO 8601 không có micro giây để JS Date.parse đọc được ở mọi trình duyệt #}
+{% macro iso(v) -%}
+{{ v.isoformat(timespec='seconds') if v else '' }}
+{%- endmacro %}
+
+{# Thanh đếm ngược tới lúc hết hạn. start bỏ trống thì chỉ hiện chữ, không có thanh. #}
+{% macro countdown(end, start=None, prefix='hết hạn') -%}
+<div class="countdown" data-end="{{ iso(end) }}" data-start="{{ iso(start) }}">
+  {% if start %}<div class="bar"><span></span></div>{% endif %}
+  <div class="cd-text"><span class="cd-left">…</span><span class="muted"> · {{ prefix }} {{ end | dt }}</span></div>
+</div>
+{%- endmacro %}

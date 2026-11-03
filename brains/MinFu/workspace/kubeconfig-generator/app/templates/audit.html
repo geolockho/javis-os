@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    .audit td, .audit th { padding: 8px 10px; font-size: 12.5px; }
+    .audit td { white-space: nowrap; }
+    .audit td.detail { white-space: normal; min-width: 220px; max-width: 360px; color: var(--muted); }
+    .act { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--accent); }
+{% endblock %}
+
+{% block content %}
+{% from "_macros.html" import badge %}
+<div class="page-head">
+  <div>
+    <h1>Audit log</h1>
+    <div class="muted">200 dòng gần nhất.</div>
+  </div>
+</div>
+<div class="panel table-wrap">
+<table class="audit">
+  <thead><tr><th>#</th><th>Lúc</th><th>Ai</th><th>Hành động</th><th>Kết quả</th><th>Request</th><th>Người xin</th>
+    <th>Cluster / Namespace</th><th>Quyền</th><th>Người duyệt</th><th>Tải lúc</th><th>Hết hạn</th><th>Chi tiết</th></tr></thead>
+  <tbody>
+  {% for a in rows %}
+    <tr>
+      <td class="mono muted">{{ a.id }}</td><td class="mono">{{ a.at | dt }}</td><td>{{ a.actor }}</td>
+      <td><span class="act">{{ a.action }}</span></td>
+      <td>{% if a.result in ('ok', 'error') %}<span class="badge b-{{ a.result }}">{{ a.result }}</span>{% else %}{{ a.result }}{% endif %}</td>
+      <td class="mono">{{ a.request_id or '' }}</td><td>{{ a.requester_email or '' }}</td>
+      <td class="mono">{% if a.cluster %}<span class="muted">{{ a.cluster }}</span>{% endif %}{% if a.namespace %} / {{ a.namespace }}{% endif %}</td>
+      <td>{% if a.role %}<code>{{ a.role }}</code>{% endif %}</td>
+      <td>{{ a.approver or '' }}</td><td class="mono">{{ a.downloaded_at | dt }}</td><td class="mono">{{ a.token_expires_at | dt }}</td>
+      <td class="detail">{{ a.detail or '' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="13" class="empty">Chưa có dòng audit nào.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

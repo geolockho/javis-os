@@ -1,0 +1,49 @@
+# Vào: chỉ từ ingress controller tới cổng oauth2-proxy (4180). App nghe 127.0.0.1 nên không có đường vào trực tiếp.
+# Ra: DNS, PostgreSQL, API server của 2 cluster, GitLab (OIDC) và Slack.
+# TODO: sửa nhãn namespace của ingress controller và địa chỉ PostgreSQL cho đúng thực tế.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kubeconfig-generator
+  namespace: fsel-internal-tools
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kubeconfig-generator
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 4180
+          protocol: TCP
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    # PostgreSQL (sửa: namespaceSelector/podSelector hoặc ipBlock của Postgres thật)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - { port: 5432, protocol: TCP }
+    # API server fsel-local
+    - to:
+        - ipBlock: { cidr: 101.99.7.167/32 }
+      ports:
+        - { port: 6444, protocol: TCP }
+    # API server fsel-prod (FKE, tên miền api.djtaj383.prd.m.fke.fptcloud.com, IP có thể đổi),
+    # GitLab OIDC và Slack webhook: đều là HTTPS ra ngoài
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]
+      ports:
+        - { port: 443, protocol: TCP }

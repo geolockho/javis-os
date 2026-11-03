@@ -1,0 +1,18 @@
+# Merge vào ConfigMap controller đang có (tên mặc định: ingress-nginx-controller).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+data:
+  # tin X-Forwarded-* / X-Real-IP do gc gửi sang, để app thấy IP client thật
+  use-forwarded-headers: "true"
+  proxy-real-ip-cidr: "10.10.0.0/16"        # TODO: dải IP mà sc NHÌN THẤY từ gc (node gc sau SNAT / NAT VPN)
+  # trace nối tiếp từ gc
+  enable-opentelemetry: "true"
+  opentelemetry-trust-incoming-span: "true"
+  otlp-collector-host: "otel-collector.observability.svc"
+  otlp-collector-port: "4317"
+  otel-service-name: "ingress-sc"
+  log-format-escape-json: "true"
+  log-format-upstream: '{"ts":"$time_iso8601","req_id":"$req_id","host":"$host","uri":"$request_uri","status":$status,"up_status":"$upstream_status","up_time":"$upstream_response_time","req_time":$request_time,"client":"$remote_addr","xff":"$http_x_forwarded_for"}'

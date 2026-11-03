@@ -1,0 +1,20 @@
+# Cert server cho host, do CA nội bộ cấp. gc verify cert này (proxy-ssl-verify) bằng ca.crt cùng CA.
+# Không dùng HTTP-01 ở đây: sau này bỏ LB public thì HTTP-01 hỏng.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-example-com-internal
+  namespace: app            # TODO: namespace của service
+spec:
+  secretName: api-example-com-internal-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: internal-ca
+  commonName: api.example.com
+  dnsNames:
+  - api.example.com         # PHẢI trùng host trong Ingress (gc gửi SNI = host)
+  duration: 2160h           # 90 ngày
+  renewBefore: 360h
+  privateKey:
+    algorithm: ECDSA
+    size: 256

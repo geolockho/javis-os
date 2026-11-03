@@ -1,0 +1,3948 @@
+{
+ "at": "2026-11-01T23:30:44+07:00",
+ "mode": "daily",
+ "ns": "fsel-prod",
+ "node_role": "appnodes-prod2",
+ "nodes": [
+  "fke-fsel-djtaj383-appnodes-prod2-z1-7ff6f-whm69",
+  "fke-fsel-djtaj383-appnodes-prod3-z1-57c46-tqkqt"
+ ],
+ "node_summary": {
+  "nodes": 2,
+  "alloc_cpu": 109.1,
+  "alloc_mem": 234341867520.0,
+  "req_cpu": 65.21399999999997,
+  "req_mem": 163579953152.0,
+  "use_cpu": 8.779861716949153,
+  "use_mem": 70048493568.0,
+  "cpu_avg": 6.404537793849971,
+  "cpu_max": 14.09832138802936,
+  "mem_avg": 68641355450.34629,
+  "mem_max": 73032429568.0
+ },
+ "window": [
+  1793466000.0,
+  1793550644.609035
+ ],
+ "rec_days": 7,
+ "services": {
+  "notification-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.021332935436302228,
+    "use_mem": 713461760.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.01599671118643184,
+    "cpu_max": 0.06793954323705757,
+    "cpu_p95": 0.03293579319528779,
+    "pod_cpu_p95": 0.017668003241292446,
+    "pod_cpu_max": 0.03750283738481786,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 708322061.5689046,
+    "mem_max": 737853440.0,
+    "mem_p95": 719950643.2,
+    "pod_mem_p95": 367959040.0,
+    "pod_mem_max": 377606144.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.021332935436302228,
+    "use_mem": 713461760.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.011779259598863962,
+    "cpu_max": 0.2590308547317075,
+    "cpu_p95": 0.025323689598747326,
+    "pod_cpu_p95": 0.013505454802823945,
+    "pod_cpu_max": 0.12910794970165332,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 729182417.1660882,
+    "mem_max": 1240285184.0,
+    "mem_p95": 884301004.8,
+    "pod_mem_p95": 449365401.59999996,
+    "pod_mem_max": 461910016.0
+   },
+   "hpa": {
+    "hpa": "notification-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 805306368,
+     "lim_cpu": 0.2,
+     "lim_mem": 805306368
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 2.701090960564789,
+    "util_p95_mem_now": 42.85482421875,
+    "util_p95_cpu_new": 27.010909605647885,
+    "util_p95_mem_new": 55.800552368164055,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "tracking-worker-prod": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 0.8999999999999999,
+    "req_mem": 943718400.0,
+    "lim_cpu": 0.8999999999999999,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.0036454389109086367,
+    "use_mem": 64057344.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.002874125794296728,
+    "cpu_max": 0.006155087771437737,
+    "cpu_p95": 0.005528908716005932,
+    "pod_cpu_p95": 0.0018686139954844888,
+    "pod_cpu_max": 0.002478054632372105,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 67250559.54770318,
+    "mem_max": 104656896.0,
+    "mem_p95": 77567590.39999999,
+    "pod_mem_p95": 26831257.599999987,
+    "pod_mem_max": 45256704.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 0.8999999999999999,
+    "req_mem": 943718400.0,
+    "lim_cpu": 0.8999999999999999,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.0036454389109086367,
+    "use_mem": 64057344.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.002382407330905243,
+    "cpu_max": 0.006373184100880185,
+    "cpu_p95": 0.004153814624205602,
+    "pod_cpu_p95": 0.0014405676319139164,
+    "pod_cpu_max": 0.0024589611157792794,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 68859017.58254834,
+    "mem_max": 103620608.0,
+    "mem_p95": 80506879.99999999,
+    "pod_mem_p95": 27817984.0,
+    "pod_mem_max": 45527040.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 0.48018921063797215,
+    "util_p95_mem_now": 8.843098958333332,
+    "util_p95_cpu_new": 2.881135263827833,
+    "util_p95_mem_new": 20.72601318359375
+   }
+  },
+  "tracuukhaosat-api": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 314572800.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.1,
+    "pod_lim_mem": 314572800.0,
+    "use_cpu": 0.0025939373935450227,
+    "use_mem": 167006208.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0026354761808102993,
+    "cpu_max": 0.0032746866878696217,
+    "cpu_p95": 0.002993537942985439,
+    "pod_cpu_p95": 0.002993537942985439,
+    "pod_cpu_max": 0.0032746866878696217,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 166961470.41696113,
+    "mem_max": 167006208.0,
+    "mem_p95": 167006208.0,
+    "pod_mem_p95": 167006208.0,
+    "pod_mem_max": 167006208.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 314572800.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.1,
+    "pod_lim_mem": 314572800.0,
+    "use_cpu": 0.0025939373935450227,
+    "use_mem": 167006208.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0029450488322558775,
+    "cpu_max": 0.09980226662223382,
+    "cpu_p95": 0.0031057488710440548,
+    "pod_cpu_p95": 0.0031069492996686266,
+    "pod_cpu_max": 0.09980226662223382,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 149238152.09951326,
+    "mem_max": 196218880.0,
+    "mem_p95": 167079936.0,
+    "pod_mem_p95": 167079936.0,
+    "pod_mem_max": 167485440.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 268435456,
+     "lim_cpu": 0.15,
+     "lim_mem": 268435456
+    },
+    "flags": [
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 6.213898599337253,
+    "util_p95_mem_now": 159.33984375,
+    "util_p95_cpu_new": 6.213898599337253,
+    "util_p95_mem_new": 62.24212646484375
+   }
+  },
+  "lmsadmin-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 6.830621061523828e-06,
+    "use_mem": 64856064.0,
+    "no_metrics": 0,
+    "cpu_avg": 1.1785273364973603e-05,
+    "cpu_max": 9.830397238777376e-05,
+    "cpu_p95": 3.819628283642088e-05,
+    "pod_cpu_p95": 3.819628283642088e-05,
+    "pod_cpu_max": 9.830397238777376e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 64515082.85512368,
+    "mem_max": 64856064.0,
+    "mem_p95": 64761446.4,
+    "pod_mem_p95": 64761446.4,
+    "pod_mem_max": 64856064.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 6.830621061523828e-06,
+    "use_mem": 64856064.0,
+    "no_metrics": 0,
+    "cpu_avg": 1.7577305873895193e-05,
+    "cpu_max": 0.00036914271455109357,
+    "cpu_p95": 7.432079828005536e-05,
+    "pod_cpu_p95": 7.430852115414358e-05,
+    "pod_cpu_max": 0.00036914271455109357,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 56701742.32622707,
+    "mem_max": 108322816.0,
+    "mem_p95": 64487424.0,
+    "pod_mem_p95": 64487424.0,
+    "pod_mem_max": 64856064.0
+   },
+   "hpa": {
+    "hpa": "lmsadmin-production",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.14861704230828718,
+    "util_p95_mem_now": 61.5,
+    "util_p95_cpu_new": 0.14861704230828718,
+    "util_p95_mem_new": 48.046875,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "tracking-api-prod": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 0.44999999999999996,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.6000000000000001,
+    "lim_mem": 629145600.0,
+    "pod_req_cpu": 0.15,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.004438850051429693,
+    "use_mem": 82800640.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0034426936459016925,
+    "cpu_max": 0.007681222345348579,
+    "cpu_p95": 0.006889870700373709,
+    "pod_cpu_p95": 0.002297409331788053,
+    "pod_cpu_max": 0.0029502338750849646,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 79829968.96113074,
+    "mem_max": 85569536.0,
+    "mem_p95": 83928678.4,
+    "pod_mem_p95": 29519052.799999997,
+    "pod_mem_max": 32038912.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 0.44999999999999996,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.6000000000000001,
+    "lim_mem": 629145600.0,
+    "pod_req_cpu": 0.15,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.004438850051429693,
+    "use_mem": 82800640.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0027553985437460595,
+    "cpu_max": 0.007885676142582938,
+    "cpu_p95": 0.005075340655568978,
+    "pod_cpu_p95": 0.0017282109320289007,
+    "pod_cpu_max": 0.0028241034829742414,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 78890795.78780366,
+    "mem_max": 88596480.0,
+    "mem_p95": 83596902.4,
+    "pod_mem_p95": 29575168.0,
+    "pod_mem_max": 34734080.0
+   },
+   "hpa": {
+    "hpa": "tracking-api-prod",
+    "min": 3,
+    "max": 10,
+    "current": 3,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 1.1521406213526006,
+    "util_p95_mem_now": 28.205078125,
+    "util_p95_cpu_new": 3.4564218640578006,
+    "util_p95_mem_new": 22.03521728515625,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "support-event-prod": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.00015803125990659686,
+    "use_mem": 57651200.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.00016213162308966746,
+    "cpu_max": 0.00019621853865478897,
+    "cpu_p95": 0.00017678922616794424,
+    "pod_cpu_p95": 0.00017678922616794424,
+    "pod_cpu_max": 0.00019621853865478897,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 57651200.0,
+    "mem_max": 57651200.0,
+    "mem_p95": 57651200.0,
+    "pod_mem_p95": 57651200.0,
+    "pod_mem_max": 57651200.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.00015803125990659686,
+    "use_mem": 57651200.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.00018898300599050154,
+    "cpu_max": 0.013517983850817322,
+    "cpu_p95": 0.00017768103811483183,
+    "pod_cpu_p95": 0.00017768103811483183,
+    "pod_cpu_max": 0.013517983850817322,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 76556561.13435796,
+    "mem_max": 143286272.0,
+    "mem_p95": 120852480.0,
+    "pod_mem_p95": 120852480.0,
+    "pod_mem_max": 120918016.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 201326592,
+     "lim_cpu": 0.05,
+     "lim_mem": 201326592
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.35536207622966365,
+    "util_p95_mem_now": 115.25390625,
+    "util_p95_cpu_new": 0.35536207622966365,
+    "util_p95_mem_new": 60.028076171875
+   }
+  },
+  "ffmpeg-api-services-production": {
+   "today": {
+    "pods": 4,
+    "req_cpu": 2.0,
+    "req_mem": 12582912000.0,
+    "lim_cpu": 2.8,
+    "lim_mem": 20971520000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 0.7,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 0.11986024621658455,
+    "use_mem": 7014608896.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.12902200014369167,
+    "cpu_max": 0.7532287754566489,
+    "cpu_p95": 0.28443914727475134,
+    "pod_cpu_p95": 0.07528704349561173,
+    "pod_cpu_max": 0.17848319096507415,
+    "replicas_min": 4,
+    "replicas_max": 5,
+    "mem_avg": 6817943798.04947,
+    "mem_max": 8092573696.0,
+    "mem_p95": 6979577036.8,
+    "pod_mem_p95": 1919723110.4,
+    "pod_mem_max": 1947410432.0
+   },
+   "last_7d": {
+    "pods": 4,
+    "req_cpu": 2.0,
+    "req_mem": 12582912000.0,
+    "lim_cpu": 2.8,
+    "lim_mem": 20971520000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 0.7,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 0.11986024621658455,
+    "use_mem": 7014608896.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.08745693889160479,
+    "cpu_max": 0.9119404864502973,
+    "cpu_p95": 0.21732806300814728,
+    "pod_cpu_p95": 0.06686335308066343,
+    "pod_cpu_max": 0.3540686985053677,
+    "replicas_min": 3,
+    "replicas_max": 7,
+    "mem_avg": 5330364981.560734,
+    "mem_max": 8946872320.0,
+    "mem_p95": 6824910028.8,
+    "pod_mem_p95": 1917990297.6,
+    "pod_mem_max": 1947410432.0
+   },
+   "hpa": {
+    "hpa": "ffmpeg-api-services-production",
+    "min": 2,
+    "max": 100,
+    "current": 4,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.12,
+     "req_mem": 3288334336,
+     "lim_cpu": 0.54,
+     "lim_mem": 3288334336
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 13.372670616132687,
+    "util_p95_mem_now": 60.971269531249995,
+    "util_p95_cpu_new": 55.71946090055286,
+    "util_p95_mem_new": 58.327107332190685,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "hangfire-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 838860800.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.01888784348496983,
+    "use_mem": 493723648.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.01448021791096719,
+    "cpu_max": 0.025828738682837374,
+    "cpu_p95": 0.023623575940871944,
+    "pod_cpu_p95": 0.011887896443104434,
+    "pod_cpu_max": 0.013521804793023914,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 492530684.3816254,
+    "mem_max": 496791552.0,
+    "mem_p95": 494960230.4,
+    "pod_mem_p95": 252307456.0,
+    "pod_mem_max": 256065536.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 838860800.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.01888784348496983,
+    "use_mem": 493723648.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.012790167648146788,
+    "cpu_max": 0.05866907772995553,
+    "cpu_p95": 0.018357810220059303,
+    "pod_cpu_p95": 0.009244492576998954,
+    "pod_cpu_max": 0.03714008806344721,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 488273492.52949923,
+    "mem_max": 825806848.0,
+    "mem_p95": 517157683.2,
+    "pod_mem_p95": 259751936.0,
+    "pod_mem_max": 264409088.0
+   },
+   "hpa": {
+    "hpa": "hangfire-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 469762048,
+     "lim_cpu": 0.06,
+     "lim_mem": 469762048
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 4.622246288499476,
+    "util_p95_mem_now": 61.9296875,
+    "util_p95_cpu_new": 18.488985153997906,
+    "util_p95_mem_new": 55.29436383928571,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "report-pt-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 209715200.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 209715200.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.004869313791907329,
+    "use_mem": 310857728.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004903090523629178,
+    "cpu_max": 0.005396639004821693,
+    "cpu_p95": 0.0052381877090171124,
+    "pod_cpu_p95": 0.0052381877090171124,
+    "pod_cpu_max": 0.005396639004821693,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 310849304.4240283,
+    "mem_max": 310857728.0,
+    "mem_p95": 310857728.0,
+    "pod_mem_p95": 310857728.0,
+    "pod_mem_max": 310857728.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 209715200.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 209715200.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.004869313791907329,
+    "use_mem": 310857728.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.005606065242486812,
+    "cpu_max": 0.37415523070764684,
+    "cpu_p95": 0.005374509795345626,
+    "pod_cpu_p95": 0.00537450899056229,
+    "pod_cpu_max": 0.37415523070764684,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 286241421.8978681,
+    "mem_max": 1176657920.0,
+    "mem_p95": 397824000.0,
+    "pod_mem_p95": 397824000.0,
+    "pod_mem_max": 1176657920.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 1207959552,
+     "lim_cpu": 0.5700000000000001,
+     "lim_mem": 1811939328
+    },
+    "flags": [
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 10.74901798112458,
+    "util_p95_mem_now": 189.697265625,
+    "util_p95_cpu_new": 10.74901798112458,
+    "util_p95_mem_new": 32.93355305989583
+   }
+  },
+  "interaction-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 1468006400.0,
+    "lim_cpu": 2.0,
+    "lim_mem": 4194304000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 734003200.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.05497018083560958,
+    "use_mem": 585404416.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.03479659843137045,
+    "cpu_max": 0.10021197828537964,
+    "cpu_p95": 0.08378378473719482,
+    "pod_cpu_p95": 0.043901498482339506,
+    "pod_cpu_max": 0.0581492846364825,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 581712052.9187279,
+    "mem_max": 585596928.0,
+    "mem_p95": 585147596.8,
+    "pod_mem_p95": 314050560.0,
+    "pod_mem_max": 316973056.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 1468006400.0,
+    "lim_cpu": 2.0,
+    "lim_mem": 4194304000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 734003200.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.05497018083560958,
+    "use_mem": 585404416.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.023426789858215655,
+    "cpu_max": 0.10076704026277905,
+    "cpu_p95": 0.056599988476245255,
+    "pod_cpu_p95": 0.029573024386697313,
+    "pod_cpu_max": 0.058778828970138225,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 572919005.8582052,
+    "mem_max": 1004199936.0,
+    "mem_p95": 642954854.4,
+    "pod_mem_p95": 322493440.0,
+    "pod_mem_max": 327249920.0
+   },
+   "hpa": {
+    "hpa": "interaction-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 603979776,
+     "lim_cpu": 0.09,
+     "lim_mem": 603979776
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 9.85767479556577,
+    "util_p95_mem_now": 43.936244419642854,
+    "util_p95_cpu_new": 59.146048773394625,
+    "util_p95_mem_new": 53.394741482204864,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "gateway-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 2.0,
+    "lim_mem": 5242880000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2621440000.0,
+    "use_cpu": 0.08714565572934832,
+    "use_mem": 1142628352.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.052951498744101134,
+    "cpu_max": 0.14571317342402268,
+    "cpu_p95": 0.12631634415740975,
+    "pod_cpu_p95": 0.06421111024631922,
+    "pod_cpu_max": 0.07953503194520889,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1042152675.9575971,
+    "mem_max": 1213505536.0,
+    "mem_p95": 1119871795.1999998,
+    "pod_mem_p95": 880307200.0,
+    "pod_mem_max": 947236864.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 2.0,
+    "lim_mem": 5242880000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 2621440000.0,
+    "use_cpu": 0.08714565572934832,
+    "use_mem": 1142628352.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.03726962460115196,
+    "cpu_max": 0.1502561326891763,
+    "cpu_p95": 0.08532433741234,
+    "pod_cpu_p95": 0.040694673250821496,
+    "pod_cpu_max": 0.08577744230714159,
+    "replicas_min": 2,
+    "replicas_max": 10,
+    "mem_avg": 1036011638.7982152,
+    "mem_max": 6215032832.0,
+    "mem_p95": 4866133196.8,
+    "pod_mem_p95": 1018643251.1999998,
+    "pod_mem_max": 1648984064.0
+   },
+   "hpa": {
+    "hpa": "gateway-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.07,
+     "req_mem": 1744830464,
+     "lim_cpu": 0.13,
+     "lim_mem": 2483027968
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 8.1389346501643,
+    "util_p95_mem_now": 97.14539062499998,
+    "util_p95_cpu_new": 58.13524750117356,
+    "util_p95_mem_new": 58.380643404447106,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "sender-production": {
+   "today": {
+    "pods": 7,
+    "req_cpu": 2.8,
+    "req_mem": 2936012800.0,
+    "lim_cpu": 4.2,
+    "lim_mem": 4404019200.0,
+    "pod_req_cpu": 0.4,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.6,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.0535009492615542,
+    "use_mem": 2180071424.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0473699539566781,
+    "cpu_max": 2.421033095912482,
+    "cpu_p95": 0.06853870316380163,
+    "pod_cpu_p95": 0.010004445900463281,
+    "pod_cpu_max": 0.4643867525817592,
+    "replicas_min": 5,
+    "replicas_max": 10,
+    "mem_avg": 2080409390.1342757,
+    "mem_max": 2824916992.0,
+    "mem_p95": 2264371200.0,
+    "pod_mem_p95": 418288844.8,
+    "pod_mem_max": 476024832.0
+   },
+   "last_7d": {
+    "pods": 7,
+    "req_cpu": 2.8,
+    "req_mem": 2936012800.0,
+    "lim_cpu": 4.2,
+    "lim_mem": 4404019200.0,
+    "pod_req_cpu": 0.4,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.6,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.0535009492615542,
+    "use_mem": 2180071424.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.03501498893891668,
+    "cpu_max": 2.6319867091012443,
+    "cpu_p95": 0.050748866837346855,
+    "pod_cpu_p95": 0.00790413195919202,
+    "pod_cpu_max": 0.5998037619500801,
+    "replicas_min": 2,
+    "replicas_max": 12,
+    "mem_avg": 2126723140.0297472,
+    "mem_max": 4246880256.0,
+    "mem_p95": 3002814463.9999995,
+    "pod_mem_p95": 415571968.0,
+    "pod_mem_max": 827133952.0
+   },
+   "hpa": {
+    "hpa": "sender-production",
+    "min": 2,
+    "max": 100,
+    "current": 7,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 872415232,
+     "lim_cpu": 0.9,
+     "lim_mem": 1275068416
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 1.976032989798005,
+    "util_p95_mem_now": 99.080078125,
+    "util_p95_cpu_new": 15.80826391838404,
+    "util_p95_mem_new": 47.63465294471153,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "fsel-portal-landing-api-backup": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.1,
+    "req_mem": 209715200.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 419430400.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 6.586108011538964e-06,
+    "use_mem": 77938688.0,
+    "no_metrics": 0,
+    "cpu_avg": 6.567459503014438e-06,
+    "cpu_max": 1.051253122766072e-05,
+    "cpu_p95": 7.579430243061263e-06,
+    "pod_cpu_p95": 3.913815736922226e-06,
+    "pod_cpu_max": 7.121107209119547e-06,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 78572221.96466431,
+    "mem_max": 79433728.0,
+    "mem_p95": 79388672.0,
+    "pod_mem_p95": 39803904.0,
+    "pod_mem_max": 39866368.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.1,
+    "req_mem": 209715200.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 419430400.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 6.586108011538964e-06,
+    "use_mem": 77938688.0,
+    "no_metrics": 0,
+    "cpu_avg": 6.87534445315077e-06,
+    "cpu_max": 0.00012392446482250644,
+    "cpu_p95": 7.958972413053107e-06,
+    "pod_cpu_p95": 4.108298794848526e-06,
+    "pod_cpu_max": 7.661775098743289e-05,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 78498032.64253843,
+    "mem_max": 79589376.0,
+    "mem_p95": 79303475.2,
+    "pod_mem_p95": 39759872.0,
+    "pod_mem_max": 40046592.0
+   },
+   "hpa": {
+    "hpa": "fsel-portal-landing-api-backup",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 60,
+    "target_cpu": 60
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.008216597589697052,
+    "util_p95_mem_now": 37.91796875,
+    "util_p95_cpu_new": 0.008216597589697052,
+    "util_p95_mem_new": 29.6234130859375,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "storage-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.3,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 4194304000.0,
+    "pod_req_cpu": 0.15,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.04766666976052876,
+    "use_mem": 1105915904.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.041288954738505086,
+    "cpu_max": 0.1223692956575815,
+    "cpu_p95": 0.10147507458092395,
+    "pod_cpu_p95": 0.05363596962425518,
+    "pod_cpu_max": 0.08040874585014038,
+    "replicas_min": 2,
+    "replicas_max": 3,
+    "mem_avg": 1265025270.04947,
+    "mem_max": 2211610624.0,
+    "mem_p95": 1788246835.1999998,
+    "pod_mem_p95": 953080217.6,
+    "pod_mem_max": 1200623616.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.3,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 4194304000.0,
+    "pod_req_cpu": 0.15,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 2097152000.0,
+    "use_cpu": 0.04766666976052876,
+    "use_mem": 1105915904.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.027739177394056375,
+    "cpu_max": 0.1223692956575815,
+    "cpu_p95": 0.06644294474905965,
+    "pod_cpu_p95": 0.03445965390298674,
+    "pod_cpu_max": 0.08366742800722109,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 1145996179.863163,
+    "mem_max": 2447745024.0,
+    "mem_p95": 1609254502.3999999,
+    "pod_mem_p95": 870687948.8,
+    "pod_mem_max": 1547825152.0
+   },
+   "hpa": {
+    "hpa": "storage-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.06,
+     "req_mem": 1610612736,
+     "lim_cpu": 0.13,
+     "lim_mem": 2348810240
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 22.97310260199116,
+    "util_p95_mem_now": 55.35684895833333,
+    "util_p95_cpu_new": 57.4327565049779,
+    "util_p95_mem_new": 54.05942281087239,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "system-production": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 1.5,
+    "req_mem": 6291456000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 12582912000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 2097152000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 4194304000.0,
+    "use_cpu": 0.39762926532312554,
+    "use_mem": 1802346496.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.22465259266548482,
+    "cpu_max": 0.6383210718261068,
+    "cpu_p95": 0.5573380464597403,
+    "pod_cpu_p95": 0.1901260021044981,
+    "pod_cpu_max": 0.2645052253506633,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 1826058442.6289752,
+    "mem_max": 1869725696.0,
+    "mem_p95": 1858437529.6,
+    "pod_mem_p95": 628006092.8,
+    "pod_mem_max": 646115328.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 1.5,
+    "req_mem": 6291456000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 12582912000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 2097152000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 4194304000.0,
+    "use_cpu": 0.39762926532312554,
+    "use_mem": 1802346496.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.14577591795036002,
+    "cpu_max": 0.6307353752505455,
+    "cpu_p95": 0.35036640800546087,
+    "pod_cpu_p95": 0.12132305337817158,
+    "pod_cpu_max": 0.2645052253506633,
+    "replicas_min": 3,
+    "replicas_max": 5,
+    "mem_avg": 1789943828.307387,
+    "mem_max": 1934807040.0,
+    "mem_p95": 1871749939.2,
+    "pod_mem_p95": 638340300.8,
+    "pod_mem_max": 670298112.0
+   },
+   "hpa": {
+    "hpa": "system-production",
+    "min": 3,
+    "max": 100,
+    "current": 3,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.21,
+     "req_mem": 1073741824,
+     "lim_cpu": 0.4,
+     "lim_mem": 1073741824
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 24.264610675634316,
+    "util_p95_mem_now": 30.4384375,
+    "util_p95_cpu_new": 57.77288256103409,
+    "util_p95_mem_new": 59.45007324218749,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "training-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 1.1,
+    "req_mem": 1258291200.0,
+    "lim_cpu": 1.3,
+    "lim_mem": 1677721600.0,
+    "pod_req_cpu": 0.55,
+    "pod_req_mem": 629145600.0,
+    "pod_lim_cpu": 0.65,
+    "pod_lim_mem": 838860800.0,
+    "use_cpu": 0.022883621319971417,
+    "use_mem": 484999168.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.015568720458386053,
+    "cpu_max": 0.03583180603697187,
+    "cpu_p95": 0.03170969836812936,
+    "pod_cpu_p95": 0.01582527586280402,
+    "pod_cpu_max": 0.02029374827216574,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 481620257.4699647,
+    "mem_max": 484999168.0,
+    "mem_p95": 484284416.0,
+    "pod_mem_p95": 245140480.0,
+    "pod_mem_max": 246820864.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 1.1,
+    "req_mem": 1258291200.0,
+    "lim_cpu": 1.3,
+    "lim_mem": 1677721600.0,
+    "pod_req_cpu": 0.55,
+    "pod_req_mem": 629145600.0,
+    "pod_lim_cpu": 0.65,
+    "pod_lim_mem": 838860800.0,
+    "use_cpu": 0.022883621319971417,
+    "use_mem": 484999168.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.011606524077895829,
+    "cpu_max": 0.045145526733881704,
+    "cpu_p95": 0.0228927908367085,
+    "pod_cpu_p95": 0.01170193521862202,
+    "pod_cpu_max": 0.028956822171832743,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 511087166.699058,
+    "mem_max": 623583232.0,
+    "mem_p95": 622212710.4,
+    "pod_mem_p95": 316026880.0,
+    "pod_mem_max": 317235200.0
+   },
+   "hpa": {
+    "hpa": "training-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 65,
+    "target_cpu": 65
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 603979776,
+     "lim_cpu": 0.05,
+     "lim_mem": 603979776
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 2.1276245852040034,
+    "util_p95_mem_now": 50.231119791666664,
+    "util_p95_cpu_new": 23.40387043724404,
+    "util_p95_mem_new": 52.32408311631944,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "fsel-portal-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.0,
+    "use_mem": 58671104.0,
+    "no_metrics": 0,
+    "cpu_avg": 2.2548265387723962e-07,
+    "cpu_max": 2.937461602666399e-05,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 2.937461602666399e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 58389565.512367494,
+    "mem_max": 58671104.0,
+    "mem_p95": 58671104.0,
+    "pod_mem_p95": 58671104.0,
+    "pod_mem_max": 58671104.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 0.0,
+    "use_mem": 58671104.0,
+    "no_metrics": 0,
+    "cpu_avg": 8.589710487052091e-07,
+    "cpu_max": 0.00032744599397203754,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 0.00032744599397203754,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 49982222.849776894,
+    "mem_max": 102653952.0,
+    "mem_p95": 58556416.0,
+    "pod_mem_p95": 58556416.0,
+    "pod_mem_max": 58671104.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.0,
+    "util_p95_mem_now": 55.84375,
+    "util_p95_cpu_new": 0.0,
+    "util_p95_mem_new": 43.6279296875
+   }
+  },
+  "lmsweb-redirect-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.2,
+    "lim_mem": 629145600.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.0,
+    "use_mem": 47296512.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0,
+    "cpu_max": 0.0,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 0.0,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 47296512.0,
+    "mem_max": 47296512.0,
+    "mem_p95": 47296512.0,
+    "pod_mem_p95": 47296512.0,
+    "pod_mem_max": 47296512.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.2,
+    "lim_mem": 629145600.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.0,
+    "use_mem": 47296512.0,
+    "no_metrics": 0,
+    "cpu_avg": 5.404867728898256e-07,
+    "cpu_max": 0.001085736581106903,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 0.001085736581106903,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 47239957.95736242,
+    "mem_max": 47652864.0,
+    "mem_p95": 47296512.0,
+    "pod_mem_p95": 47296512.0,
+    "pod_mem_max": 47652864.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 0.0,
+    "util_p95_mem_now": 15.03515625,
+    "util_p95_cpu_new": 0.0,
+    "util_p95_mem_new": 35.2386474609375
+   }
+  },
+  "importdata-fsel-event-prod": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 104857600.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 104857600.0,
+    "use_cpu": 0.0,
+    "use_mem": 60002304.0,
+    "no_metrics": 0,
+    "cpu_avg": 6.651003640568438e-08,
+    "cpu_max": 7.1725895857885195e-06,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 7.1725895857885195e-06,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 60002332.946996465,
+    "mem_max": 60006400.0,
+    "mem_p95": 60002304.0,
+    "pod_mem_p95": 60002304.0,
+    "pod_mem_max": 60006400.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 104857600.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 104857600.0,
+    "use_cpu": 0.0,
+    "use_mem": 60002304.0,
+    "no_metrics": 0,
+    "cpu_avg": 5.098509649924764e-08,
+    "cpu_max": 1.1446260578204019e-05,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 1.1446260578204019e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 60000854.052553296,
+    "mem_max": 60006400.0,
+    "mem_p95": 60002304.0,
+    "pod_mem_p95": 60002304.0,
+    "pod_mem_max": 60006400.0
+   },
+   "hpa": {
+    "hpa": "importdata-fsel-event-prod",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.0,
+    "util_p95_mem_now": 57.22265625,
+    "util_p95_cpu_new": 0.0,
+    "util_p95_mem_new": 44.7052001953125,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "lmsapi-production": {
+   "today": {
+    "pods": 5,
+    "req_cpu": 10.0,
+    "req_mem": 15728640000.0,
+    "lim_cpu": 12.5,
+    "lim_mem": 26214400000.0,
+    "pod_req_cpu": 2.0,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 2.5,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 1.0542038472881234,
+    "use_mem": 8550666240.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.5412407519452072,
+    "cpu_max": 5.256071235427415,
+    "cpu_p95": 1.2544656157376817,
+    "pod_cpu_p95": 0.29304835674298774,
+    "pod_cpu_max": 1.3155184098860055,
+    "replicas_min": 5,
+    "replicas_max": 7,
+    "mem_avg": 9073496281.102474,
+    "mem_max": 14239186944.0,
+    "mem_p95": 13914422067.199997,
+    "pod_mem_p95": 2176372736.0000005,
+    "pod_mem_max": 2356609024.0
+   },
+   "last_7d": {
+    "pods": 5,
+    "req_cpu": 10.0,
+    "req_mem": 15728640000.0,
+    "lim_cpu": 12.5,
+    "lim_mem": 26214400000.0,
+    "pod_req_cpu": 2.0,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 2.5,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 1.0542038472881234,
+    "use_mem": 8550666240.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.346166689744195,
+    "cpu_max": 5.482436856250837,
+    "cpu_p95": 0.8165197902823412,
+    "pod_cpu_p95": 0.18788461060458667,
+    "pod_cpu_max": 1.3155184098860055,
+    "replicas_min": 5,
+    "replicas_max": 10,
+    "mem_avg": 8287451488.333168,
+    "mem_max": 14402912256.0,
+    "mem_p95": 11833043353.599998,
+    "pod_mem_p95": 2096736870.4000006,
+    "pod_mem_max": 2625814528.0
+   },
+   "hpa": {
+    "hpa": "lmsapi-production",
+    "min": 5,
+    "max": 100,
+    "current": 5,
+    "target_memory": 60,
+    "target_cpu": 60
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.37,
+     "req_mem": 4160749568,
+     "lim_cpu": 2.0,
+     "lim_mem": 4160749568
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 9.394230530229333,
+    "util_p95_mem_now": 66.65347005208335,
+    "util_p95_cpu_new": 50.779624487726124,
+    "util_p95_mem_new": 50.39324852728077,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "notebook-worker": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 536870912.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 1073741824.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 536870912.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1073741824.0,
+    "use_cpu": 0.0017897223900099745,
+    "use_mem": 240943104.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0017720984875351526,
+    "cpu_max": 0.0019268714479066039,
+    "cpu_p95": 0.0018590406228750104,
+    "pod_cpu_p95": 0.0018590406228750104,
+    "pod_cpu_max": 0.0019268714479066039,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 240943104.0,
+    "mem_max": 240943104.0,
+    "mem_p95": 240943104.0,
+    "pod_mem_p95": 240943104.0,
+    "pod_mem_max": 240943104.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 536870912.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 1073741824.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 536870912.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1073741824.0,
+    "use_cpu": 0.0017897223900099745,
+    "use_mem": 240943104.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0017413114499936983,
+    "cpu_max": 0.008433366569908075,
+    "cpu_p95": 0.0018816153718285461,
+    "pod_cpu_p95": 0.0018816153718285461,
+    "pod_cpu_max": 0.008433366569908075,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 214449550.53247398,
+    "mem_max": 241430528.0,
+    "mem_p95": 241360896.0,
+    "pod_mem_p95": 241360896.0,
+    "pod_mem_max": 241430528.0
+   },
+   "hpa": {
+    "hpa": "notebook-worker",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 402653184,
+     "lim_cpu": 0.05,
+     "lim_mem": 402653184
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 0.9408076859142731,
+    "util_p95_mem_now": 44.95697021484375,
+    "util_p95_cpu_new": 3.7632307436570924,
+    "util_p95_mem_new": 59.942626953125,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "notebook-frontend": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 209715200.0,
+    "lim_cpu": 0.2,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 209715200.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 6.293636813052992e-05,
+    "use_mem": 83181568.0,
+    "no_metrics": 0,
+    "cpu_avg": 4.057975004577373e-05,
+    "cpu_max": 0.0005978220274937293,
+    "cpu_p95": 0.00016158003318040708,
+    "pod_cpu_p95": 0.00016158003318040708,
+    "pod_cpu_max": 0.0005978220274937293,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 81890054.33215548,
+    "mem_max": 83468288.0,
+    "mem_p95": 83306905.6,
+    "pod_mem_p95": 83306905.6,
+    "pod_mem_max": 83468288.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.2,
+    "req_mem": 209715200.0,
+    "lim_cpu": 0.2,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 209715200.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 8.315964952017446e-05,
+    "use_mem": 83181568.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.652161708181124e-05,
+    "cpu_max": 0.0007537430461041179,
+    "cpu_p95": 0.00016245251409360668,
+    "pod_cpu_p95": 0.00016245251409360668,
+    "pod_cpu_max": 0.0007537430461041179,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 81842405.47347546,
+    "mem_max": 83468288.0,
+    "mem_p95": 82842419.2,
+    "pod_mem_p95": 82842419.2,
+    "pod_mem_max": 83468288.0
+   },
+   "hpa": {
+    "hpa": "notebook-frontend",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 0.08122625704680334,
+    "util_p95_mem_now": 39.50234375,
+    "util_p95_cpu_new": 0.32490502818721334,
+    "util_p95_mem_new": 61.722412109375,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "master-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.5,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 0.7,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.25,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.35,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.011094479836576555,
+    "use_mem": 1281089536.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.006600182531344682,
+    "cpu_max": 0.10393375609929774,
+    "cpu_p95": 0.015289476065359627,
+    "pod_cpu_p95": 0.007943013479433996,
+    "pod_cpu_max": 0.10393375609929774,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 703277989.5406361,
+    "mem_max": 1291251712.0,
+    "mem_p95": 1289878323.2,
+    "pod_mem_p95": 774651904.0,
+    "pod_mem_max": 774688768.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.5,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 0.7,
+    "lim_mem": 2097152000.0,
+    "pod_req_cpu": 0.25,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.35,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.011094479836576555,
+    "use_mem": 1281089536.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.00568246177984281,
+    "cpu_max": 0.18031167818931712,
+    "cpu_p95": 0.01158961556329852,
+    "pod_cpu_p95": 0.006380398148070169,
+    "pod_cpu_max": 0.18031167818931712,
+    "replicas_min": 1,
+    "replicas_max": 4,
+    "mem_avg": 837310467.0461081,
+    "mem_max": 1605242880.0,
+    "mem_p95": 1490014208.0,
+    "pod_mem_p95": 849235968.0,
+    "pod_mem_max": 874610688.0
+   },
+   "hpa": {
+    "hpa": "master-production",
+    "min": 1,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 1476395008,
+     "lim_cpu": 0.28,
+     "lim_mem": 1476395008
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: tang"
+    ],
+    "util_p95_cpu_now": 2.5521592592280675,
+    "util_p95_mem_now": 80.989453125,
+    "util_p95_cpu_new": 12.760796296140336,
+    "util_p95_mem_new": 57.52091841264204,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "aggregation-worker-prod": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 0.15000000000000002,
+    "req_mem": 943718400.0,
+    "lim_cpu": 0.8999999999999999,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.00656823755032541,
+    "use_mem": 77889536.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004669207871240478,
+    "cpu_max": 0.009716160875477537,
+    "cpu_p95": 0.00891430812242086,
+    "pod_cpu_p95": 0.0030336142005989693,
+    "pod_cpu_max": 0.0035906954124956154,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 81463621.65371025,
+    "mem_max": 104448000.0,
+    "mem_p95": 86810214.4,
+    "pod_mem_p95": 31768576.0,
+    "pod_mem_max": 45494272.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 0.15000000000000002,
+    "req_mem": 943718400.0,
+    "lim_cpu": 0.8999999999999999,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.00656823755032541,
+    "use_mem": 77889536.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0037707849516459015,
+    "cpu_max": 0.0097748774479819,
+    "cpu_p95": 0.007001237357813069,
+    "pod_cpu_p95": 0.002413970114009018,
+    "pod_cpu_max": 0.0036763934155612057,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 79245068.31135349,
+    "mem_max": 104591360.0,
+    "mem_p95": 85851340.8,
+    "pod_mem_p95": 30873600.0,
+    "pod_mem_max": 45494272.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 4.8279402280180355,
+    "util_p95_mem_now": 9.814453125,
+    "util_p95_cpu_new": 4.8279402280180355,
+    "util_p95_mem_new": 23.00262451171875
+   }
+  },
+  "notebook-api": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2147483648.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2147483648.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1073741824.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1073741824.0,
+    "use_cpu": 0.005074782295365189,
+    "use_mem": 1149157376.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004342346417623815,
+    "cpu_max": 0.008541019249956363,
+    "cpu_p95": 0.006891699682104763,
+    "pod_cpu_p95": 0.0035577847052908063,
+    "pod_cpu_max": 0.004914219334213074,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1139390847.5477033,
+    "mem_max": 1149157376.0,
+    "mem_p95": 1147813888.0,
+    "pod_mem_p95": 653002752.0,
+    "pod_mem_max": 658321408.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 1.0,
+    "req_mem": 2147483648.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 2147483648.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 1073741824.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1073741824.0,
+    "use_cpu": 0.005074782295365189,
+    "use_mem": 1149157376.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004246064935863809,
+    "cpu_max": 0.020106389914806077,
+    "cpu_p95": 0.006612393748846891,
+    "pod_cpu_p95": 0.003422521150743421,
+    "pod_cpu_max": 0.016942468502592813,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1236675728.6901338,
+    "mem_max": 1476513792.0,
+    "mem_p95": 1400913920.0,
+    "pod_mem_p95": 858972160.0,
+    "pod_mem_max": 924889088.0
+   },
+   "hpa": {
+    "hpa": "notebook-api",
+    "min": 1,
+    "max": 100,
+    "current": 2,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 1275068416,
+     "lim_cpu": 0.05,
+     "lim_mem": 1409286144
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 0.6845042301486842,
+    "util_p95_mem_now": 79.99801635742188,
+    "util_p95_cpu_new": 6.845042301486842,
+    "util_p95_mem_new": 67.36675061677632,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "fsel-portal-landing-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 8.938916535075e-06,
+    "use_mem": 50823168.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.110100303528332e-05,
+    "cpu_max": 0.00015122053579102467,
+    "cpu_p95": 8.66477424701281e-05,
+    "pod_cpu_p95": 8.66477424701281e-05,
+    "pod_cpu_max": 0.00015122053579102467,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 50818232.537102476,
+    "mem_max": 50954240.0,
+    "mem_p95": 50827264.0,
+    "pod_mem_p95": 50827264.0,
+    "pod_mem_max": 50954240.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 8.96538330917548e-06,
+    "use_mem": 50823168.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.912232983912361e-05,
+    "cpu_max": 0.0011804076993191179,
+    "cpu_p95": 0.00010911440963546388,
+    "pod_cpu_p95": 0.00010911440963546388,
+    "pod_cpu_max": 0.0011804076993191179,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 50745991.805651955,
+    "mem_max": 50954240.0,
+    "mem_p95": 50819072.0,
+    "pod_mem_p95": 50819072.0,
+    "pod_mem_max": 50954240.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.21822881927092774,
+    "util_p95_mem_now": 48.46484375,
+    "util_p95_cpu_new": 0.21822881927092774,
+    "util_p95_mem_new": 37.8631591796875
+   }
+  },
+  "user-production": {
+   "today": {
+    "pods": 5,
+    "req_cpu": 2.5,
+    "req_mem": 20971520000.0,
+    "lim_cpu": 7.5,
+    "lim_mem": 31457280000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 4194304000.0,
+    "pod_lim_cpu": 1.5,
+    "pod_lim_mem": 6291456000.0,
+    "use_cpu": 0.5501052462633373,
+    "use_mem": 5079863296.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.31380554668832117,
+    "cpu_max": 1.322032319725402,
+    "cpu_p95": 0.7640881276412963,
+    "pod_cpu_p95": 0.1633443582101358,
+    "pod_cpu_max": 0.30097565534469656,
+    "replicas_min": 5,
+    "replicas_max": 5,
+    "mem_avg": 4796173728.113074,
+    "mem_max": 8045158400.0,
+    "mem_p95": 5701475123.2,
+    "pod_mem_p95": 1132243763.2,
+    "pod_mem_max": 1851478016.0
+   },
+   "last_7d": {
+    "pods": 5,
+    "req_cpu": 2.5,
+    "req_mem": 20971520000.0,
+    "lim_cpu": 7.5,
+    "lim_mem": 31457280000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 4194304000.0,
+    "pod_lim_cpu": 1.5,
+    "pod_lim_mem": 6291456000.0,
+    "use_cpu": 0.5501052462633373,
+    "use_mem": 5079863296.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.2367144473520958,
+    "cpu_max": 1.2799866772419075,
+    "cpu_p95": 0.5650907014074776,
+    "pod_cpu_p95": 0.1306899105699712,
+    "pod_cpu_max": 0.42936180106709626,
+    "replicas_min": 5,
+    "replicas_max": 10,
+    "mem_avg": 5264028740.537432,
+    "mem_max": 12993851392.0,
+    "mem_p95": 7607970201.599996,
+    "pod_mem_p95": 1579014144.0,
+    "pod_mem_max": 3102162944.0
+   },
+   "hpa": {
+    "hpa": "user-production",
+    "min": 5,
+    "max": 100,
+    "current": 5,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.2,
+     "req_mem": 3154116608,
+     "lim_cpu": 0.65,
+     "lim_mem": 4697620480
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 26.13798211399424,
+    "util_p95_mem_now": 37.646630859375,
+    "util_p95_cpu_new": 65.3449552849856,
+    "util_p95_mem_new": 50.06200912150931,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "tracking-config-api-prod": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 104857600.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 104857600.0,
+    "use_cpu": 0.0007308251980533241,
+    "use_mem": 24555520.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0033478885963042415,
+    "cpu_max": 0.049202383419912246,
+    "cpu_p95": 0.0036664932588804113,
+    "pod_cpu_p95": 0.0036664932588804113,
+    "pod_cpu_max": 0.049202383419912246,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 26679491.39222615,
+    "mem_max": 74772480.0,
+    "mem_p95": 26920960.0,
+    "pod_mem_p95": 26920960.0,
+    "pod_mem_max": 74772480.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 104857600.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 104857600.0,
+    "use_cpu": 0.0007308251980533241,
+    "use_mem": 24555520.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0031958934689870124,
+    "cpu_max": 0.04926610811837439,
+    "cpu_p95": 0.0033019832279782974,
+    "pod_cpu_p95": 0.0033019832279782974,
+    "pod_cpu_max": 0.04926610811837439,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 23622373.219633117,
+    "mem_max": 77213696.0,
+    "mem_p95": 25864601.599999998,
+    "pod_mem_p95": 25864601.599999998,
+    "pod_mem_max": 77213696.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.08,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 6.603966455956595,
+    "util_p95_mem_now": 24.666406249999998,
+    "util_p95_cpu_new": 6.603966455956595,
+    "util_p95_mem_new": 19.2706298828125
+   }
+  },
+  "lmsweb-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 629145600.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.009342708575652371,
+    "use_mem": 121024512.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.00882275237791835,
+    "cpu_max": 0.03958117834287116,
+    "cpu_p95": 0.02296414177711138,
+    "pod_cpu_p95": 0.011414976662057718,
+    "pod_cpu_max": 0.02134414218794754,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 121005783.29328622,
+    "mem_max": 122015744.0,
+    "mem_p95": 121338675.2,
+    "pod_mem_p95": 67456000.0,
+    "pod_mem_max": 68415488.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 629145600.0,
+    "lim_cpu": 0.4,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 314572800.0,
+    "pod_lim_cpu": 0.2,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.009342708575652371,
+    "use_mem": 121024512.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.010569652539553933,
+    "cpu_max": 0.08598297184835697,
+    "cpu_p95": 0.028657354170836886,
+    "pod_cpu_p95": 0.014490337157071655,
+    "pod_cpu_max": 0.043210276222804024,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 119815326.90530491,
+    "mem_max": 219803648.0,
+    "mem_p95": 121021235.2,
+    "pod_mem_p95": 67444736.0,
+    "pod_mem_max": 68476928.0
+   },
+   "hpa": {
+    "hpa": "lmsweb-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.07,
+     "lim_mem": 134217728
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 7.245168578535827,
+    "util_p95_mem_now": 21.440104166666664,
+    "util_p95_cpu_new": 28.980674314143307,
+    "util_p95_mem_new": 50.250244140625,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "exam-practice-lcms-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 838860800.0,
+    "lim_cpu": 0.6,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.014391472536121287,
+    "use_mem": 440320000.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.010170904259074557,
+    "cpu_max": 0.021702764953435254,
+    "cpu_p95": 0.02019046268543759,
+    "pod_cpu_p95": 0.010269615567158807,
+    "pod_cpu_max": 0.012702785626023035,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 441407118.9257951,
+    "mem_max": 442429440.0,
+    "mem_p95": 442265600.0,
+    "pod_mem_p95": 233884672.0,
+    "pod_mem_max": 234246144.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 838860800.0,
+    "lim_cpu": 0.6,
+    "lim_mem": 1258291200.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 419430400.0,
+    "pod_lim_cpu": 0.3,
+    "pod_lim_mem": 629145600.0,
+    "use_cpu": 0.014391472536121287,
+    "use_mem": 440320000.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.007690458781751962,
+    "cpu_max": 0.03722863795476821,
+    "cpu_p95": 0.01471032117442497,
+    "pod_cpu_p95": 0.007565548544587647,
+    "pod_cpu_max": 0.0328686138055391,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 437601387.12146753,
+    "mem_max": 723546112.0,
+    "mem_p95": 462675968.0,
+    "pod_mem_p95": 237264896.0,
+    "pod_mem_max": 241512448.0
+   },
+   "hpa": {
+    "hpa": "exam-practice-lcms-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 402653184,
+     "lim_cpu": 0.05,
+     "lim_mem": 402653184
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 2.521849514862549,
+    "util_p95_mem_now": 56.568359375,
+    "util_p95_cpu_new": 15.131097089175293,
+    "util_p95_mem_new": 58.925374348958336,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "master-auth-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 734003200.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 1048576000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 734003200.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.005816839034255829,
+    "use_mem": 236683264.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004488257749964214,
+    "cpu_max": 0.009549272095392351,
+    "cpu_p95": 0.008206233849897342,
+    "pod_cpu_p95": 0.008206233849897342,
+    "pod_cpu_max": 0.009549272095392351,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 234593290.85512367,
+    "mem_max": 236810240.0,
+    "mem_p95": 236699648.0,
+    "pod_mem_p95": 236699648.0,
+    "pod_mem_max": 236810240.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 734003200.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 1048576000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 734003200.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 0.005816839034255829,
+    "use_mem": 236683264.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0032866068156852534,
+    "cpu_max": 0.065731029138104,
+    "cpu_p95": 0.0062234558737769684,
+    "pod_cpu_p95": 0.006241065176135672,
+    "pod_cpu_max": 0.031081522746199217,
+    "replicas_min": 1,
+    "replicas_max": 3,
+    "mem_avg": 216107551.22260782,
+    "mem_max": 535359488.0,
+    "mem_p95": 252411904.0,
+    "pod_mem_p95": 252256256.0,
+    "pod_mem_max": 252452864.0
+   },
+   "hpa": {
+    "hpa": "master-auth-production",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 469762048,
+     "lim_cpu": 0.05,
+     "lim_mem": 469762048
+    },
+    "flags": [
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 12.482130352271342,
+    "util_p95_mem_now": 34.3671875,
+    "util_p95_cpu_new": 12.482130352271342,
+    "util_p95_mem_new": 53.69873046875,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "auth-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 10485760000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 0.027175923008280974,
+    "use_mem": 1164124160.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.018424917898460826,
+    "cpu_max": 0.05027396868952141,
+    "cpu_p95": 0.038057561208298354,
+    "pod_cpu_p95": 0.01894462423813545,
+    "pod_cpu_max": 0.02931876355623431,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1127284157.0600708,
+    "mem_max": 1164120064.0,
+    "mem_p95": 1153762508.8,
+    "pod_mem_p95": 579528704.0,
+    "pod_mem_max": 584986624.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.6,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 1.0,
+    "lim_mem": 10485760000.0,
+    "pod_req_cpu": 0.3,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 5242880000.0,
+    "use_cpu": 0.027175923008280974,
+    "use_mem": 1164124160.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.01756162454041012,
+    "cpu_max": 0.10586909207696434,
+    "cpu_p95": 0.03626997932736778,
+    "pod_cpu_p95": 0.01858734735101794,
+    "pod_cpu_max": 0.05542744764531387,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 1061721631.7302926,
+    "mem_max": 1557032960.0,
+    "mem_p95": 1211450163.2,
+    "pod_mem_p95": 620014796.8,
+    "pod_mem_max": 637415424.0
+   },
+   "hpa": {
+    "hpa": "auth-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 80,
+    "target_cpu": 80
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 939524096,
+     "lim_cpu": 0.09,
+     "lim_mem": 1006632960
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 6.195782450339314,
+    "util_p95_mem_now": 39.41947916666667,
+    "util_p95_cpu_new": 37.17469470203588,
+    "util_p95_mem_new": 65.992431640625,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "exam-practice-lms-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 3145728000.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.25,
+    "pod_lim_mem": 1572864000.0,
+    "use_cpu": 0.01910561980774445,
+    "use_mem": 663068672.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.013083083496116739,
+    "cpu_max": 0.02822288698454932,
+    "cpu_p95": 0.02501240439937934,
+    "pod_cpu_p95": 0.01282272100304932,
+    "pod_cpu_max": 0.016804663165894622,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 658891099.3639576,
+    "mem_max": 700608512.0,
+    "mem_p95": 682020454.4,
+    "pod_mem_p95": 369038336.0,
+    "pod_mem_max": 380018688.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 0.4,
+    "req_mem": 2097152000.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 3145728000.0,
+    "pod_req_cpu": 0.2,
+    "pod_req_mem": 1048576000.0,
+    "pod_lim_cpu": 0.25,
+    "pod_lim_mem": 1572864000.0,
+    "use_cpu": 0.01910561980774445,
+    "use_mem": 663068672.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.010277773708189766,
+    "cpu_max": 0.03242391064320105,
+    "cpu_p95": 0.019030242484065707,
+    "pod_cpu_p95": 0.009891930590737182,
+    "pod_cpu_max": 0.028941147878658532,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 604640917.5131383,
+    "mem_max": 868052992.0,
+    "mem_p95": 681390080.0,
+    "pod_mem_p95": 331034624.0,
+    "pod_mem_max": 380018688.0
+   },
+   "hpa": {
+    "hpa": "exam-practice-lms-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 603979776,
+     "lim_cpu": 0.05,
+     "lim_mem": 603979776
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 4.945965295368591,
+    "util_p95_mem_now": 31.569921875000002,
+    "util_p95_cpu_new": 19.783861181474364,
+    "util_p95_mem_new": 54.80889214409722,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "lcmsapi-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 1.6,
+    "req_mem": 1677721600.0,
+    "lim_cpu": 1.8,
+    "lim_mem": 2516582400.0,
+    "pod_req_cpu": 0.8,
+    "pod_req_mem": 838860800.0,
+    "pod_lim_cpu": 0.9,
+    "pod_lim_mem": 1258291200.0,
+    "use_cpu": 0.022781817139512224,
+    "use_mem": 1043492864.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.016440875959363593,
+    "cpu_max": 0.04292382782236867,
+    "cpu_p95": 0.03598081599252346,
+    "pod_cpu_p95": 0.018954725308060843,
+    "pod_cpu_max": 0.028543640470677336,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1043720112.3957597,
+    "mem_max": 1054117888.0,
+    "mem_p95": 1046241280.0,
+    "pod_mem_p95": 526826496.0,
+    "pod_mem_max": 533819392.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 1.6,
+    "req_mem": 1677721600.0,
+    "lim_cpu": 1.8,
+    "lim_mem": 2516582400.0,
+    "pod_req_cpu": 0.8,
+    "pod_req_mem": 838860800.0,
+    "pod_lim_cpu": 0.9,
+    "pod_lim_mem": 1258291200.0,
+    "use_cpu": 0.022781817139512224,
+    "use_mem": 1043492864.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.010309039585034508,
+    "cpu_max": 0.059187549586830285,
+    "cpu_p95": 0.025783882760610624,
+    "pod_cpu_p95": 0.013192898889578128,
+    "pod_cpu_max": 0.039415519301952945,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 983764602.0981656,
+    "mem_max": 1417166848.0,
+    "mem_p95": 1086814617.6,
+    "pod_mem_p95": 545905049.6,
+    "pod_mem_max": 609468416.0
+   },
+   "hpa": {
+    "hpa": "lcmsapi-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 939524096,
+     "lim_cpu": 0.06,
+     "lim_mem": 939524096
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 1.649112361197266,
+    "util_p95_mem_now": 65.076953125,
+    "util_p95_cpu_new": 26.385797779156256,
+    "util_p95_mem_new": 58.104422433035715,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "summer-event-prod": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 1048576000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 3.0245543236113463e-06,
+    "use_mem": 114147328.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.4225671534556934e-06,
+    "cpu_max": 2.514706802519549e-05,
+    "cpu_p95": 4.1102131623011026e-06,
+    "pod_cpu_p95": 4.1102131623011026e-06,
+    "pod_cpu_max": 2.514706802519549e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 114225209.89399293,
+    "mem_max": 114651136.0,
+    "mem_p95": 114601984.0,
+    "pod_mem_p95": 114601984.0,
+    "pod_mem_max": 114651136.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.5,
+    "lim_mem": 1048576000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.5,
+    "pod_lim_mem": 1048576000.0,
+    "use_cpu": 3.0245543236113463e-06,
+    "use_mem": 114147328.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.5146928542777134e-06,
+    "cpu_max": 2.514706802519549e-05,
+    "cpu_p95": 4.276018849702806e-06,
+    "pod_cpu_p95": 4.276018849702806e-06,
+    "pod_cpu_max": 2.514706802519549e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 114241988.85473475,
+    "mem_max": 114651136.0,
+    "mem_p95": 114610176.0,
+    "pod_mem_p95": 114610176.0,
+    "pod_mem_max": 114651136.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 201326592,
+     "lim_cpu": 0.05,
+     "lim_mem": 201326592
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.008552037699405612,
+    "util_p95_mem_now": 109.30078125,
+    "util_p95_cpu_new": 0.008552037699405612,
+    "util_p95_mem_new": 56.927490234375
+   }
+  },
+  "tracuukhaosat-web": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 314572800.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.1,
+    "pod_lim_mem": 314572800.0,
+    "use_cpu": 0.0,
+    "use_mem": 60055552.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0,
+    "cpu_max": 0.0,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 0.0,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 60055552.0,
+    "mem_max": 60055552.0,
+    "mem_p95": 60055552.0,
+    "pod_mem_p95": 60055552.0,
+    "pod_mem_max": 60055552.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.1,
+    "lim_mem": 314572800.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.1,
+    "pod_lim_mem": 314572800.0,
+    "use_cpu": 0.0,
+    "use_mem": 60055552.0,
+    "no_metrics": 0,
+    "cpu_avg": 3.0712271959062566e-06,
+    "cpu_max": 0.0009355763922677137,
+    "cpu_p95": 0.0,
+    "pod_cpu_p95": 0.0,
+    "pod_cpu_max": 0.0009355763922677137,
+    "replicas_min": 1,
+    "replicas_max": 2,
+    "mem_avg": 60767132.86749595,
+    "mem_max": 121479168.0,
+    "mem_p95": 62328832.0,
+    "pod_mem_p95": 62328832.0,
+    "pod_mem_max": 63102976.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.0,
+    "util_p95_mem_now": 59.44140624999999,
+    "util_p95_cpu_new": 0.0,
+    "util_p95_mem_new": 46.4385986328125
+   }
+  },
+  "ordering-production": {
+   "today": {
+    "pods": 2,
+    "req_cpu": 3.0,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 8388608000.0,
+    "pod_req_cpu": 1.5,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 1.5,
+    "pod_lim_mem": 4194304000.0,
+    "use_cpu": 0.060047895895858815,
+    "use_mem": 1359486976.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.04451562671733208,
+    "cpu_max": 0.11994859728582283,
+    "cpu_p95": 0.1003891998061713,
+    "pod_cpu_p95": 0.05411256364188405,
+    "pod_cpu_max": 0.07810094654564016,
+    "replicas_min": 2,
+    "replicas_max": 2,
+    "mem_avg": 1433194510.4734983,
+    "mem_max": 1836388352.0,
+    "mem_p95": 1707107532.8,
+    "pod_mem_p95": 889997312.0,
+    "pod_mem_max": 965869568.0
+   },
+   "last_7d": {
+    "pods": 2,
+    "req_cpu": 3.0,
+    "req_mem": 3145728000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 8388608000.0,
+    "pod_req_cpu": 1.5,
+    "pod_req_mem": 1572864000.0,
+    "pod_lim_cpu": 1.5,
+    "pod_lim_mem": 4194304000.0,
+    "use_cpu": 0.060047895895858815,
+    "use_mem": 1359486976.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0330418023625714,
+    "cpu_max": 0.13559046827020244,
+    "cpu_p95": 0.07623055018366355,
+    "pod_cpu_p95": 0.039346002751175585,
+    "pod_cpu_max": 0.08690395745057339,
+    "replicas_min": 2,
+    "replicas_max": 4,
+    "mem_avg": 1621053888.7932572,
+    "mem_max": 2519322624.0,
+    "mem_p95": 2165060403.2,
+    "pod_mem_p95": 1087468544.0,
+    "pod_mem_max": 1138987008.0
+   },
+   "hpa": {
+    "hpa": "ordering-production",
+    "min": 2,
+    "max": 100,
+    "current": 2,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.07,
+     "req_mem": 1879048192,
+     "lim_cpu": 0.14,
+     "lim_mem": 1879048192
+    },
+    "flags": [
+     "req_cpu: giam"
+    ],
+    "util_p95_cpu_now": 2.6230668500783723,
+    "util_p95_mem_now": 69.13938802083334,
+    "util_p95_cpu_new": 56.20857535882225,
+    "util_p95_mem_new": 57.873371669224326,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "lcmsweb-production": {
+   "today": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 7.857310905080567e-06,
+    "use_mem": 62066688.0,
+    "no_metrics": 0,
+    "cpu_avg": 7.83343370280972e-06,
+    "cpu_max": 9.230592155836153e-05,
+    "cpu_p95": 1.0337256960557112e-05,
+    "pod_cpu_p95": 1.0337256960557112e-05,
+    "pod_cpu_max": 9.230592155836153e-05,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 61874740.466431096,
+    "mem_max": 62066688.0,
+    "mem_p95": 61947904.0,
+    "pod_mem_p95": 61947904.0,
+    "pod_mem_max": 62066688.0
+   },
+   "last_7d": {
+    "pods": 1,
+    "req_cpu": 0.05,
+    "req_mem": 104857600.0,
+    "lim_cpu": 0.05,
+    "lim_mem": 209715200.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 209715200.0,
+    "use_cpu": 7.857310905080567e-06,
+    "use_mem": 62066688.0,
+    "no_metrics": 0,
+    "cpu_avg": 1.0143380447369793e-05,
+    "cpu_max": 0.0003946847149196405,
+    "cpu_p95": 1.4963418625122513e-05,
+    "pod_cpu_p95": 1.4963418625122513e-05,
+    "pod_cpu_max": 0.0003946847149196405,
+    "replicas_min": 1,
+    "replicas_max": 1,
+    "mem_avg": 56546593.8879524,
+    "mem_max": 62066688.0,
+    "mem_p95": 61935616.0,
+    "pod_mem_p95": 61935616.0,
+    "pod_mem_max": 62066688.0
+   },
+   "hpa": {
+    "hpa": "lcmsweb-production",
+    "min": 1,
+    "max": 100,
+    "current": 1,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 0.029926837250245027,
+    "util_p95_mem_now": 59.06640625,
+    "util_p95_cpu_new": 0.029926837250245027,
+    "util_p95_mem_new": 46.1456298828125,
+    "hpa_pinned_at_min": true,
+    "hpa_hit_max": false
+   }
+  },
+  "realtime-production": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 1.5,
+    "req_mem": 9437184000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 18874368000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 6291456000.0,
+    "use_cpu": 0.34016383645937776,
+    "use_mem": 2069274624.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.24579134194206592,
+    "cpu_max": 0.707827224099688,
+    "cpu_p95": 0.6206808302589908,
+    "pod_cpu_p95": 0.22030234338392243,
+    "pod_cpu_max": 0.34503760818137175,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 1662367794.6572437,
+    "mem_max": 2277134336.0,
+    "mem_p95": 2195218841.6,
+    "pod_mem_p95": 748084428.8,
+    "pod_mem_max": 779235328.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 1.5,
+    "req_mem": 9437184000.0,
+    "lim_cpu": 3.0,
+    "lim_mem": 18874368000.0,
+    "pod_req_cpu": 0.5,
+    "pod_req_mem": 3145728000.0,
+    "pod_lim_cpu": 1.0,
+    "pod_lim_mem": 6291456000.0,
+    "use_cpu": 0.34016383645937776,
+    "use_mem": 2069274624.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.1666545680528138,
+    "cpu_max": 0.7217687547242804,
+    "cpu_p95": 0.3876376931497442,
+    "pod_cpu_p95": 0.13524735070921334,
+    "pod_cpu_max": 0.34503760818137175,
+    "replicas_min": 3,
+    "replicas_max": 6,
+    "mem_avg": 1576623206.0446208,
+    "mem_max": 2455465984.0,
+    "mem_p95": 2175321702.399999,
+    "pod_mem_p95": 836169728.0,
+    "pod_mem_max": 1066778624.0
+   },
+   "hpa": {
+    "hpa": "realtime-production",
+    "min": 3,
+    "max": 100,
+    "current": 3,
+    "target_memory": 70,
+    "target_cpu": 70
+   },
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.23,
+     "req_mem": 1409286144,
+     "lim_cpu": 0.52,
+     "lim_mem": 1610612736
+    },
+    "flags": [
+     "req_cpu: giam",
+     "req_mem: giam"
+    ],
+    "util_p95_cpu_now": 27.04947014184267,
+    "util_p95_mem_now": 26.58111979166667,
+    "util_p95_cpu_new": 58.803195960527546,
+    "util_p95_mem_new": 59.33285667782739,
+    "hpa_pinned_at_min": false,
+    "hpa_hit_max": false
+   }
+  },
+  "system-aggregation-worker-prod": {
+   "today": {
+    "pods": 3,
+    "req_cpu": 0.15000000000000002,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.15000000000000002,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.005493312127621204,
+    "use_mem": 89268224.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.004000890379626345,
+    "cpu_max": 0.008272602296454065,
+    "cpu_p95": 0.007531559362482386,
+    "pod_cpu_p95": 0.00255231911060368,
+    "pod_cpu_max": 0.0029478700219448405,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 83971256.53710248,
+    "mem_max": 92286976.0,
+    "mem_p95": 90007552.0,
+    "pod_mem_p95": 30417715.199999996,
+    "pod_mem_max": 32305152.0
+   },
+   "last_7d": {
+    "pods": 3,
+    "req_cpu": 0.15000000000000002,
+    "req_mem": 314572800.0,
+    "lim_cpu": 0.15000000000000002,
+    "lim_mem": 1572864000.0,
+    "pod_req_cpu": 0.05,
+    "pod_req_mem": 104857600.0,
+    "pod_lim_cpu": 0.05,
+    "pod_lim_mem": 524288000.0,
+    "use_cpu": 0.005493312127621204,
+    "use_mem": 89268224.0,
+    "no_metrics": 0,
+    "cpu_avg": 0.0032674547387304726,
+    "cpu_max": 0.008395965489557072,
+    "cpu_p95": 0.005838085517887592,
+    "pod_cpu_p95": 0.0020108314888316143,
+    "pod_cpu_max": 0.002949570333757109,
+    "replicas_min": 3,
+    "replicas_max": 3,
+    "mem_avg": 81287660.45413981,
+    "mem_max": 91086848.0,
+    "mem_p95": 88698880.0,
+    "pod_mem_p95": 29927424.0,
+    "pod_mem_max": 32305152.0
+   },
+   "hpa": null,
+   "baseline": {
+    "suggest": {
+     "req_cpu": 0.05,
+     "req_mem": 134217728,
+     "lim_cpu": 0.05,
+     "lim_mem": 134217728
+    },
+    "flags": [],
+    "util_p95_cpu_now": 4.021662977663229,
+    "util_p95_mem_now": 28.541015625,
+    "util_p95_cpu_new": 4.021662977663229,
+    "util_p95_mem_new": 22.29766845703125
+   }
+  }
+ },
+ "proposals": [
+  {
+   "service": "lmsapi-production",
+   "pods": 5,
+   "hpa": "lmsapi-production",
+   "values": {
+    "dir": "lmsapi",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 2.0,
+    "p95": 0.18788461060458667,
+    "util": 9.394230530229333,
+    "new": 0.32,
+    "target": 60,
+    "target_new": 70,
+    "util_new": 58.71394081393333
+   },
+   "memory": {
+    "cur": 3145728000.0,
+    "p95": 2096736870.4000006,
+    "util": 66.65347005208335,
+    "new": 3145728000.0,
+    "target": 60,
+    "target_new": 60,
+    "util_new": 66.65347005208335
+   },
+   "save_cpu": 8.4,
+   "save_mem": 0.0
+  },
+  {
+   "service": "user-production",
+   "pods": 5,
+   "hpa": "user-production",
+   "values": {
+    "dir": "user",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.1306899105699712,
+    "util": 26.13798211399424,
+    "new": 0.2,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 65.3449552849856
+   },
+   "memory": {
+    "cur": 4194304000.0,
+    "p95": 1579014144.0,
+    "util": 37.646630859375,
+    "new": 3154116608,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 50.06200912150931
+   },
+   "save_cpu": 1.5,
+   "save_mem": 5200936960.0
+  },
+  {
+   "service": "realtime-production",
+   "pods": 3,
+   "hpa": "realtime-production",
+   "values": {
+    "dir": "realtime",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.13524735070921334,
+    "util": 27.04947014184267,
+    "new": 0.23,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 58.803195960527546
+   },
+   "memory": {
+    "cur": 3145728000.0,
+    "p95": 836169728.0,
+    "util": 26.58111979166667,
+    "new": 1275068416,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 65.57842053865132
+   },
+   "save_cpu": 0.81,
+   "save_mem": 5611978752.0
+  },
+  {
+   "service": "ordering-production",
+   "pods": 2,
+   "hpa": "ordering-production",
+   "values": {
+    "dir": "ordering",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 1.5,
+    "p95": 0.039346002751175585,
+    "util": 2.6230668500783723,
+    "new": 0.07,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 56.20857535882225
+   },
+   "memory": {
+    "cur": 1572864000.0,
+    "p95": 1087468544.0,
+    "util": 69.13938802083334,
+    "new": 1572864000.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 69.13938802083334
+   },
+   "save_cpu": 2.86,
+   "save_mem": 0.0
+  },
+  {
+   "service": "system-production",
+   "pods": 3,
+   "hpa": "system-production",
+   "values": {
+    "dir": "system",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.12132305337817158,
+    "util": 24.264610675634316,
+    "new": 0.21,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 57.77288256103409
+   },
+   "memory": {
+    "cur": 2097152000.0,
+    "p95": 638340300.8,
+    "util": 30.4384375,
+    "new": 939524096,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 67.94294084821428
+   },
+   "save_cpu": 0.8700000000000001,
+   "save_mem": 3472883712.0
+  },
+  {
+   "service": "sender-production",
+   "pods": 7,
+   "hpa": "sender-production",
+   "values": {
+    "dir": "sender",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.4,
+    "p95": 0.00790413195919202,
+    "util": 1.976032989798005,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 15.80826391838404
+   },
+   "memory": {
+    "cur": 419430400.0,
+    "p95": 415571968.0,
+    "util": 99.080078125,
+    "new": 419430400.0,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 99.080078125
+   },
+   "save_cpu": 2.45,
+   "save_mem": 0.0
+  },
+  {
+   "service": "ffmpeg-api-services-production",
+   "pods": 4,
+   "hpa": "ffmpeg-api-services-production",
+   "values": {
+    "dir": "ffmpeg-api-services",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.06686335308066343,
+    "util": 13.372670616132687,
+    "new": 0.12,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 55.71946090055286
+   },
+   "memory": {
+    "cur": 3145728000.0,
+    "p95": 1917990297.6,
+    "util": 60.971269531249995,
+    "new": 3145728000.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 60.971269531249995
+   },
+   "save_cpu": 1.52,
+   "save_mem": 0.0
+  },
+  {
+   "service": "lcmsapi-production",
+   "pods": 2,
+   "hpa": "lcmsapi-production",
+   "values": {
+    "dir": "lcmsapi",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.8,
+    "p95": 0.013192898889578128,
+    "util": 1.649112361197266,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 26.385797779156256
+   },
+   "memory": {
+    "cur": 838860800.0,
+    "p95": 545905049.6,
+    "util": 65.076953125,
+    "new": 838860800.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 65.076953125
+   },
+   "save_cpu": 1.5,
+   "save_mem": 0.0
+  },
+  {
+   "service": "notification-production",
+   "pods": 2,
+   "hpa": "notification-production",
+   "values": {
+    "dir": "notification",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.013505454802823945,
+    "util": 2.701090960564789,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 27.010909605647885
+   },
+   "memory": {
+    "cur": 1048576000.0,
+    "p95": 449365401.59999996,
+    "util": 42.85482421875,
+    "new": 671088640,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 66.96066284179688
+   },
+   "save_cpu": 0.9,
+   "save_mem": 754974720.0
+  },
+  {
+   "service": "auth-production",
+   "pods": 2,
+   "hpa": "auth-production",
+   "values": {
+    "dir": "auth",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.3,
+    "p95": 0.01858734735101794,
+    "util": 6.195782450339314,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 37.17469470203588
+   },
+   "memory": {
+    "cur": 1572864000.0,
+    "p95": 620014796.8,
+    "util": 39.41947916666667,
+    "new": 939524096,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 65.992431640625
+   },
+   "save_cpu": 0.5,
+   "save_mem": 1266679808.0
+  },
+  {
+   "service": "tracking-worker-prod",
+   "pods": 3,
+   "hpa": null,
+   "values": {
+    "dir": "tracking-worker",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.3,
+    "p95": 0.0014405676319139164,
+    "util": 0.48018921063797215,
+    "new": 0.05,
+    "target": null,
+    "target_new": null,
+    "util_new": 2.881135263827833
+   },
+   "memory": {
+    "cur": 314572800.0,
+    "p95": 27817984.0,
+    "util": 8.843098958333332,
+    "new": 134217728,
+    "target": null,
+    "target_new": null,
+    "util_new": 20.72601318359375
+   },
+   "save_cpu": 0.75,
+   "save_mem": 541065216.0
+  },
+  {
+   "service": "training-production",
+   "pods": 2,
+   "hpa": "training-production",
+   "values": {
+    "dir": "training",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.55,
+    "p95": 0.01170193521862202,
+    "util": 2.1276245852040034,
+    "new": 0.05,
+    "target": 65,
+    "target_new": 65,
+    "util_new": 23.40387043724404
+   },
+   "memory": {
+    "cur": 629145600.0,
+    "p95": 316026880.0,
+    "util": 50.231119791666664,
+    "new": 629145600.0,
+    "target": 65,
+    "target_new": 65,
+    "util_new": 50.231119791666664
+   },
+   "save_cpu": 1.0,
+   "save_mem": 0.0
+  },
+  {
+   "service": "notebook-api",
+   "pods": 2,
+   "hpa": "notebook-api",
+   "values": {
+    "dir": "notebook-api",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.003422521150743421,
+    "util": 0.6845042301486842,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 6.845042301486842
+   },
+   "memory": {
+    "cur": 1073741824.0,
+    "p95": 858972160.0,
+    "util": 79.99801635742188,
+    "new": 1073741824.0,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 79.99801635742188
+   },
+   "save_cpu": 0.9,
+   "save_mem": 0.0
+  },
+  {
+   "service": "gateway-production",
+   "pods": 2,
+   "hpa": "gateway-production",
+   "values": {
+    "dir": "gateway",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.5,
+    "p95": 0.040694673250821496,
+    "util": 8.1389346501643,
+    "new": 0.07,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 58.13524750117356
+   },
+   "memory": {
+    "cur": 1048576000.0,
+    "p95": 1018643251.1999998,
+    "util": 97.14539062499998,
+    "new": 1048576000.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 97.14539062499998
+   },
+   "save_cpu": 0.86,
+   "save_mem": 0.0
+  },
+  {
+   "service": "exam-practice-lms-production",
+   "pods": 2,
+   "hpa": "exam-practice-lms-production",
+   "values": {
+    "dir": "exam-practice-lms",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.009891930590737182,
+    "util": 4.945965295368591,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 19.783861181474364
+   },
+   "memory": {
+    "cur": 1048576000.0,
+    "p95": 331034624.0,
+    "util": 31.569921875000002,
+    "new": 536870912,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 61.660003662109375
+   },
+   "save_cpu": 0.30000000000000004,
+   "save_mem": 1023410176.0
+  },
+  {
+   "service": "interaction-production",
+   "pods": 2,
+   "hpa": "interaction-production",
+   "values": {
+    "dir": "interaction",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.3,
+    "p95": 0.029573024386697313,
+    "util": 9.85767479556577,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 59.146048773394625
+   },
+   "memory": {
+    "cur": 734003200.0,
+    "p95": 322493440.0,
+    "util": 43.936244419642854,
+    "new": 536870912,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 60.06908416748047
+   },
+   "save_cpu": 0.5,
+   "save_mem": 394264576.0
+  },
+  {
+   "service": "exam-practice-lcms-production",
+   "pods": 2,
+   "hpa": "exam-practice-lcms-production",
+   "values": {
+    "dir": "exam-practice",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.3,
+    "p95": 0.007565548544587647,
+    "util": 2.521849514862549,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 15.131097089175293
+   },
+   "memory": {
+    "cur": 419430400.0,
+    "p95": 237264896.0,
+    "util": 56.568359375,
+    "new": 419430400.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 56.568359375
+   },
+   "save_cpu": 0.5,
+   "save_mem": 0.0
+  },
+  {
+   "service": "lmsweb-production",
+   "pods": 2,
+   "hpa": "lmsweb-production",
+   "values": {
+    "dir": "lmsweb",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.014490337157071655,
+    "util": 7.245168578535827,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 28.980674314143307
+   },
+   "memory": {
+    "cur": 314572800.0,
+    "p95": 67444736.0,
+    "util": 21.440104166666664,
+    "new": 134217728,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 50.250244140625
+   },
+   "save_cpu": 0.30000000000000004,
+   "save_mem": 360710144.0
+  },
+  {
+   "service": "master-production",
+   "pods": 2,
+   "hpa": "master-production",
+   "values": {
+    "dir": "master",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.25,
+    "p95": 0.006380398148070169,
+    "util": 2.5521592592280675,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 12.760796296140336
+   },
+   "memory": {
+    "cur": 1048576000.0,
+    "p95": 849235968.0,
+    "util": 80.989453125,
+    "new": 1048576000.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 80.989453125
+   },
+   "save_cpu": 0.4,
+   "save_mem": 0.0
+  },
+  {
+   "service": "hangfire-production",
+   "pods": 2,
+   "hpa": "hangfire-production",
+   "values": {
+    "dir": "hangfire",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.009244492576998954,
+    "util": 4.622246288499476,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 18.488985153997906
+   },
+   "memory": {
+    "cur": 419430400.0,
+    "p95": 259751936.0,
+    "util": 61.9296875,
+    "new": 419430400.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 61.9296875
+   },
+   "save_cpu": 0.30000000000000004,
+   "save_mem": 0.0
+  },
+  {
+   "service": "tracking-api-prod",
+   "pods": 3,
+   "hpa": "tracking-api-prod",
+   "values": {
+    "dir": "tracking-api",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.15,
+    "p95": 0.0017282109320289007,
+    "util": 1.1521406213526006,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 3.4564218640578006
+   },
+   "memory": {
+    "cur": 104857600.0,
+    "p95": 29575168.0,
+    "util": 28.205078125,
+    "new": 104857600.0,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 28.205078125
+   },
+   "save_cpu": 0.3,
+   "save_mem": 0.0
+  },
+  {
+   "service": "aggregation-worker-prod",
+   "pods": 3,
+   "hpa": null,
+   "values": {
+    "dir": "aggregation-worker",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.05,
+    "p95": 0.002413970114009018,
+    "util": 4.8279402280180355,
+    "new": 0.05,
+    "target": null,
+    "target_new": null,
+    "util_new": 4.8279402280180355
+   },
+   "memory": {
+    "cur": 314572800.0,
+    "p95": 30873600.0,
+    "util": 9.814453125,
+    "new": 134217728,
+    "target": null,
+    "target_new": null,
+    "util_new": 23.00262451171875
+   },
+   "save_cpu": 0.0,
+   "save_mem": 541065216.0
+  },
+  {
+   "service": "lmsweb-redirect-production",
+   "pods": 1,
+   "hpa": null,
+   "values": null,
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.0,
+    "util": 0.0,
+    "new": 0.05,
+    "target": null,
+    "target_new": null,
+    "util_new": 0.0
+   },
+   "memory": {
+    "cur": 314572800.0,
+    "p95": 47296512.0,
+    "util": 15.03515625,
+    "new": 134217728,
+    "target": null,
+    "target_new": null,
+    "util_new": 35.2386474609375
+   },
+   "save_cpu": 0.15000000000000002,
+   "save_mem": 180355072.0
+  },
+  {
+   "service": "notebook-worker",
+   "pods": 1,
+   "hpa": "notebook-worker",
+   "values": {
+    "dir": "notebook-worker",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "cpu",
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.0018816153718285461,
+    "util": 0.9408076859142731,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 3.7632307436570924
+   },
+   "memory": {
+    "cur": 536870912.0,
+    "p95": 241360896.0,
+    "util": 44.95697021484375,
+    "new": 402653184,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 59.942626953125
+   },
+   "save_cpu": 0.15000000000000002,
+   "save_mem": 134217728.0
+  },
+  {
+   "service": "storage-production",
+   "pods": 2,
+   "hpa": "storage-production",
+   "values": {
+    "dir": "storage",
+    "hpa_in_git": false
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.15,
+    "p95": 0.03445965390298674,
+    "util": 22.97310260199116,
+    "new": 0.06,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 57.4327565049779
+   },
+   "memory": {
+    "cur": 1572864000.0,
+    "p95": 870687948.8,
+    "util": 55.35684895833333,
+    "new": 1572864000.0,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 55.35684895833333
+   },
+   "save_cpu": 0.18,
+   "save_mem": 0.0
+  },
+  {
+   "service": "master-auth-production",
+   "pods": 1,
+   "hpa": "master-auth-production",
+   "values": {
+    "dir": "masterauth",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "memory"
+   ],
+   "cpu": {
+    "cur": 0.05,
+    "p95": 0.006241065176135672,
+    "util": 12.482130352271342,
+    "new": 0.05,
+    "target": 70,
+    "target_new": 70,
+    "util_new": 12.482130352271342
+   },
+   "memory": {
+    "cur": 734003200.0,
+    "p95": 252256256.0,
+    "util": 34.3671875,
+    "new": 402653184,
+    "target": 70,
+    "target_new": 80,
+    "util_new": 62.648518880208336
+   },
+   "save_cpu": 0.0,
+   "save_mem": 331350016.0
+  },
+  {
+   "service": "notebook-frontend",
+   "pods": 1,
+   "hpa": "notebook-frontend",
+   "values": {
+    "dir": "notebook-frontend",
+    "hpa_in_git": true
+   },
+   "changed": [
+    "cpu"
+   ],
+   "cpu": {
+    "cur": 0.2,
+    "p95": 0.00016245251409360668,
+    "util": 0.08122625704680334,
+    "new": 0.05,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 0.32490502818721334
+   },
+   "memory": {
+    "cur": 209715200.0,
+    "p95": 82842419.2,
+    "util": 39.50234375,
+    "new": 209715200.0,
+    "target": 80,
+    "target_new": 80,
+    "util_new": 39.50234375
+   },
+   "save_cpu": 0.15000000000000002,
+   "save_mem": 0.0
+  }
+ ]
+}

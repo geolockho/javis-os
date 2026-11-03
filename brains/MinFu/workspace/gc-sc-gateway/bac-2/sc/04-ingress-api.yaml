@@ -1,0 +1,29 @@
+# Ingress ỨNG DỤNG đang có. Chỉ thêm: khối tls, mTLS (auth-tls-*), whitelist. Rule/backend giữ nguyên.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: app
+  annotations:
+    # chỉ chấp nhận client cert do CA nội bộ ký (tức là gc). Secret edge-client-ca chỉ chứa ca.crt
+    nginx.ingress.kubernetes.io/auth-tls-secret: "app/edge-client-ca"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/auth-tls-verify-depth: "1"
+    # chỉ nhận từ dải IP của gc (bỏ dòng này trong đợt PoC nếu chưa chắc IP nguồn)
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.10.0.0/16"   # TODO
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts: ["api.example.com"]
+    secretName: api-example-com-internal-tls
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 8080

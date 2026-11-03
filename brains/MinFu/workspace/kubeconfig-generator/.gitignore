@@ -1,0 +1,24 @@
+# Secret: tuyệt đối không commit
+.env
+*.kubeconfig
+/kubeconfig*
+/admin-*.yaml
+secrets/
+*.token
+deploy/secret.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Editor
+.idea/
+.vscode/

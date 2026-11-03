@@ -1,0 +1,44 @@
+# Quyền thêm cho Kyverno để sinh RoleBinding "kubeconfig-generator-issuer" trong namespace dev.
+# Gộp vào ClusterRole của background controller qua label aggregate, không sửa chart Kyverno.
+#
+# Gắn CẢ HAI bộ label vì aggregationRule khác nhau theo bản Kyverno:
+# - Kyverno 1.11 (fsel-prod): chỉ chọn theo app.kubernetes.io/{component,instance,part-of}. Thiếu bộ này thì
+#   ClusterRole không được gộp, Kyverno không có `bind` và không sinh được RoleBinding.
+# - Kyverno mới (fsel-local 1.19): chọn theo rbac.kyverno.io/aggregate-to-* (vẫn nhận cả bộ app.kubernetes.io).
+# instance=kyverno là tên Helm release; cài release tên khác thì phải sửa theo.
+#
+# `bind` trên đúng ClusterRole kubeconfig-generator-issuer: K8s chặn tạo RoleBinding tới role mà người tạo
+# không tự có đủ quyền. Cho Kyverno `bind` đúng một role này thay vì cấp nguyên các quyền của nó.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:kubeconfig-generator:background
+  labels:
+    rbac.kyverno.io/aggregate-to-background-controller: "true"
+    app.kubernetes.io/component: background-controller
+    app.kubernetes.io/instance: kyverno
+    app.kubernetes.io/part-of: kyverno
+rules:
+- apiGroups: [rbac.authorization.k8s.io]
+  resources: [rolebindings]
+  verbs: [get, list, watch, create, update, patch, delete]
+- apiGroups: [rbac.authorization.k8s.io]
+  resources: [clusterroles]
+  verbs: [bind]
+  resourceNames: [kubeconfig-generator-issuer]
+---
+# Admission controller của Kyverno kiểm tra quyền của background controller lúc nhận policy generate,
+# và cần đọc được RoleBinding để so khớp. Chỉ đọc.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:kubeconfig-generator:admission
+  labels:
+    rbac.kyverno.io/aggregate-to-admission-controller: "true"
+    app.kubernetes.io/component: admission-controller
+    app.kubernetes.io/instance: kyverno
+    app.kubernetes.io/part-of: kyverno
+rules:
+- apiGroups: [rbac.authorization.k8s.io]
+  resources: [rolebindings]
+  verbs: [get, list, watch]
