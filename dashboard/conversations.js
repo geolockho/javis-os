@@ -63,6 +63,7 @@
   var _host = null, _timer = null, _tab = "inbox";
   var _items = [], _stats = {}, _dauVet = "";
   var _kenhLoc = "", _botLoc = "", _q = "";
+  var _privFor = 0;                     // id of the comment thread whose composer is set to "Message privately" (0.446.0)
   var _statusLoc = "", _typeLoc = "";   // bộ lọc (0.65.3), lưu ở trình duyệt qua JavisConvFilters
   var _contactLoc = "";     // 2026-10-25: "1" = only chats where the customer left a phone number or email
   // Chatbot v5 (2026-10-28, docs/dev/2026-10-chatbot-v5-spec.md): who is handling the chat (the quick filters), the ticked
@@ -144,6 +145,32 @@
   }
   function chipKenh(id) {
     return '<span class="ht-chip">' + logoKenh(id) + " " + esc(nhanKenh(id)) + "</span>";
+  }
+  // A Facebook Page comment thread (0.446.0): conversation id "cmt:<comment id>" on the Messenger channel. It gets its
+  // own badge (a square comment box, not the round Messenger bubble) so a public comment never reads as a private chat.
+  // Instagram through the same Page (0.447.0): "ig:<user>" is a direct message, "igc:<comment id>" a comment thread.
+  function chatKind(c) {
+    if (!c || c.channel !== "messenger") return "";
+    var x = String(c.external_chat_id || "");
+    return x.indexOf("cmt:") === 0 ? "fbc" : x.indexOf("igc:") === 0 ? "igc" : x.indexOf("ig:") === 0 ? "ig" : "";
+  }
+  function isComment(c) { var k = chatKind(c); return k === "fbc" || k === "igc"; }
+  function isInstagram(c) { var k = chatKind(c); return k === "ig" || k === "igc"; }
+  function commentLogo(size, c) {
+    return (window.Icons && Icons.kenh) ? Icons.kenh(isInstagram(c) ? "igcomment" : "fbcomment", { size: size || "13px" }) : "";
+  }
+  // The badge on the avatar: a comment box for a comment thread, the Instagram mark for an Instagram message.
+  function badgeOf(c, size) {
+    if (isComment(c)) return commentLogo(size, c);
+    if (isInstagram(c)) return (window.Icons && Icons.kenh) ? Icons.kenh("instagram", { size: size }) : "";
+    return logoKenh(c.channel, size);
+  }
+  function chipOf(c) {
+    var k = chatKind(c);
+    if (k === "fbc" || k === "igc") return '<span class="ht-chip">' + commentLogo("13px", c) + " " +
+      esc(window.t(k === "igc" ? "ht.ig_comment" : "ht.fb_comment")) + "</span>";
+    if (k === "ig") return '<span class="ht-chip">' + badgeOf(c, "13px") + " Instagram</span>";
+    return chipKenh(c.channel);
   }
   function nangLuc(id, khoa) { return !!((kenhCua(id).nang_luc || {})[khoa]); }
 
@@ -705,7 +732,7 @@
     var ch = String(ten || "?").trim().charAt(0).toUpperCase() || "?";
     var grp = c.chat_type === "group";
     return '<span class="ht-item-ava' + (grp ? " g" : "") + '" aria-hidden="true">' + (grp ? ic("users") : esc(ch)) +
-      '<span class="ib-kl">' + logoKenh(c.channel, "21px") + '</span>' +
+      '<span class="ib-kl">' + badgeOf(c, "21px") + '</span>' +
       (c.unread_count ? '<span class="ht-item-ava-dot"></span>' : "") + '</span>';
   }
 
@@ -1003,6 +1030,9 @@
     if (act === "tag") return menuToggleTag(id, parseInt(b.dataset.tag, 10), b);
     if (act === "tag_new") return menuNewTag(id);
     if (act === "copy") return menuCopy(id);
+    if (act === "profile") { closeRowMenu(false); return showProfile(id); }
+    if (act === "block") return menuBlock(id);
+    if (act === "delete") return menuDelete(id);
     runRowAction(id, act);
   }
 
@@ -1041,6 +1071,69 @@
       } else return;
     } catch (e) { return menuFail(id, e.message); }
     closeRowMenu(!!(_rm && _rm.kb));       // keyboard users land back on the row's "..."
+    _dauVet = "";
+    veDanhSach();
+    tai(true);
+  }
+
+  // ---- View profile, Block, Delete (0.447.0) ----
+  function convName(c) { return (c && (c.title || c.customer_name || c.external_chat_id)) || ""; }
+
+  async function showProfile(id) {
+    var c = rmItem(id) || (_conv && _conv.id === id ? _conv : null) || { id: id };
+    var box = el('<div class="ht-modal"><div class="ht-form ht-prof" role="dialog" aria-label="' + esc(window.t("ht.rm_profile")) + '">' +
+      '<div class="ht-prof-body">' + ic("loader") + ' ' + esc(window.t("ht.prof_loading")) + '</div>' +
+      '<div class="ht-form-acts"><button class="s-btn-ghost ht-close" type="button">' + esc(window.t("common.close")) + '</button></div>' +
+      '</div></div>');
+    document.body.appendChild(box);
+    var dong = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+    box.onmousedown = function (e) { if (e.target === box) dong(); };
+    box.querySelector(".ht-close").onclick = dong;
+    var body = box.querySelector(".ht-prof-body");
+    try {
+      var p = await api("/conversations/" + id + "/profile");
+      var name = p.name || convName(c);
+      body.innerHTML =
+        (p.picture ? '<img class="ht-prof-pic" alt="" src="' + esc(p.picture) + '">' :
+          '<span class="ht-prof-pic ht-prof-none">' + esc(String(name || "?").charAt(0).toUpperCase()) + '</span>') +
+        '<div class="ht-prof-name"><b>' + esc(name) + '</b>' + (p.username ? '<small>' + esc(p.username.charAt(0) === "@" ? p.username : "@" + p.username) + '</small>' : "") + '</div>' +
+        (p.phone ? '<div class="ht-prof-row">' + ic("phone") + ' ' + esc(p.phone) + '</div>' : "") +
+        (p.url ? '<a class="s-btn ht-prof-open" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + ic("external-link") + ' ' +
+          esc(window.t("ht.prof_open")) + '</a>' : "") +
+        (p.note ? '<div class="ht-prof-note">' + esc(p.note) + '</div>' : "");
+    } catch (e) {
+      body.innerHTML = '<div class="ht-prof-note">' + ic("triangle-alert") + ' ' + esc(e.message) + '</div>';
+    }
+  }
+
+  async function menuBlock(id) {
+    var c = rmItem(id);
+    if (!c) return closeRowMenu(false);
+    closeRowMenu(false);
+    if (!confirm(window.t(window.JavisConvFilters.chatKind(c) === "zalo_private" ? "ht.block_q_zalo" : "ht.block_q_fb", { ten: convName(c) }))) return;
+    try {
+      await api("/conversations/" + id + "/block", { method: "POST" });
+      c.metadata = Object.assign({}, c.metadata || {}, { blocked: true });
+      c.mode = "human";
+      alert(window.t("ht.blocked", { ten: convName(c) }));
+    } catch (e) { alert(window.t("ht.rm_err", { err: e.message })); }
+    _dauVet = "";
+    tai(true);
+  }
+
+  async function menuDelete(id) {
+    var c = rmItem(id);
+    if (!c) return closeRowMenu(false);
+    closeRowMenu(false);
+    var F = window.JavisConvFilters, k = F.chatKind(c), remote = F.platformActs(c).indexOf("delete_remote") >= 0;
+    var q = k === "fb_comment" ? "ht.del_q_fbc" : k === "ig_comment" ? "ht.del_q_igc" : remote ? "ht.del_q_zalo" :
+      (k === "messenger_dm" || k === "ig_dm") ? "ht.del_q_meta" : "ht.del_q_local";
+    if (!confirm(window.t(q, { ten: convName(c) }))) return;
+    try {
+      await api("/conversations/" + id + "/delete", { method: "POST" });
+    } catch (e) { return alert(window.t("ht.rm_err", { err: e.message })); }
+    _items = _items.filter(function (it) { return it.id !== id; });
+    if (_conv && _conv.id === id) dongThread();
     _dauVet = "";
     veDanhSach();
     tai(true);
@@ -1279,7 +1372,7 @@
         '<div class="ht-head-text"><span class="ib-hname"><strong>' + esc(ten) + '</strong>' +
           '<span class="ib-htags">' + tags + '<button type="button" class="ib-htag-add" aria-label="' + esc(window.t("ht.tag_title")) + '">' +
             ic("plus") + '<span>' + esc(window.t("ht.tag_btn")) + '</span></button></span></span>' +
-          '<small>' + chipKenh(c.channel) + (accLabel(c) ? ' · ' + esc(accLabel(c)) : "") +
+          '<small>' + chipOf(c) + (accLabel(c) ? ' · ' + esc(accLabel(c)) : "") +
           (c.chat_type === "group" ? ' · ' + esc(window.t("ht.nhom")) : "") +
           (soTin ? ' · ' + esc(window.t("sess.msgs", { count: soTin })) : "") + '</small></div>' +
         (threeModes ? '<span class="ib-hmode" title="' + esc(say) + '">' + bar + '</span>' + (V ? V.modeChipHtml(c, ic) : "") : "") +
@@ -1354,6 +1447,16 @@
       ta.oninput = grow;
       if (nhapDo) grow();
       box.querySelector(".ht-send").onclick = function () { gui(c); };
+      box.querySelectorAll(".ht-priv-o").forEach(function (b) {
+        b.onclick = function () {
+          var on = b.getAttribute("data-priv") === "1";
+          if ((_privFor === c.id) === on) return;
+          _privFor = on ? c.id : 0;
+          veThread();
+          var t2 = _host.querySelector(".ht-thread .ib-cin textarea");
+          if (t2) t2.focus();
+        };
+      });
       var ask = box.querySelector(".ib-ask");
       if (ask) ask.onclick = function () { aiReply(c, ta.value.trim(), "ask"); };
     }
@@ -1900,17 +2003,33 @@
     var ph = ten ? t(laBot ? "ib.cin_ph_as_ai" : "ib.cin_ph_as", { ten: ten }) :
       t(laBot ? "ib.cin_ph_ai" : cham ? "ib.cin_ph_touch" : "ht.gui_ph");
     var busy = _aiBusy === "redo" || _aiBusy === "send" ? _aiBusy : "";
+    var cmt = isComment(c), priv = cmt && _privFor === c.id;
+    if (priv) ph = t("ht.priv_ph");
     return '<div class="ht-compose' + (draft ? " has-draft" : "") + '">' + noteHtml() +
+      (cmt ? privToggleHtml(priv, c) : "") +
       '<div class="ib-cbox">' +
       (draft && V ? V.draftHtml(draft, busy || (_aiBusy ? "x" : ""), ic) : "") +
       '<div class="ib-cin">' +
         '<textarea rows="1" placeholder="' + esc(ph) + '" aria-label="' + esc(t("ib.cin_aria")) + '"></textarea>' +
-        (laBot ? '<button type="button" class="s-btn-ghost ib-ask"' + (_aiBusy ? " disabled" : "") + ' title="' + esc(t("ib.ai_reply_t")) +
+        (laBot && !priv ? '<button type="button" class="s-btn-ghost ib-ask"' + (_aiBusy ? " disabled" : "") + ' title="' + esc(t("ib.ai_reply_t")) +
           '" aria-label="' + esc(t("ib.ai_reply")) + '">' +
           ic(_aiBusy === "ask" ? "loader" : "sparkles") + '<span>' + esc(t(_aiBusy === "ask" ? "ib.ai_busy" : "ib.ai_reply")) + '</span></button>' : "") +
         '<button type="button" class="s-btn ht-send" aria-label="' + esc(t("ht.gui")) + '">' + ic("send") + '<span>' + esc(t("ht.gui")) + '</span></button>' +
       '</div></div>' +
     '</div>';
+  }
+
+  // "Reply publicly" / "Message privately" above the composer of a comment thread (0.446.0). Private goes to the
+  // commenter's Messenger inbox (Meta's Private Replies: once per comment, within 7 days).
+  function privToggleHtml(priv, c) {
+    var t = window.t;
+    var dm = isInstagram(c) ? ((window.Icons && Icons.kenh) ? Icons.kenh("instagram", { size: "15px" }) : "") : logoKenh("messenger", "15px");
+    return '<div class="ht-priv" role="radiogroup" aria-label="' + esc(t("ht.priv_aria")) + '">' +
+      '<button type="button" role="radio" class="ht-priv-o' + (priv ? "" : " on") + '" data-priv="0" aria-checked="' + !priv + '">' +
+        commentLogo("15px", c) + '<span>' + esc(t("ht.priv_public")) + '</span></button>' +
+      '<button type="button" role="radio" class="ht-priv-o' + (priv ? " on" : "") + '" data-priv="1" aria-checked="' + priv + '">' +
+        dm + '<span>' + esc(t("ht.priv_private")) + '</span></button>' +
+      infoBtn() + '</div>' + infoBody(esc(t("ht.priv_how")));
   }
 
   async function gui(c) {
@@ -1923,7 +2042,13 @@
     _dangGui = true;
     ta.disabled = true; if (nut) nut.disabled = true;
     try {
-      await api("/conversations/" + c.id + "/reply", { method: "POST", body: fd({ text: txt }) });
+      if (isComment(c) && _privFor === c.id) {
+        await api("/conversations/" + c.id + "/private-reply", { method: "POST", body: fd({ text: txt }) });
+        // One private message per comment: back to public replies, so the next Send does not hit Meta's limit.
+        _privFor = 0;
+      } else {
+        await api("/conversations/" + c.id + "/reply", { method: "POST", body: fd({ text: txt }) });
+      }
       ta.value = "";
     } catch (e) {
       alert(window.t("ht.loi_gui") + " " + e.message);
@@ -1964,6 +2089,11 @@
         ' ' + esc(t.message_type) + '</span>' : "";
     var loi = t.metadata && t.metadata.loi
       ? '<div class="ht-msg-loi">' + ic("triangle-alert") + ' ' + esc(t.metadata.loi) + '</div>' : "";
+    if (t.metadata && t.metadata.private_reply_to) {
+      var ig = isInstagram(_conv);
+      loai = '<span class="ht-loai ht-priv-tag">' + (ig ? badgeOf({ channel: "messenger", external_chat_id: "ig:" }, "13px") :
+        logoKenh("messenger", "13px")) + ' ' + esc(window.t(ig ? "ht.priv_sent_ig" : "ht.priv_sent")) + '</span>' + loai;
+    }
     // Who and when go under the bubble (0.397.0). A private chat's customer is named in the head already, so only a
     // group shows who wrote each message.
     if (lop === "khach" && _conv && _conv.chat_type !== "group") ai = "";

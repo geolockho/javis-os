@@ -6,6 +6,43 @@ Lịch sử phiên bản Javis OS. Bản mới nhất ở trên cùng. Xem ngay 
 
 Định dạng: mỗi phiên bản là một khối `## [x.y.z] - ngày`, bên dưới nhóm thay đổi theo `### Thêm mới / Sửa lỗi / Cải thiện / Bảo mật`.
 
+## [0.447.0] - 2026-11-03
+### Thêm mới
+- **Instagram vào chung kết nối Meta.** Khi đăng nhập Facebook ở thẻ Kết nối Meta, tick **Nối cả Instagram của Trang**: tin nhắn và bình luận của tài khoản Instagram gắn với Fanpage vào chung Hộp thư, cùng bot với Trang. Trả lời công khai dưới bình luận và nhắn riêng cho người bình luận đều dùng được.
+- **Menu "..." của mỗi hội thoại có thêm Xem trang cá nhân, Chặn và Xoá hội thoại.** Fanpage: xem tên và ảnh, chặn người nhắn. Instagram: xem trang cá nhân có link mở thẳng. Zalo cá nhân: xem thông tin (cả số điện thoại nếu người đó công khai), chặn, xoá luôn trên Zalo.
+- Xoá một hội thoại bình luận sẽ xoá bình luận đó trên Facebook hoặc Instagram. Tin nhắn Messenger và Instagram chỉ xoá được trong Javis, vì Meta không cho ứng dụng xoá tin nhắn.
+### Cải thiện
+- Hội thoại Instagram có icon Instagram, bình luận Instagram có ô vuông màu hồng, nhìn là phân biệt được với Facebook.
+
+## [0.446.0] - 2026-11-03
+### Thêm mới
+- **Nhắn riêng cho người bình luận.** Mở một bình luận Facebook trong Hộp thư, chọn **Nhắn riêng** phía trên ô trả lời: tin đi thẳng vào Messenger của người đó từ Fanpage, dù họ chưa từng nhắn cho Trang. Khách trả lời là thành cuộc chat Messenger bình thường trong Hộp thư. Meta cho nhắn riêng một lần mỗi bình luận, trong vòng 7 ngày.
+- **Gỡ kết nối Fanpage.** Mỗi Trang trong danh sách đã kết nối có nút **Gỡ kết nối**: Javis gỡ Trang khỏi bot, báo Meta ngừng gửi tin của Trang này, hội thoại cũ vẫn giữ.
+### Cải thiện
+- **Thẻ "Facebook Messenger" đổi thành "Kết nối Meta"**, kèm icon Facebook, Messenger, Instagram, Threads (hai cái cuối sắp có). WhatsApp vẫn nối riêng như cũ vì nó dùng số điện thoại và token riêng.
+- **Bình luận có icon riêng** (ô vuông màu cam có dòng chữ), không còn trông giống tin nhắn Messenger (bong bóng tròn xanh).
+
+## [0.445.1] - 2026-11-03
+### Sửa lỗi
+- **Windows: kết nối chạy bằng `npx` không còn hỏng khi đường dẫn có dấu cách** (ví dụ `C:\My Javis\...` hay tên người dùng có dấu cách). Javis chạy thẳng Node thay vì đi qua `cmd.exe`, vốn làm mất dấu ngoặc kép khi Node cài ở `Program Files`. Cảm ơn @ethan1nguyen1 (#898).
+- **Windows: link dạng `/C:/Users/...` trong câu trả lời bấm mở được**, không còn bị báo "không tìm thấy file".
+
+## [0.445.0] - 2026-11-03
+### Cải thiện
+- **Mở chat mới bằng Claude Code đỡ tốn hạn mức gói hơn nhiều.** Trước đây mỗi phiên chat mới phải nạp lại khoảng 40.000 token phần hướng dẫn của Javis, vì trong đó có giờ, mức dùng và mã phiên đổi liên tục. Giờ phần này giữ y hệt nhau giữa các phiên nên được đọc lại từ bộ nhớ đệm. Cảm ơn @sunstaysg-oss đã đo và báo (#975).
+- Giờ hiện tại, mã phiên chat, mức dùng hôm nay và lần chạy quy trình gần nhất chuyển sang dòng đầu mỗi tin nhắn gửi cho Claude Code, nên Javis vẫn biết đủ như cũ, và lượt nối tiếp luôn thấy giờ mới.
+
+## [0.444.4] - 2026-11-03
+### Sửa lỗi
+- **Javis trên VPS nhỏ không còn đứng hình vì vài việc chậm chạy chặn cả máy chủ.** Năm chỗ trước đây làm việc nặng ngay trên luồng chính, nên trong lúc đó mọi trang khác và cả bước kiểm tra sức khoẻ đều phải chờ (ba lần lỡ kiểm tra là Traefik báo "404 page not found"). Giờ cả năm chỗ chạy ở luồng phụ:
+  - trang Việc khi xem việc của từng bot,
+  - số liệu thống kê của trang Việc (trước đây dò file nhật ký từng ngày một từ năm 1970),
+  - thẻ GitHub ở trang Kết nối (gọi sang GitHub, có lúc chờ tới 20 giây),
+  - lần đầu tải giao diện sau mỗi lần khởi động lại (thu gọn file mất vài giây trên VPS 1 nhân),
+  - trang Công cụ khi đang cài bộ nghe offline.
+- **Bộ nghe tin thoại offline (Whisper) chừa lại một nhân cho Javis** và chạy ở mức ưu tiên thấp hơn, nên nghe một tin thoại dài không làm treo app trên máy 1-2 nhân.
+- Khi máy chủ chậm, các lần trình duyệt thử lại được rải ngẫu nhiên, không dồn vào cùng một lúc.
+
 ## [0.444.3] - 2026-11-03
 ### Sửa lỗi
 - **Câu báo "You've hit your 5-hour limit" giờ được nhận ra.** Trước đây chat hiện nguyên giờ UTC và không có thẻ tự chạy lại. Giờ thẻ báo giờ mở lại theo giờ của bạn, kèm ngày nếu sang hôm sau. Cảm ơn @hwangrin (#961).

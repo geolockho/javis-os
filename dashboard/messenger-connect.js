@@ -93,23 +93,60 @@
       + esc(bad ? tw("msc.sum_bad", { n: bad }) : tw("msc.sum_ok")) + "</div>";
   }
 
+  // The apps one Meta connection covers (0.446.0, owner 03/11/2026: the card is "Meta", not just Messenger, with the
+  // apps beside it). WhatsApp is not one of them (owner, same day): it has its own number, token and webhook, so it
+  // stays its own channel. Facebook, Messenger and Instagram (0.447.0, through the Page) work; Threads is drawn faded
+  // with a "coming" tooltip.
+  var META_APPS = [["facebook", true], ["messenger", true], ["instagram", true], ["threads", false]];
+  function appsHtml(size) {
+    var I = typeof window !== "undefined" && window.Icons;
+    if (!I || !I.kenh) return "";
+    return '<span class="msc-apps">' + META_APPS.map(function (x) {
+      var name = I.kenhNhan ? I.kenhNhan(x[0]) : x[0];
+      return '<span class="msc-app' + (x[1] ? "" : " soon") + '" title="' + esc(x[1] ? name : tw("msc.app_soon", { app: name })) + '">'
+        + I.kenh(x[0], { size: size || "18px" }) + "</span>";
+    }).join("") + "</span>";
+  }
+
+  function pageLogo(size) {
+    var I = typeof window !== "undefined" && window.Icons;
+    return I && I.kenh ? I.kenh("facebook", { size: size }) : ic("message-circle");
+  }
+
   function accountHtml(a) {
     var bots = (a.bots || []);
     var botTxt = bots.length
       ? bots.map(function (b) { return esc(b.name) + (b.enabled ? "" : " (" + esc(tw("msc.bot_off")) + ")"); }).join(", ")
       : esc(tw("msc.no_bot"));
     return '<div class="lv-card msc-acc" data-id="' + esc(a.id) + '">'
-      + '<div class="lv-top"><div class="lv-name"><span class="lv-ic">' + ic("message-circle") + "</span><b>"
+      + '<div class="lv-top"><div class="lv-name"><span class="lv-ic">' + pageLogo("20px") + "</span><b>"
       + esc(a.page_name || a.label || a.page_id) + "</b></div></div>"
       + '<div class="lv-meta">Page ID ' + esc(a.page_id) + (a.app_id ? " · App ID " + esc(a.app_id) : "")
       + " · " + esc(tw("msc.bots")) + ": " + botTxt + "</div>"
       + '<div class="si-field msc-field msc-cmt-row"><label>' + esc(tw("msc.cmt_label")) + infoBtn() + "</label>"
       + infoBody(esc(tw("msc.cmt_how")))
       + commentSelect(a.comments || "inbox", "data-act-mode") + "</div>"
+      + igRowHtml(a.instagram || {})
       + '<div class="lv-actions"><button class="s-btn-ghost" type="button" data-act="check">' + esc(tw("msc.check")) + "</button>"
       + '<button class="s-btn-ghost" type="button" data-act="repair">' + esc(tw("msc.repair")) + "</button>"
-      + '<button class="s-btn-ghost" type="button" data-act="renew">' + esc(tw("msc.renew")) + "</button></div>"
+      + '<button class="s-btn-ghost" type="button" data-act="renew">' + esc(tw("msc.renew")) + "</button>"
+      + '<button class="s-btn-ghost msc-del" type="button" data-act="remove">' + esc(tw("msc.remove")) + "</button></div>"
       + '<div class="msc-slot"></div></div>';
+  }
+
+  // The Page's Instagram (0.447.0): on / off when one is connected, else how to connect it.
+  function igRowHtml(ig) {
+    var I = typeof window !== "undefined" && window.Icons;
+    var logoIg = I && I.kenh ? I.kenh("instagram", { size: "18px" }) : "";
+    if (!ig.id) {
+      return '<div class="lv-meta msc-ig-none">' + logoIg + " " + esc(tw("msc.ig_none")) + infoBtn() + "</div>"
+        + infoBody(esc(tw("msc.ig_none_how")));
+    }
+    return '<div class="si-field msc-field msc-ig-row"><label>' + logoIg + " Instagram "
+      + (ig.username ? "@" + esc(ig.username) : esc(ig.id)) + "</label>"
+      + '<select class="js-input msc-ig" data-act-ig="1">'
+      + '<option value="1"' + (ig.on ? " selected" : "") + ">" + esc(tw("msc.ig_on")) + "</option>"
+      + '<option value="0"' + (ig.on ? "" : " selected") + ">" + esc(tw("msc.ig_off")) + "</option></select></div>";
   }
 
   // Literal keys so the i18n test can see every one of them.
@@ -163,6 +200,10 @@
       + '<div class="si-field msc-field"><label>' + esc(tw("msc.cmt_label")) + infoBtn() + "</label>"
       + infoBody(esc(tw("msc.cmt_how")))
       + commentSelect("inbox", "data-f-cmt") + "</div>"
+      // 0.447.0: Instagram rides on the same login, only when ticked (a Meta app without the Instagram use case
+      // refuses the whole login over its permissions).
+      + '<label class="msc-ig-tick"><input type="checkbox" data-f-ig="1"> ' + esc(tw("msc.ig_tick")) + "</label>"
+      + infoBtn() + infoBody(esc(tw("msc.ig_tick_how")))
       + '<div class="lv-form-act"><button class="s-btn" type="button" data-f="login"' + (https ? "" : " disabled") + ">"
       + esc(tw("msc.login")) + "</button>"
       + '<button class="s-btn-ghost" type="button" data-f="cancel">' + esc(tw("msc.cancel")) + "</button>"
@@ -192,7 +233,8 @@
       + pages.map(function (pg) {
         return '<label class="msc-pick-row"><input type="checkbox" data-page="' + esc(pg.id) + '" checked>'
           + (pg.picture ? '<img class="msc-pick-pic" alt="" src="' + esc(pg.picture) + '">' : '<span class="msc-pick-pic">' + logo("20px") + "</span>")
-          + '<span class="msc-pick-name"><b>' + esc(pg.name || pg.id) + '</b><span class="lv-meta">Page ID ' + esc(pg.id) + "</span></span></label>";
+          + '<span class="msc-pick-name"><b>' + esc(pg.name || pg.id) + '</b><span class="lv-meta">Page ID ' + esc(pg.id)
+          + (pg.ig_username ? " · Instagram @" + esc(pg.ig_username) : "") + "</span></span></label>";
       }).join("")
       + '<div class="lv-form-act"><button class="s-btn" type="button" data-f="finish">' + esc(tw("msc.finish")) + "</button>"
       + '<span class="lv-msg" role="status" data-f="finish-msg"></span></div></div>';
@@ -229,6 +271,7 @@
       + '<div class="cat-ico">' + logo("28px") + "</div>"
       + '<div class="cat-name">' + esc(tw("msc.head")) + ' <span class="prov-kind">' + esc(tw("msc.badge")) + "</span>"
       + infoBtn() + "</div>"
+      + appsHtml("18px")
       + '<div class="cat-desc j-clamp2">' + esc(tw("msc.card_desc")) + "</div>"
       + infoBody(esc(tw("msc.intro")))
       + '<button class="gcard-btn" type="button" data-msc-open="1">' + esc(tw("models.connect")) + "</button></div>";
@@ -240,6 +283,7 @@
     return '<div class="prov-card conn-card msc-group">'
       + '<div class="prov-head"><span class="conn-ico">' + logo("24px") + "</span>"
       + '<div class="prov-info"><div class="prov-name">' + esc(tw("msc.head")) + infoBtn() + "</div>"
+      + appsHtml("16px")
       + '<div class="prov-status j-clamp2">' + esc(tw("msc.card_desc")) + "</div>"
       + infoBody(esc(tw("msc.intro"))) + "</div></div>"
       // The Pages open in a popup (owner, 28/10/2026, same as the bot cards on the Chatbot page): a shop can connect many
@@ -284,6 +328,13 @@
       card.querySelectorAll("[data-act]").forEach(function (btn) {
         btn.onclick = function () { act(card, card.dataset.id, btn.dataset.act); };
       });
+      var igSel = card.querySelector("[data-act-ig]");
+      if (igSel) igSel.onchange = async function () {
+        var slot = card.querySelector(".msc-slot");
+        var r = await api("/messenger/instagram", { account_id: card.dataset.id, on: igSel.value === "1" });
+        slot.innerHTML = '<div class="lv-meta">' + esc(r.ok ? tw("msc.ig_saved") : (r.error || tw("msc.err_net"))) + "</div>";
+        if (r.ok) load();
+      };
       var sel = card.querySelector("[data-act-mode]");
       if (sel) sel.onchange = async function () {
         var slot = card.querySelector(".msc-slot");
@@ -318,7 +369,9 @@
     try { win = window.open("about:blank", "_blank"); } catch (e) { win = null; }
     btn.disabled = true;
     msg.textContent = tw("msc.working");
-    var r = await api("/messenger/oauth/start", { app_id: appId, app_secret: secret, brain: brain() });
+    var igBox = form.querySelector("[data-f-ig]");
+    var r = await api("/messenger/oauth/start", { app_id: appId, app_secret: secret, brain: brain(),
+      instagram: !!(igBox && igBox.checked) });
     if (!r.ok) {
       btn.disabled = false;
       msg.textContent = r.error || tw("msc.err_net");
@@ -408,7 +461,32 @@
     setTimeout(function () { try { form.querySelector('[data-f="app_id"]').focus(); } catch (e) {} }, 30);
   }
 
+  // Disconnect a Page (0.446.0): the shared channel-account delete takes it off any bot, tells Meta to stop sending
+  // its events, and removes it. Past conversations stay in the inbox.
+  async function removePage(card, id) {
+    var a = ((setup && setup.accounts) || []).filter(function (x) { return x.id === id; })[0] || {};
+    var name = a.page_name || a.label || a.page_id || "";
+    var bots = (a.bots || []).map(function (b) { return b.name; }).filter(Boolean);
+    if (!window.confirm(tw(bots.length ? "msc.remove_q_bot" : "msc.remove_q", { page: name, bot: bots.join(", ") }))) return;
+    var slot = card.querySelector(".msc-slot");
+    slot.innerHTML = '<div class="lv-meta">' + esc(tw("msc.working")) + "</div>";
+    var r;
+    try {
+      var f = new FormData();
+      f.append("go_khoi_bot", "1");
+      var res = await fetch("/channels/accounts/" + encodeURIComponent(id) + "/delete", { method: "POST", body: f });
+      r = await res.json();
+    } catch (e) { r = { ok: false, error: tw("msc.err_net") }; }
+    if (!r || !r.ok) { slot.innerHTML = '<div class="lv-note">' + esc((r && r.error) || tw("msc.err_net")) + "</div>"; return; }
+    if (r.bot_tat) window.alert(tw("msc.removed_bot_off", { bot: r.bot_tat }));
+    await load();
+    var M = typeof window !== "undefined" && window.JavisConnModal;
+    if (M) M.close();
+    if (((setup && setup.accounts) || []).length) openPages();
+  }
+
   async function act(card, id, what) {
+    if (what === "remove") { removePage(card, id); return; }
     if (what === "renew") {
       var a = ((setup && setup.accounts) || []).filter(function (x) { return x.id === id; })[0] || {};
       openForm(a);
@@ -430,7 +508,7 @@
 
   var api_ = { mount: mount, openForm: openForm, catCard: catCard, groupHtml: groupHtml, checklistHtml: checklistHtml,
     summaryHtml: summaryHtml, accountHtml: accountHtml, formHtml: formHtml, addToConnCount: addToConnCount,
-    openPages: openPages, pickHtml: pickHtml, resultsHtml: resultsHtml, commentSelect: commentSelect, guideUrl: guideUrl };
+    openPages: openPages, pickHtml: pickHtml, appsHtml: appsHtml, resultsHtml: resultsHtml, commentSelect: commentSelect, guideUrl: guideUrl, igRowHtml: igRowHtml };
   if (typeof window !== "undefined") window.JavisMessenger = api_;
   if (typeof module !== "undefined" && module.exports) module.exports = api_;
 })();
