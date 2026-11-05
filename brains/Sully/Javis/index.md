@@ -2,7 +2,7 @@
 
 > Tự sinh từ file - ĐỪNG sửa tay. Chỉ mục mọi năng lực của Javis trong brain này để bất kỳ AI/engine đọc 1 chỗ là hiểu Javis làm được gì. Song song `wiki/index.md` (tri thức).
 
-**Tổng quan:** 0 agents · 6 skills · 0 workflows (0 bật) · 0 loops (0 bật) · 28 plugins (27 chạy)
+**Tổng quan:** 0 agents · 6 skills · 0 workflows (0 bật) · 0 loops (0 bật) · 31 plugins (30 chạy)
 
 ## Agents
 _(chưa có)_
@@ -49,6 +49,9 @@ _(chưa có)_
 - **Nhật ký dùng tool** (`tool-audit`) - bundled/tắt · tools: javis_tool_stats · hooks: post_tool_call · Đếm số lần MỖI tool được engine gọi (qua hook post_tool_call) và cho xem thống kê tool hay dùng. Đây là ví dụ minh hoạ cơ chế HOOK của plugin. Mặc định TẮT - bật qua POST /plugins/toggle (slug=tool-audit) để thử.
 - **Tin thoại** (`voice-note`) - bundled/chạy · tools: javis_voice_note · Javis ghi một đoạn nói ngắn (tối đa 1000 ký tự) thành file mp3 trong attachments/voice/ rồi nhúng vào câu trả lời. Khung chat hiện trình phát, Telegram nhận file âm thanh. Dùng giọng Edge miễn phí theo ngôn ngữ của câu.
 - **Đọc video YouTube** (`youtube-read`) - bundled/chạy · tools: javis_youtube_read · Đọc lời thoại (phụ đề) của video YouTube từ link để tóm tắt. Tự đổi qua 6 kiểu trình phát rồi tới yt-dlp khi YouTube chặn máy chủ. Không cần đăng nhập, không cần API key.
+- **Javis Gate** (`javis-gate`) - pack/chạy · Cổng cho ChatGPT, Claude và AI khác làm việc cùng Javis qua connector MCP có OAuth. AI đó đọc hội thoại và nhắn vào khung chat như bạn gõ. Bấm Mở trang để lấy địa chỉ, chọn mức quyền, ngắt kết nối.
+- **Tính giá bán** (`pricing`) - pack/chạy · tools: javis_tinh_gia_ban · Tính giá bán từ giá vốn theo biên lợi nhuận mong muốn, cộng VAT rồi làm tròn lên số đẹp. Thuần stdlib, chỉ đọc, không chạm mạng.
 - **Zalo nhóm - tag người, ghi chú, nhắc hẹn, poll** (`zalo-group`) - pack/chạy · tools: zalo_group_members, zalo_send_mention, zalo_create_note, zalo_create_reminder, zalo_create_poll · Tag ĐÚNG người trong nhóm Zalo (nói tên, Javis tự tìm ID Zalo thật), liệt kê thành viên, tạo ghi chú nhóm, tạo nhắc hẹn và tạo poll, bằng chính tài khoản đã quét QR ở trang Kết nối. Bù đúng chỗ MCP chuẩn của zalo-agent-cli còn thiếu - nó chỉ có bảy tool và tool gửi tin chỉ nhận chữ.
 - **Gửi ảnh & file qua Zalo** (`zalo-image`) - pack/chạy · tools: zalo_send_image · Gửi ẢNH hoặc FILE qua Zalo kèm lời nhắn, bằng chính tài khoản đã quét QR ở trang Kết nối. Bù đúng chỗ MCP chuẩn của zalo-agent-cli còn thiếu - tool zalo_send_message của nó chỉ nhận chữ.
 - **Đọc ảnh trong nhóm Zalo** (`zalo-read-images`) - pack/chạy · tools: zalo_read_images · Lấy ẢNH người ta gửi trong nhóm Zalo về brain (attachments/zalo/) rồi cho bộ não xem được nội dung ảnh, bằng chính tài khoản đã quét QR ở trang Kết nối. Engine tự xem được ảnh (Claude Code, Codex) mở thẳng file; engine khác nhận lời tả của ChatGPT trên gói đang đăng nhập. Bù đúng chỗ MCP chuẩn của zalo-agent-cli còn thiếu - nó chỉ trả link ảnh và giữ tin 2 giờ.
+- **Đọc bình luận Facebook (Apify)** (`fb-comments-apify`) - user/chạy · tools: fb_comments · Đọc nội dung bình luận của bài CÔNG KHAI trên Trang Facebook khác qua Apify (actor facebook-comments-scraper). Chỉ đọc, dùng chung token của kết nối facebook-monitor. Tốn phí Apify theo số bình luận.

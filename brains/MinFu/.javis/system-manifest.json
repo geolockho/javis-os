@@ -55,8 +55,92 @@
     "skills/query-wiki": {
       "hash": "e02eb3ba911b3bd7f1ef79447e5b37d8f7368f3c4793504af0851272f6325d4d",
       "status": "managed"
+    },
+    "skills/security-audit": {
+      "hash": "708970b763f6293f7c797cb7a1b7a4e392dfde8fb0f90ba790120ad7bcd64859",
+      "status": "managed"
+    },
+    "skills/security-audit/AI-AND-LLM.md": {
+      "hash": "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
+      "status": "managed"
+    },
+    "skills/security-audit/ATTACK-CLASSES.md": {
+      "hash": "a7ee3ba35d6bf076d0312bbb434f23262947bc5ecc270fc747ebbe3954f28a11",
+      "status": "managed"
+    },
+    "skills/security-audit/CLIENT-SIDE.md": {
+      "hash": "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
+      "status": "managed"
+    },
+    "skills/security-audit/CLOUD-AND-DEPLOYMENT.md": {
+      "hash": "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
+      "status": "managed"
+    },
+    "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md": {
+      "hash": "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
+      "status": "managed"
+    },
+    "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md": {
+      "hash": "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
+      "status": "managed"
+    },
+    "skills/security-audit/HUNTING.md": {
+      "hash": "bb699b77c80b733c1dd34cd65bc75b4e3f9d158f668e4636757f00c35810526e",
+      "status": "managed"
+    },
+    "skills/security-audit/LICENSE.txt": {
+      "hash": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+      "status": "managed"
+    },
+    "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md": {
+      "hash": "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
+      "status": "managed"
+    },
+    "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md": {
+      "hash": "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
+      "status": "managed"
+    },
+    "skills/security-audit/RECONNAISSANCE.md": {
+      "hash": "5c5f5d02c1f051a4c90ab35c6ce78ab91580bfce275913e56d12801c9a6e3fbe",
+      "status": "managed"
+    },
+    "skills/security-audit/report-schema.json": {
+      "hash": "6575c9de4a62255699ea052ebf9a49ebfb373a32891bcd89af6f55cc84b35519",
+      "status": "managed"
+    },
+    "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md": {
+      "hash": "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
+      "status": "managed"
+    },
+    "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md": {
+      "hash": "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
+      "status": "managed"
+    },
+    "skills/security-audit/validate-coverage-ledger.cjs": {
+      "hash": "2eb280bd2e33c002916f86db9b29f9edfedb6454e5db973c766290465b868ac8",
+      "status": "managed"
+    },
+    "skills/security-audit/validate-coverage-ledger.test.cjs": {
+      "hash": "cfb9df26b03469a4279a70e7664a2a5434dd6f8c2c204e91f9b0aeb9dd71e648",
+      "status": "managed"
+    },
+    "skills/security-audit/validate-findings.cjs": {
+      "hash": "e85f232e36bfac0f866f244da50376692d6b45c690beadcb00608b0e6c8b5283",
+      "status": "managed"
+    },
+    "skills/security-audit/validate-findings.test.cjs": {
+      "hash": "b92001117a92c4161d43777a0ba2fa182a8a4d97f2304cc8c0cee5331497b73b",
+      "status": "managed"
+    },
+    "skills/security-audit/VALIDATION-AND-REPORTING.md": {
+      "hash": "b963a4f25986c5dc2b0c66068f4f0f537749e06b2a5c22788f987c0025511091",
+      "status": "managed"
+    },
+    "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md": {
+      "hash": "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
+      "status": "managed"
     }
   },
-  "app_version": "0.413.0",
-  "synced_at": "2026-11-03T11:03:21+07:00"
+  "app_version": "0.481.1",
+  "synced_at": "2026-11-05T15:02:10+07:00"
 }
