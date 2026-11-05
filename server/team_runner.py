@@ -76,10 +76,22 @@ PEER_HINT = ('Góp ý cho một tin của đồng đội (tuỳ chọn, tối đ
 ASK_PEER_OP = "ask_peer"
 ASK_PEER_PER_TURN = 2
 LEADER_ROLES = ("leader_reply", "plan", "synthesize")
+# 0.452.0 (owner, 04/11/2026: "để tạo thành 1 loop hoàn chỉnh mà hiệu quả"): a member answering the owner's message opens
+# the job the owner asked for, instead of only proposing it. The job is coordinated by the leader like any job (plan,
+# assign, help, synthesize, acceptance), so members never hand work to each other directly. One job per owner message
+# (the source key is the message), at most `auto_jobs` a day per team; 0 turns it off.
+AUTO_JOB_HINT = ("Nếu chủ nhóm đang GIAO một việc cần làm thật (viết, làm, sửa, tra cứu, lập kế hoạch...) chứ không chỉ hỏi "
+                 "hay trò chuyện, hãy mở việc ngay thay vì chỉ hứa làm: "
+                 '<!-- JAVIS_TEAM: {"op": "open_job", "title": "<tên việc ngắn>", "brief": "<yêu cầu đủ ý của chủ, kèm '
+                 'thế nào là xong>"} -->. Trưởng nhóm sẽ lập kế hoạch, giao người, rồi tổng hợp kết quả về đây. Mỗi tin '
+                 "của chủ chỉ mở một việc. Câu hỏi hay trò chuyện thì chỉ trả lời, không mở việc.")
 REPLY_ROLES = ("leader_reply", "member_reply")
 # Bước của việc nhóm chạy CÓ công cụ (0.194.0, chủ 17/10/2026: "team phải đầy đủ các quyền thì mới làm việc được"): Làm
 # và Hỗ trợ. Lượt trò chuyện, lập kế hoạch và tổng hợp vẫn chỉ chữ cho nhanh và rẻ.
 TOOL_ROLES = ("work", "help")
+# 0.449.0: the block the /skill command puts before the owner's words (dashboard/chat-slash.js buildSkillInvocation).
+SKILL_BLOCK_RE = re.compile(r"\[SKILL:\s*([A-Za-z0-9_-]+)")
+SKILLS_PER_TURN = 3
 ROLE_LABEL = {
     "leader_reply": "Trưởng nhóm trả lời trò chuyện",
     "member_reply": "Thành viên trả lời trò chuyện",
@@ -436,8 +448,15 @@ class TeamRunner:
                  ceiling: Any = None, projector: Any = None, judge: Any = None,
                  learning: Any = None, contrib_reader: Any = None, docs_block: Any = None, approvals: Any = None,
                  acceptance: Any = None, check_command: Optional[Callable] = None,
-                 brain_root: Optional[Callable] = None, work_dir: Optional[Callable] = None):
+                 brain_root: Optional[Callable] = None, work_dir: Optional[Callable] = None,
+                 job_done: Optional[Callable] = None, skill_block: Optional[Callable] = None):
         self.teams = teams
+        # 0.449.0: `job_done(team, task)` runs once a job is marked done (GitHub repos of the team chat get pushed there).
+        # Called on the loop, never raises into the runner. None: nothing happens after a job.
+        self.job_done = job_done
+        # 0.449.0: `skill_block(team, slugs) -> str`, the text of the skills the owner named with /skill in the job or
+        # message. A text-only turn cannot load a skill itself, so the host puts it in the prompt. None: no skills block.
+        self.skill_block = skill_block
         # 0.207.0: owner approval requests (team_approval.ApprovalStore), in the team store's own file by default.
         if approvals is None and getattr(teams, "path", None) is not None:
             approvals = team_approval.ApprovalStore(teams.path, clock=clock)
@@ -570,9 +589,24 @@ class TeamRunner:
             raise TeamError("không có nhóm này")
         return team
 
+    _NAME_TTL_S = 30.0
+
     def _name(self, team: dict, agent_key: str) -> str:
+        """A member's display name. Performance (2026-11-05): `agent_info` builds the agent's whole system prompt (its
+        file, memory, pinned files, overlays) and the name is all this needs, yet it runs for every team on the team
+        list and for every reaction on a message page. A rename shows within the TTL."""
+        k = (team.get("brain_id"), agent_key)
+        now = time.monotonic()
+        cache = self.__dict__.setdefault("_name_cache", {})
+        hit = cache.get(k)
+        if hit and now - hit[0] < self._NAME_TTL_S:
+            return hit[1]
         info = self.agent_info(team["brain_id"], agent_key) or {}
-        return str(info.get("name") or info.get("slug") or agent_key)
+        name = str(info.get("name") or info.get("slug") or agent_key)
+        if len(cache) > 512:
+            cache.clear()
+        cache[k] = (now, name)
+        return name
 
     def _resolve(self, team: dict, ref: Any) -> Optional[str]:
         """Mã agent từ `agent_key`, slug lúc vào nhóm hay slug hiện tại; chỉ thành viên đang hoạt động."""
@@ -626,6 +660,39 @@ class TeamRunner:
 
     def _state(self, team_id: str) -> None:
         self._publish({"type": "team_state", "team_id": team_id})
+
+    def _job_done(self, team: dict, task_id: str) -> None:
+        """Tell the host a job just closed as done (0.449.0). The host's work (pushing the team's GitHub repos) runs on
+        the loop, after the caller's lock is released; a failure there never reopens or breaks the job."""
+        if self.job_done is None:
+            return
+        task = self.tasks.get_task(task_id) or {"id": task_id}
+
+        def go(t=dict(team), k=dict(task)):
+            try:
+                self.job_done(t, k)
+            except Exception as ex:  # noqa: BLE001 - after-job work is best effort
+                log.warning("job_done hook: %s: %s", type(ex).__name__, ex)
+        self._on_loop(go)
+
+    def _skills(self, team: dict, *texts: str) -> str:
+        """The skills named by `[SKILL: slug` blocks (the /skill command of the team composer) in the turn's own text and
+        its job, as one prompt block from the host. "" when none, or when the host gives no `skill_block`."""
+        if self.skill_block is None:
+            return ""
+        slugs: list = []
+        for t in texts:
+            for m in SKILL_BLOCK_RE.finditer(str(t or "")):
+                slug = m.group(1).lower()
+                if slug not in slugs:
+                    slugs.append(slug)
+        if not slugs:
+            return ""
+        try:
+            return str(self.skill_block(team, slugs[:SKILLS_PER_TURN]) or "")
+        except Exception as ex:  # noqa: BLE001 - a broken skill file must not cost the turn
+            log.warning("skill block: %s: %s", type(ex).__name__, ex)
+            return ""
 
     def _lock_for(self, agent_key: str) -> asyncio.Lock:
         loop = asyncio.get_running_loop()
@@ -957,7 +1024,10 @@ class TeamRunner:
         role = "leader_reply" if key == team["leader_key"] else "member_reply"
         body = (f"Chủ nhóm vừa nhắn (tin #{mid}):\n{text}\n\n"
                 "Trả lời ngắn gọn (1 đến 3 câu), đúng vai của bạn trong nhóm.")
-        if role == "leader_reply":
+        if await self._io(self._auto_jobs_left, team) > 0:
+            # 0.452.0: whoever answers the owner opens the job itself; the leader still plans and assigns it.
+            body += "\n" + AUTO_JOB_HINT
+        elif role == "leader_reply":
             body += ("\nNếu trao đổi này nên thành một việc nhóm, bạn có thể ĐỀ XUẤT (chủ nhóm bấm mới thành việc): "
                      '<!-- JAVIS_TEAM: {"op": "propose_job", "title": "...", "brief": "..."} -->')
 
@@ -1744,6 +1814,57 @@ class TeamRunner:
     def _system(self, team: dict, text: str, kind: str) -> None:
         self._post(team, text, author_kind="system", meta={"kind": kind})
 
+    # ───────────── 0.452.0: jobs opened from the chat ─────────────
+
+    def _leader_with_authority(self, team_id: str, agent_key: str, role: str) -> bool:
+        """The leader under Full authority opens jobs through its admin ops (no daily cap of this path)."""
+        if role != "leader_reply":
+            return False
+        auth = self.teams.active_authority(team_id)
+        return bool(auth and auth.get("leader_key") == agent_key)
+
+    def _day_start(self) -> float:
+        lt = time.localtime(self.clock())
+        return time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, lt.tm_wday, lt.tm_yday, lt.tm_isdst))
+
+    def _auto_jobs_left(self, team: dict) -> int:
+        """Jobs the chat may still open today (cap `auto_jobs` minus the ones opened from the chat since midnight)."""
+        cap = int((team.get("caps") or {}).get("auto_jobs") or 0)
+        if cap <= 0:
+            return 0
+        since = self._day_start()
+        used = sum(1 for e in self.teams.events(team["team_id"], 500)
+                   if e["kind"] == "job_opened" and str(e["by"]).startswith("chat:") and e["created_at"] >= since)
+        return max(0, cap - used)
+
+    def _chat_open_job(self, team_id: str, agent_key: str, op: dict, notes: list, reply_to) -> None:
+        """A member answering the owner opens the job asked for (0.452.0). Caller holds `accept_lock`. The job is keyed on
+        the owner's message, so the leader and a member answering the same message open it once."""
+        team = self._team(team_id)
+        title = re.sub(r"\s+", " ", str(op.get("title") or "")).strip()[:120]
+        if not title:
+            notes.append("Mở việc cần tiêu đề, đã bỏ")
+            return
+        if not reply_to:
+            notes.append("Chỉ mở việc khi trả lời tin của chủ nhóm, đã bỏ")
+            return
+        source = f"chat:{team['session_id']}:{int(reply_to)}"
+        if self._auto_jobs_left(team) <= 0:
+            notes.append("Hôm nay nhóm đã tự mở đủ số việc cho phép (Giới hạn của team), chủ nhóm giao việc để chạy tiếp")
+            return
+        tid, created = self.tasks.enqueue_team(
+            team["brain_id"], team_id, title, str(op.get("brief") or title)[:4000], source_ref=source,
+            assignee_key="", coordinator_key=team["leader_key"] or "", chat_id=f"team:{team_id}",
+            created_by=f"agent:chat:{agent_key}")
+        self._ensure_quality_contract(tid)
+        if created:
+            self.teams.log_event(team_id, "job_opened", f"chat:{agent_key}", None, {"task_id": tid, "title": title})
+            self._post(team, localefmt.chu('{ten} đã mở việc "{viec}". Trưởng nhóm sẽ lập kế hoạch và giao người.',
+                                           '{ten} opened the job "{viec}". The leader will plan it and assign people.',
+                                           ten=self._name(team, agent_key), viec=title),
+                       author_kind="system", task_id=tid, meta={"kind": "job_opened", "from_chat": True})
+            self._state(team_id)
+
     def _apply_admin(self, team_id: str, leader_key: str, op: dict, notes: list, source: str,
                      authority_pin: Any = _UNPINNED) -> None:
         """Một lệnh quản trị của trưởng nhóm Toàn quyền (spec 13, 15.2). Người gọi giữ `accept_lock`. Lỗi thì ghi chú
@@ -2484,6 +2605,7 @@ class TeamRunner:
                "system": (str(info.get("system") or "").rstrip() + "\n\n" + note + "\n\n" +
                           "\n".join(INTERNAL_GROUP_NOTE)).lstrip(),
                "prompt": (self._context(team, agent_key, role, task, step, authority_pin=pin)
+                          + self._skills(team, body, (task or {}).get("title") or "", (task or {}).get("intent") or "")
                           + self._docs(team, tool_turn) + "\n\n" + body),
                "thread": f"teammate:{team_id}:{agent_key}", "task_id": task["id"] if task else None,
                "step_id": step["step_id"] if step else None, "turn_id": turn_id,
@@ -2789,6 +2911,10 @@ class TeamRunner:
             # Quyền ghim lúc giữ chỗ lượt (GOAL T1 mục 9). Đọc trong khoá, cùng khoá với cấp và thu hồi.
             pin = (self.teams.turn(turn_id) or {}).get("authority_id") if admin_ops else None
             for i, op in enumerate(admin_ops):
+                if (applied and op["op"] == "open_job" and role in REPLY_ROLES
+                        and not self._leader_with_authority(team_id, agent_key, role)):
+                    self._chat_open_job(team_id, agent_key, op, notes, reply_to)
+                    continue
                 if not applied or role not in LEADER_ROLES:
                     notes.append(f"Lệnh '{op['op']}' không dùng được ở lượt này, đã bỏ")
                     continue
@@ -3081,6 +3207,7 @@ class TeamRunner:
                 return self._accept_product(team, cur, msg_id, int(rev), acc)
         if self.tasks.team_finish(task_id, text, expected_rev=rev) is not None:
             self._judge_job_changed(task_id, team["team_id"])
+            self._job_done(team, task_id)
             self.sessions.update_team_message_meta(team["session_id"], msg_id, {"job_result": True})
             self._publish({"type": "team_message", "team_id": team["team_id"],
                            "message": self.sessions.team_message(team["session_id"], msg_id)})
@@ -3400,6 +3527,7 @@ class TeamRunner:
                     return result
                 if self.tasks.team_finish_reviewed(task_id, body['result_content'], expected_rev=body['revision'], decision_key=key) is None:
                     return {'ok': False, 'error': 'not_waiting'}
+                self._job_done(team, task_id)
             if objective:
                 self.acceptance.set_state(task_id, status='passed')
             else:
@@ -3474,6 +3602,7 @@ class TeamRunner:
                 m = self.sessions.team_message(team["session_id"], int(acc["result_msg_id"])) if acc.get("result_msg_id") else None
                 if self.tasks.team_finish_reviewed(task_id, (m or {}).get("content", ""), expected_rev=int(acc["revision"])) is None:
                     return {"ok": False, "error": "not_waiting"}
+                self._job_done(team, task_id)
                 self.acceptance.set_state(task_id, status="accepted", confirmed_by=by, confirmed_at=self.clock(),
                                           confirmed_hashes=now_h)
                 if acc.get("result_msg_id"):

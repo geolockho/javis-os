@@ -59,12 +59,12 @@
   var CAP_KEY = { task_turns: "teams.cap.task_turns", task_steps: "teams.cap.task_steps", daily_turns: "teams.cap.daily_turns",
     mentions: "teams.cap.mentions", help_depth: "teams.cap.help_depth", busy_wait_s: "teams.cap.busy_wait_s",
     judge_daily: "teams.cap.judge_daily", volunteer_k: "teams.cap.volunteer_k", judge_off_batch: "teams.cap.judge_off_batch",
-    reply_parallel: "teams.cap.reply_parallel" };
+    reply_parallel: "teams.cap.reply_parallel", auto_jobs: "teams.cap.auto_jobs" };
   var TAB_KEY = { info: "teams.tab_info", jobs: "teams.tab_jobs", team: "teams.tab_team" };
   var LATE = ["late_cancelled", "late", "old_revision", "member_left", "leader_changed", "lease_lost"];
   // Trần chủ nhóm chỉnh được (team_store.OWNER_CAPS). Bốn trần đầu có "Không giới hạn" (lưu null, GOAL T1 mục 9).
   var CAP_FIELDS = ["task_turns", "task_steps", "help_depth", "daily_turns", "mentions", "busy_wait_s", "judge_daily",
-    "volunteer_k"];
+    "volunteer_k", "auto_jobs"];
   var OWNER_UNL = ["task_turns", "task_steps", "help_depth", "daily_turns", "judge_daily"];
   // Ô chọn chế độ (T3 phần J): phán xử khi Cộng hưởng của trợ lý tắt, 1 = lọc code + lô, 0 = chỉ lọc code. Chỉ chủ chỉnh.
   // 0.260.0: reply_parallel, 1 = mọi người được @ trả lời cùng lúc, 0 = lần lượt theo thứ tự @.
@@ -236,14 +236,15 @@
     var text = String(m.content == null ? "" : m.content);
     if (mine) {
       var Q = quoteApi();
-      var t = Q ? Q.tach(text) : { quote: "", rest: text };
+      var sk = skillSplit(text);
+      var t = Q ? Q.tach(sk.rest) : { quote: "", rest: sk.rest };
       // 0.191.0: files sent with the message show as chips; the paperclip names line stored for the team turns is not repeated.
       var files = ((m.meta || {}).files || []).filter(function (f) { return f && f.path; });
       var rest = files.length ? t.rest.replace(/(?:\n\n)?\uD83D\uDCCE [^\n]*$/, "") : t.rest;
       // A long message collapses to ten lines with "Show more", like the main chat (chat-acts.js).
       var A = actsApi();
       var long = !!(A && A.isLongText && A.isLongText(rest));
-      return (t.quote ? quoteHtml(t.quote) : "") + (rest ? '<div class="tm-text utext' + (long && !open ? " clamped" : "") + '">' +
+      return skillChipHtml(sk.slug) + (t.quote ? quoteHtml(t.quote) : "") + (rest ? '<div class="tm-text utext' + (long && !open ? " clamped" : "") + '">' +
         esc(rest).replace(/\n/g, "<br>") + "</div>" + (long ? A.clampButtonHtml(!!open) : "") : "") +
         (files.length ? '<div class="tm-files">' + files.map(function (f) { return fileChipHtml(f, m.ts); }).join("") + "</div>" : "");
     }
@@ -279,9 +280,37 @@
   }
 
   // One-line plain preview of a message for the reply bar and the quote: markdown marks and an earlier quote dropped.
+  // 0.449.0: /skill in the team composer. The message carries the main chat's block (chat-slash.js buildSkillInvocation):
+  // "[SKILL: slug\n...]\n\n" before the owner's words. The server reads the skill into every member turn of that message
+  // or job (team_runner._skills); the chat shows the owner's own words and a small "/slug" chip.
+  var SKILL_HEAD = /^\[SKILL: ([A-Za-z0-9_-]+)\n[^\]]*\]\n\n/;
+  function skillSplit(text) {
+    var s = String(text == null ? "" : text), m = s.match(SKILL_HEAD);
+    return m ? { slug: m[1], rest: s.slice(m[0].length) } : { slug: "", rest: s };
+  }
+  // The skill a typed message calls: "/slug words" at the start, or a known "/slug" inside the sentence (the last one,
+  // like the main chat). `known` is the brain's skill slugs. Returns {cmd, rest, mid} or null. Inside a sentence the name
+  // stays in the words ("make /viet-email the main skill" still reads right); at the start it is an address and goes.
+  function skillCall(typed, known) {
+    var list = (known || []).map(function (x) { return String(x || "").toLowerCase(); });
+    var t = String(typed || "");
+    var head = t.match(/^\/([a-zA-Z0-9_-]+)(?:\s+([\s\S]*))?$/);
+    if (head && list.indexOf(head[1].toLowerCase()) >= 0) return { cmd: head[1].toLowerCase(), rest: (head[2] || "").trim(), mid: false };
+    var re = /(^|\s)\/([a-zA-Z0-9_-]+)(?=\s|$)/g, m, hit = null;
+    while ((m = re.exec(t)) !== null) { if (list.indexOf(m[2].toLowerCase()) >= 0) hit = m; }
+    if (!hit) return null;
+    var start = hit.index + hit[1].length;
+    var rest = (t.slice(0, start) + hit[2] + t.slice(start + 1 + hit[2].length)).trim().replace(/\s{2,}/g, " ");
+    return { cmd: hit[2].toLowerCase(), rest: rest, mid: true };
+  }
+  function skillChipHtml(slug) {
+    return slug ? '<span class="tm-skill-chip" title="' + esc(tw("teams.skill_used", { name: slug })) + '">' + ic("sparkles") +
+      "<span>/" + esc(slug) + "</span></span>" : "";
+  }
+
   function plainPreview(text, n) {
     var Q = quoteApi();
-    var s = String(text == null ? "" : text);
+    var s = skillSplit(text).rest;
     if (Q) s = Q.tach(s).rest;
     // Hidden blocks (JAVIS_CARD, JAVIS_ASK... are HTML comments) never show in a preview or a quote.
     s = s.replace(/<!--[\s\S]*?-->/g, " ").replace(/<!--[\s\S]*$/, " ");
@@ -457,7 +486,18 @@
         seen[k].n++;
       });
     });
-    return out.sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); });
+    return tagOrder(out);
+  }
+  // 0.454.0: the owner's own tag order (reorder-dialog.js, saved per page), else by name.
+  function tagOrder(list) {
+    var R = typeof window !== "undefined" && window.JavisReorder;
+    return R ? R.sortTags(list, "tags_teams", function (g) { return g.key; }, function (g) { return g.ten; })
+      : list.sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); });
+  }
+  function reorderTags(tags) {
+    var R = window.JavisReorder;
+    R.open({ title: tw("reorder.title_tags"), items: tags.map(function (g) { return { id: g.key, label: g.ten, icon: "tag" }; }),
+      save: function (keys) { return R.saveTags("tags_teams", keys); } });
   }
 
   function hasTag(t, key) {
@@ -497,6 +537,10 @@
     tags.forEach(function (g) {
       rows.push({ label: g.ten, icon: "tag", right: String(g.n), on: key === g.key, run: function () { pick(g.key); } });
     });
+    if (tags.length > 1 && typeof window !== "undefined" && window.JavisReorder) {
+      rows.push({ sep: true });
+      rows.push({ label: tw("reorder.menu_tags"), icon: "arrow-up-down", run: function () { reorderTags(tags); } });
+    }
     return rows;
   }
 
@@ -507,7 +551,7 @@
     var seen = {};
     allTags(teams).forEach(function (g) { seen[g.key] = 1; out.push({ ten: g.ten, key: g.key, on: !!mine[g.key] }); });
     Object.keys(mine).forEach(function (k) { if (!seen[k]) out.push({ ten: mine[k], key: k, on: true }); });
-    return out.sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); });
+    return tagOrder(out);
   }
 
   function tagPicker() {
@@ -1875,7 +1919,7 @@
       openMember: null, advOpen: false, turns: [], sideOpener: null, rowMenu: null, focusRowMenu: false, swallowClick: false,
       picked: [], retrying: {}, pickSt: null, pickOpener: null, pickHost: null, roster: [],
       renaming: "", renamingHead: false, replyTo: null, plusOpen: false, dict: null, dictBase: "", dictState: "idle",
-      atts: [], folder: null, info: null, typing: [], pinned: [], pinsOpen: false, tagFilter: readTagFilter(),
+      atts: [], folder: null, repos: [], ghIcon: null, skills: null, skillsBrain: "", info: null, typing: [], pinned: [], pinsOpen: false, tagFilter: readTagFilter(),
       autoOpened: false, unclamped: {}, outbox: [] };
   }
 
@@ -2303,6 +2347,7 @@
     return '<div class="tm-plus-menu" role="menu" aria-label="' + esc(tw("teams.plus")) + '">' +
       item('role="menuitem" data-plus-attach="1"', "paperclip", tw("teams.attach")) +
       item('role="menuitem" data-plus-folder="1"', "folder", tw("cp.pin_folder")) +
+      item('role="menuitem" data-plus-github="1"', "git-branch", tw("gh.menu")) +
       item('role="menuitemcheckbox" aria-checked="' + (S.asJob ? "true" : "false") + '" class="tm-asjob" title="' +
         esc(tw("teams.as_job_title")) + '"', "list-todo", tw("teams.as_job"), S.asJob) +
       item('role="menuitem" data-insert-at="1"', "at-sign", tw("teams.mention_insert")) +
@@ -2429,7 +2474,8 @@
     var text = String(m.content == null ? "" : m.content);
     if (m.author_kind === "owner") {
       var Q = quoteApi();
-      return Q ? Q.tach(text).rest : text;
+      var sk = skillSplit(text);
+      return Q ? Q.tach(sk.rest).rest : sk.rest;
     }
     var vm = typeof window !== "undefined" && window.JavisVisibleMarkdown;
     return vm ? vm(text) : text;
@@ -2921,20 +2967,51 @@
     });
   }
 
+  // 2026-11-05: the last state of the teams opened lately (the record, the queue, the newest page of messages). Opening
+  // one of them again draws it at once from here while the same three requests refresh it behind; before, every
+  // switch showed an empty chat until the slowest of them answered. Lives outside S, which each visit rebuilds.
+  var TEAM_CACHE = {}, TEAM_CACHE_MAX = 12, TEAM_CACHE_MS = 5 * 60 * 1000;
+  function keepTeam() {
+    if (!S || !S.activeId || !S.team || S.filterTask || (S.jumped !== null && S.jumped !== undefined)) return;
+    TEAM_CACHE[S.activeId] = { at: Date.now(), team: S.team, queue: S.queue, msgs: S.msgs.slice(-60), hasMore: S.hasMore || S.msgs.length > 60,
+      pinned: S.pinned || [], taskTitles: Object.assign({}, S.taskTitles) };
+    var ids = Object.keys(TEAM_CACHE);
+    if (ids.length > TEAM_CACHE_MAX) {
+      ids.sort(function (a, b) { return TEAM_CACHE[a].at - TEAM_CACHE[b].at; });
+      ids.slice(0, ids.length - TEAM_CACHE_MAX).forEach(function (k) { delete TEAM_CACHE[k]; });
+    }
+  }
+  function useTeam(id) {
+    var c = TEAM_CACHE[id];
+    if (!c || S.filterTask) return false;
+    if (Date.now() - c.at > TEAM_CACHE_MS) { delete TEAM_CACHE[id]; return false; }
+    S.team = c.team; S.queue = c.queue; S.msgs = c.msgs.slice(); S.hasMore = c.hasMore; S.pinned = c.pinned;
+    S.taskTitles = Object.assign({}, c.taskTitles);
+    return true;
+  }
+
   function openTeam(id, taskId) {
+    keepTeam();
     S.jumped = null; S.searchResults = null; S.searchQuery = ""; S.searchOpen = false;
     S.activeId = id; S.view = "chat"; S.asJob = false; S.pending = null; S.filterTask = String(taskId || "");
     S.team = null; S.queue = null; S.msgs = []; S.taskTitles = {}; S.side = false; S.openMember = null; S.turns = [];
     S.picker = null; S.draft = null; S.picked = []; S.retrying = {};
-    S.replyTo = null; S.plusOpen = false; S.renamingHead = false; forgetAtts(S.atts); S.atts = []; S.folder = null; S.info = null;
+    S.replyTo = null; S.plusOpen = false; S.renamingHead = false; forgetAtts(S.atts); S.atts = []; S.folder = null; S.repos = []; S.ghIcon = null; S.info = null;
     S.typing = []; S.pinned = []; S.pinsOpen = false; S.unclamped = {}; S.listCache = null; S.outbox = []; stopReveal();
     closeFolderPanel();
+    closeGithubPanel();
     stopMic();
     var input = S.el.querySelector(".tm-input");
     if (input) input.value = "";
     setNote("");
+    useTeam(id);
     drawAll(true);
-    Promise.all([loadTeam(), loadQueue(), loadMsgs(false)]).then(function () { if (S.activeId === id) { drawAll(true); loadFolder(); } });
+    Promise.all([loadTeam(), loadQueue(), loadMsgs(false)]).then(function () {
+      if (S.activeId !== id) return;
+      // Drawn from the cache, the chat was already on screen: this redraw reuses the unchanged message nodes.
+      drawAll(true);
+      keepTeam(); loadFolder(); loadSkills();
+    });
     markOpened(id);
   }
 
@@ -3179,6 +3256,14 @@
         '<button type="button" class="tm-chip-x" data-folder-unpin="1" aria-label="' + esc(tw("cp.pin_unpin")) + '" title="' +
         esc(tw("cp.pin_unpin")) + '">' + ic("x") + "</button></span>";
     }
+    if (S.repos.length) {
+      // 0.449.0: the GitHub repos of the team chat. The name opens the picker; the status (once pushed) opens the detail.
+      var G = window.JavisTeamGithub, names = S.repos.map(function (r) { return r.full_name; });
+      var stKey = S.ghIcon && S.ghIcon.state ? "gh.st_" + S.ghIcon.state : "";
+      h += '<span class="tm-chip tm-chip-gh" title="' + esc(tw("gh.chip_label", { names: names.join(", ") })) + '">' + ic("git-branch") +
+        '<button type="button" class="tm-chip-name" data-gh-open="1">' + esc(G ? G.chipText(names, 18) : names[0]) + "</button>" +
+        (stKey ? '<button type="button" class="tm-chip-st tm-gh-st" data-gh-status="1">' + esc(tw(stKey)) + "</button>" : "") + "</span>";
+    }
     S.atts.forEach(function (a, i) {
       h += '<span class="tm-chip' + (a.err ? " is-err" : "") + (a.url ? " has-thumb" : "") + '" data-att="' + i + '">' +
         (a.url ? '<img class="tm-chip-thumb" src="' + esc(a.url) + '" alt="">' : ic(a.kind === "image" ? "image" : "paperclip")) +
@@ -3204,7 +3289,59 @@
         S.folder = (d && d.folder) || null;
         drawComposer();
         if (S.side && S.tab === "info") drawSide(true);
-      }).catch(function () {});
+      }).catch(function () {}).then(loadRepos);
+  }
+
+  // 0.449.0: GitHub repos attached to the team chat (team-github.js). Work/Help steps edit them and Javis pushes once a
+  // job is done, like a private chat.
+  function loadRepos() {
+    var sid = sessionId(), G = window.JavisTeamGithub;
+    if (!sid || !G) return Promise.resolve();
+    return G.load(sid, brain()).then(function (d) {
+      if (!d || sessionId() !== sid) return;
+      setRepos(d);
+    });
+  }
+  function setRepos(d) {
+    S.repos = (d && d.repos) || [];
+    S.ghIcon = d && d.icon && d.icon.state ? d.icon : null;
+    drawComposer();
+    if (S.side && S.tab === "info") drawSide(true);
+  }
+  function closeGithubPanel() {
+    var pop = document.querySelector(".tm-gh-pop");
+    if (pop) pop.remove();
+    document.removeEventListener("mousedown", githubOutside, true);
+    document.removeEventListener("keydown", githubEsc, true);
+  }
+  // The (i) explanation opens in its own pop-up (info-tip.js); reading it must not close the picker.
+  function githubOutside(e) { if (!(e.target.closest && e.target.closest(".tm-gh-pop, .info-pop, .info-pop-bg"))) closeGithubPanel(); }
+  function githubEsc(e) { if (e.key === "Escape") closeGithubPanel(); }
+  function openGithubPanel() {
+    var G = window.JavisTeamGithub;
+    var comp = S.el.querySelector(".tm-composer");
+    if (!G || !comp || !S.team || !sessionId()) return;
+    closeGithubPanel();
+    closeFolderPanel();
+    var r = comp.getBoundingClientRect();
+    var pop = document.createElement("div");
+    pop.className = "cp-menu tm-folder-pop tm-gh-pop";
+    pop.style.left = Math.max(8, r.left + 8) + "px";
+    pop.style.bottom = Math.max(8, window.innerHeight - r.top + 6) + "px";
+    pop.innerHTML = '<div class="cp-mi cp-back">' + esc(tw("gh.menu")) + infoBtn() + "</div>" +
+      infoBody(esc(tw("teams.gh_how"))) + '<div class="cp-sep"></div><div class="tm-gh-body"></div>';
+    document.body.appendChild(pop);
+    var sid = sessionId();
+    G.panel(pop.querySelector(".tm-gh-body"), {
+      sid: function () { return sessionId() === sid ? sid : ""; }, brain: brain,
+      current: function () { return S.repos.map(function (x) { return x.full_name; }); },
+      changed: function (d) { if (sessionId() === sid) setRepos(d); },
+      close: closeGithubPanel,
+      connections: function () { try { window.Alpine.store("nav").go("mcp"); } catch (e) { location.hash = "#mcp"; } } });
+    setTimeout(function () {
+      document.addEventListener("mousedown", githubOutside, true);
+      document.addEventListener("keydown", githubEsc, true);
+    }, 0);
   }
 
   function pinTeamFolder(p) {
@@ -3315,6 +3452,12 @@
       ? '<div class="tm-info-row">' + ic("folder") + '<span class="tm-info-grow" title="' + esc(S.folder.path) + '">' + esc(S.folder.name) +
         '</span><button type="button" class="ws-btn" data-folder-open="1">' + esc(tw("teams.change")) + "</button></div>"
       : '<button type="button" class="ws-btn" data-folder-open="1">' + ic("folder") + " " + esc(tw("cp.pin_folder")) + "</button>") + "</section>";
+    h += '<section class="tm-info-sec"><h4>' + esc(tw("gh.menu")) + "</h4>" + (S.repos.length
+      ? S.repos.map(function (r) {
+        return '<div class="tm-info-row">' + ic("git-branch") + '<span class="tm-info-grow" title="' + esc(r.worktree || r.full_name) + '">' +
+          esc(r.full_name) + (r.branch ? ' <span class="tm-sub">' + esc(r.branch) + "</span>" : "") + "</span></div>";
+      }).join("") + '<button type="button" class="ws-btn" data-gh-open="1">' + esc(tw("teams.change")) + "</button>"
+      : '<button type="button" class="ws-btn" data-gh-open="1">' + ic("git-branch") + " " + esc(tw("teams.gh_attach")) + "</button>") + "</section>";
     if (!I) return h + '<p class="tm-sub">' + esc(tw("common.loading")) + "</p>";
     var imgs = I.files.filter(function (f) { return f.image; });
     var docs = I.files.filter(function (f) { return !f.image; });
@@ -3361,7 +3504,12 @@
     // A reply carries the quoted message as a markdown quote on top (the same convention as the main chat, so every
     // engine reads it and history shows it), and calls the assistant being replied to when nobody is @-mentioned.
     var Q = quoteApi();
-    var text = S.replyTo && Q ? Q.ghep(S.replyTo.quote, typed) : typed;
+    // 0.449.0: a /skill call goes first as the main chat's skill block; the quote and the owner's words follow it.
+    var X = window.JavisSlash;
+    var call = X && X.buildSkillInvocation ? skillCall(typed, (S.skills || []).map(function (k) { return k.slug; })) : null;
+    var words = call ? call.rest : typed;
+    var text = S.replyTo && Q ? Q.ghep(S.replyTo.quote, words) : words;
+    if (call) text = X.buildSkillInvocation(call.cmd, text, call.mid);
     if (S.replyTo && S.replyTo.key && !mentions.length) mentions = [S.replyTo.key];
     // The message shows at once as a pending bubble keyed by its client id; the server's copy replaces it when it
     // arrives. A retry after a dropped connection sends the SAME client id, so the server returns the message it may
@@ -3482,10 +3630,63 @@
     return m[1];
   }
 
+  // 0.449.0: "/" lists the brain's skills, in the same suggestion box as "@". Only skills: the main chat's session and
+  // system commands (/new, /model...) act on a private chat, not on a team.
+  function loadSkills() {
+    var b = brain();
+    if (S.skills && S.skillsBrain === b) return Promise.resolve(S.skills);
+    return fetch("/skills?brain=" + q(b), { credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .catch(function () { return {}; })
+      .then(function (d) { S.skills = (d && d.skills) || []; S.skillsBrain = b; return S.skills; });
+  }
+  function skillSuggest(input, box, tok) {
+    if (!S.skills || S.skillsBrain !== brain()) {
+      hideSug();
+      loadSkills().then(function () { if (S && S.el && S.el.isConnected && S.skills) suggest(); });
+      return;
+    }
+    var X = window.JavisSlash;
+    var items = S.skills.filter(function (k) { return k && k.slug; }).map(function (k) {
+      return { kind: "skill", cmd: k.slug, name: k.name || k.slug, group: k.group || "", desc: k.description || "" };
+    });
+    var list = (X && X.filterItems ? X.filterItems(items, tok.query) : items).slice(0, 8);
+    S.sugKeys = list.map(function (k) { return "/" + k.cmd; });
+    if (S.sugIdx == null || S.sugIdx >= list.length) S.sugIdx = 0;
+    box.hidden = !list.length;
+    input.setAttribute("aria-expanded", list.length ? "true" : "false");
+    box.innerHTML = list.map(function (k, i) {
+      var on = i === S.sugIdx;
+      return '<button type="button" class="tm-sug-item tm-sug-skill' + (on ? " is-active" : "") + '" role="option" id="tm-sug-' + i +
+        '" aria-selected="' + (on ? "true" : "false") + '" data-skill="' + esc(k.cmd) + '">' +
+        '<span class="tm-sug-all" aria-hidden="true">' + ic("sparkles") + "</span>" +
+        '<span class="tm-sug-text"><span class="tm-sug-name">/' + esc(k.cmd) + (k.name !== k.cmd ? ' <span class="tm-sug-slug">' + esc(k.name) + "</span>" : "") +
+        "</span>" + (k.desc ? '<span class="tm-sug-role">' + esc(k.desc) + "</span>" : "") + "</span></button>";
+    }).join("");
+    if (list.length) input.setAttribute("aria-activedescendant", "tm-sug-" + S.sugIdx);
+    else input.removeAttribute("aria-activedescendant");
+  }
+  function pickSkill(slug) {
+    var input = S.el.querySelector(".tm-input");
+    if (!input || !slug) return;
+    var pos = input.selectionStart || input.value.length;
+    var before = input.value.slice(0, pos).replace(/\/([\p{L}\p{M}0-9_-]*)$/u, "/" + slug + " ");
+    input.value = before + input.value.slice(pos);
+    try { input.setSelectionRange(before.length, before.length); } catch (e) {}
+    input.focus();
+    grow(input);
+    S.pending = null;
+    hideSug();
+    drawHint();
+  }
+
   function suggest() {
     var input = S.el.querySelector(".tm-input");
     var box = S.el.querySelector(".tm-sug");
     if (!input || !box || !S.team) return;
+    var X = window.JavisSlash;
+    var tok = X && X.tokenAtCaret ? X.tokenAtCaret(input.value, input.selectionStart || 0) : null;
+    if (tok) return skillSuggest(input, box, tok);
     var query = suggestQuery(input);
     if (query === null) { hideSug(); return; }
     var list = mentionMatches(S.team.members, query, mentionsFromText(input.value, S.team.members, S.picked));
@@ -3551,6 +3752,7 @@
   }
 
   function pickMention(key) {
+    if (String(key || "").charAt(0) === "/") return pickSkill(String(key).slice(1));
     var input = S.el.querySelector(".tm-input");
     if (input && key === "*all") {
       // @all is read from the text itself (mentionScan), so it needs no picked entry.
@@ -3934,6 +4136,8 @@
     if (d.plusAttach) { setPlus(false); return pickFiles(attachFiles); }
     if (d.plusFolder || d.folderOpen) { setPlus(false); return openFolderPanel(); }
     if (d.folderUnpin) return pinTeamFolder("");
+    if (d.plusGithub || d.ghOpen) { setPlus(false); return openGithubPanel(); }
+    if (d.ghStatus) { var gs = sessionId(); if (gs && window.JavisTeamGithub) window.JavisTeamGithub.openStatus(gs); return; }
     if (d.attX !== undefined) { forgetAtts(S.atts.splice(+d.attX, 1)); drawComposer(); return; }
     if (d.outRetry) {
       var oe = S.outbox.filter(function (p) { return p.cid === d.outRetry; })[0];
@@ -4062,6 +4266,7 @@
     if (t.classList.contains("tm-send")) return send();
     if (t.classList.contains("tm-older")) return loadMsgs(true);
     if (d.mention) return pickMention(d.mention);
+    if (d.skill) return pickSkill(d.skill);
     if (d.unmention) return unMention(d.unmention);
     if (t.classList.contains("tm-search-btn")) {
       S.searchOpen = !S.searchOpen;
@@ -4517,7 +4722,7 @@
     }
   }
 
-  var refreshTimer = null;
+  var refreshTimer = null, refreshOpen = "";
   function onTeamEvent(ev) {
     if (!S || !S.el || !S.el.isConnected) return;
     var d = (ev && ev.detail) || {};
@@ -4564,15 +4769,22 @@
       // A new message while the owner reads higher up: the jump button becomes "New messages" (at the end it follows).
       if (i < 0 && S.scroll && !S.scroll.stuck()) toLatest(false);
     }
+    // 2026-11-05: "the owner read this team" only changes the unread badge on the team list. It used to refetch the open
+    // team and its queue too, the heaviest reads of the page, after every team switch and every agent message.
+    // Events merged into one refresh keep the open team's refetch if any of them asked for it.
+    if (d.type !== "team_read" && d.team_id === S.activeId) refreshOpen = d.team_id;
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(function () {
+      var full = !!refreshOpen && !!S && refreshOpen === S.activeId;
+      refreshOpen = "";
       loadTeams(false);
-      if (d.team_id === S.activeId) { loadQueue(); loadTeam(); }
+      if (full) { loadQueue(); loadTeam(); }
     }, 300);
   }
 
   // Rời trang (console.js gọi qua _pageLeave): đóng ngăn, bỏ hẹn giờ; trang dựng lại từ đầu lần ghé sau.
   function leave() {
+    keepTeam();
     clearTimeout(refreshTimer);
     if (colResize()) colResize().miniTip.hide();
     if (S && S.pickSt) closePicker();
@@ -4775,6 +4987,10 @@
     // 0.197.0: back to this tab with a team open: what arrived while away is read now.
     if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("visibilitychange", onVisible);
     // Auto bật/tắt ở trang Cộng sự hay tab khác (0.142.0): danh sách thành viên của nhóm đang mở đọc lại trạng thái.
+    // 0.454.0: the tag order changed (here or on another tab of this page): the list and its tag bar follow.
+    window.addEventListener("javis:order-changed", function () {
+      if (S && S.el && S.el.isConnected) drawList();
+    });
     window.addEventListener("javis:resonance-agents-changed", function () {
       if (!S || !S.el || !S.el.isConnected || !S.activeId) return;
       loadTeam();
@@ -4795,7 +5011,7 @@
     membersHtml: membersHtml, settingsFormHtml: settingsFormHtml, capsFormHtml: capsFormHtml, capsPayload: capsPayload, saveCapsFlow: saveCapsFlow, teamTabHtml: teamTabHtml, limitsHtml: limitsHtml,
     levelOf: levelOf, grantFor: grantFor, teamAvatarHtml: teamAvatarHtml, savePin: savePin, pinTeamWith: pinTeamWith, noteHtml: noteHtml, levelsHtml: levelsHtml, turnsHtml: turnsHtml,
     bannersHtml: bannersHtml, reactCornerHtml: reactCornerHtml, reactBarHtml: reactBarHtml, sheetHtml: sheetHtml,
-    hoverActsHtml: hoverActsHtml, bodyHtml: bodyHtml, listSync: listSync, pendingHtml: pendingHtml, copyTextOf: copyTextOf, fileChipHtml: fileChipHtml, uploadError: uploadError, plainPreview: plainPreview, previewText: previewText,
+    hoverActsHtml: hoverActsHtml, bodyHtml: bodyHtml, skillSplit: skillSplit, skillCall: skillCall, listSync: listSync, pendingHtml: pendingHtml, copyTextOf: copyTextOf, fileChipHtml: fileChipHtml, uploadError: uploadError, plainPreview: plainPreview, previewText: previewText,
     nextReaction: nextReaction, REACTIONS: REACTIONS, authorityHtml: authorityHtml, readGrant: readGrant,
     searchResultsHtml: searchResultsHtml, replyStatusHtml: replyStatusHtml, headLine: headLine,
     typingHtml: typingHtml, pinsHtml: pinsHtml, markMentions: markMentions, replyRefHtml: replyRefHtml,
