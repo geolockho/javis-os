@@ -142,3 +142,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Điều khiển và hỗ trợ lái trên VinFast VF 6]]
+
+## [2026-11-05] ingest | tự học từ chat
+
+Đã tạo:
+- [[Đổi tên Facebook Page]]

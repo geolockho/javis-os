@@ -49,3 +49,6 @@ Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `req
 - [[Điều khiển và hỗ trợ lái trên VinFast VF 6]] - ## Chọn số và giữ xe
 
 - Cụm chọn số có P, R, N và D; cần đạp phanh khi chuyển số
+- [[Đổi tên Facebook Page]] - ## Các bước đổi tên
+
+Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
