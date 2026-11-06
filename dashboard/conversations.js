@@ -66,7 +66,7 @@
   var _privFor = 0;                     // id of the comment thread whose composer is set to "Message privately" (0.446.0)
   // The mic of the reply box (owner, 2026-11-05: "thêm nút chép lời để nói bằng giọng nói rồi chép lại, khỏi phải gõ").
   // dictate.js does the listening; the state lives here because the 5-second redraw rebuilds the box.
-  var _dict = null, _dictState = "idle", _dictBase = "", _dictConv = 0, _dictSend = false;
+  var _dict = null, _dictState = "idle", _dictBase = "", _dictHeard = "", _dictConv = 0, _dictSend = false;
   var _statusLoc = "", _typeLoc = "";   // bộ lọc (0.65.3), lưu ở trình duyệt qua JavisConvFilters
   var _contactLoc = "";     // 2026-10-25: "1" = only chats where the customer left a phone number or email
   // Chatbot v5 (2026-10-28, docs/dev/2026-10-chatbot-v5-spec.md): who is handling the chat (the quick filters), the ticked
@@ -2084,6 +2084,26 @@
   // the words, fixes them, then presses Send (or A.I. draft, where the words are the instruction).
   function dictOn(c) { return !!(_dict && _dictState !== "idle" && c && c.id === _dictConv); }
 
+  // Enter while recording stops and sends in one press, like the main chat (owner 2026-11-05). Pressing the mic redraws
+  // it, so the focus falls back to the page and the reply box's own Enter never runs: listen on the document instead.
+  var _dictKeys = false;
+  function watchDictEnter() {
+    if (_dictKeys) return;
+    _dictKeys = true;
+    document.addEventListener("keydown", function (e) {
+      if (!_conv || !dictOn(_conv) || _chon !== _dictConv) return;
+      var A = window.JavisActs;
+      var send = A ? A.enterSends(e, false) : e.key === "Enter" && !e.shiftKey && !e.isComposing;
+      if (!send) return;
+      var tg = e.target, tag = String((tg && tg.tagName) || "").toUpperCase();
+      var ok = !tg || tag === "BODY" || tag === "HTML" || tg === replyBox()
+        || !!(tg.classList && tg.classList.contains("ib-mic"));
+      if (!ok) return;
+      e.preventDefault(); e.stopPropagation();
+      gui(_conv);
+    }, true);
+  }
+
   function micHtml(c) {
     var st = dictOn(c) ? _dictState : "idle";
     var lab = window.t(st === "idle" ? "ib.mic" : st === "transcribing" ? "ib.mic_busy" : "ib.mic_stop");
@@ -2117,17 +2137,16 @@
     // A phone would keep the keyboard up over the words; put it away while listening (see composer-dictate.js, 0.409.0).
     if (ta && touchOnly() && document.activeElement === ta) { try { ta.blur(); } catch (e) { /* ignore */ } }
     _dictBase = ta ? ta.value : "";
+    _dictHeard = "";
     _dictConv = c.id;
     _dictSend = false;
     if (_actNote) setNote("");
+    // Like a voice recorder (owner, 2026-11-05): the words are held while speaking and land in the box once, when the
+    // recording ends (see composer-dictate.js).
     var dict = D.create({
       onText: function (text) {
-        if (_dict !== dict || _chon !== _dictConv) return;
-        var box = replyBox();
-        if (!box) return;
-        box.value = D.joinText(_dictBase, text);
-        box.style.height = "auto"; box.style.height = box.scrollHeight + "px";
-        box.scrollTop = box.scrollHeight;
+        if (_dict !== dict) return;
+        _dictHeard = String(text || "");
       },
       onState: function (st) {
         if (_dict !== dict) return;
@@ -2136,11 +2155,16 @@
         if (st === "idle") _dict = null;
         paintMic();
         if (st !== "idle" || was === "idle") return;
-        var send = _dictSend;
-        _dictSend = false;
+        var send = _dictSend, heard = _dictHeard;
+        _dictSend = false; _dictHeard = "";
         if (_chon !== _dictConv || !_conv) return;
-        if (send) { gui(_conv); return; }
         var box = replyBox();
+        if (box && heard) {
+          box.value = D.joinText(_dictBase, heard);
+          box.style.height = "auto"; box.style.height = box.scrollHeight + "px";
+          box.scrollTop = box.scrollHeight;
+        }
+        if (send) { gui(_conv); return; }
         if (box && !touchOnly()) { try { box.focus(); box.setSelectionRange(box.value.length, box.value.length); } catch (e) { /* ignore */ } }
       },
       onError: function (code) {
@@ -2152,6 +2176,7 @@
     });
     _dict = dict;
     _dictState = "listening";
+    watchDictEnter();
     paintMic();
     dict.start();
   }
@@ -2160,7 +2185,7 @@
   function dropMic() {
     if (!_dict) return;
     var d = _dict;
-    _dict = null; _dictState = "idle"; _dictSend = false;
+    _dict = null; _dictState = "idle"; _dictSend = false; _dictHeard = "";
     try { d.cancel(); } catch (e) { /* ignore */ }
   }
 

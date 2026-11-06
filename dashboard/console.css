@@ -528,15 +528,20 @@ button.ord-mi:hover, button.ord-mi:focus-visible { background: var(--bg3); }
 .sk-group-head .dim { color: var(--text3); font-weight: 400; margin-left: 6px; }
 
 .rail-spacer { flex: 1; }
-.rail-lang {                                           /* ô đổi ngôn ngữ giao diện, ngay trên hàng version */
-  display: flex; align-items: center; gap: 6px; padding: 8px 6px 0;
+/* Ô đổi ngôn ngữ giao diện, ngay trên hàng version. Ô và hàng version là MỘT khối chân rail: chung
+   một đường kẻ phía trên, cách nhau một nhịp đều (chủ repo, 0.481.5: hai đường kẻ chồng nhau và ô
+   chọn dính sát vào hàng version). `display:flex` đè mất thuộc tính `hidden`, nên phải ẩn lại tay. */
+.rail-lang {
+  display: flex; align-items: center; gap: 8px; padding: 10px 6px 8px;
   border-top: 1px solid var(--glass-brd); color: var(--text3);
 }
+.rail-lang[hidden] { display: none; }
+.rail-lang:not([hidden]) + .rail-foot { border-top: 0; padding-top: 0; }
 .rail-lang svg { width: 14px; height: 14px; flex: 0 0 auto; }
 .rail-lang-sel {
-  flex: 1; min-width: 0; background: transparent; color: var(--text2);
+  flex: 1; min-width: 0; height: 32px; background: transparent; color: var(--text2);
   border: 1px solid var(--glass-brd); border-radius: 8px;
-  font-family: var(--font-ui); font-size: 12px; padding: 4px 6px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 13px; line-height: 1.2; padding: 0 8px; cursor: pointer;
 }
 .rail-lang-sel:hover { color: var(--text); background: var(--surface-2); }
 .rail-lang-sel option { background: var(--panel-solid); color: var(--text); }
@@ -586,6 +591,7 @@ button.ord-mi:hover, button.ord-mi:focus-visible { background: var(--bg3); }
   .rail.collapsed .rail-brand-text { display: none; }           /* thu gọn: chỉ còn dấu ấn, chữ không vừa */
   .rail.collapsed .rf-meta { display: none; }                   /* giấu version/tác giả cho vừa bề ngang hẹp, chỉ còn nút */
   .rail.collapsed .rail-lang { display: none; }                 /* ô ngôn ngữ cũng không vừa bề ngang thu gọn */
+  .rail.collapsed .rail-lang + .rail-foot { border-top: 1px solid var(--glass-brd); padding-top: 8px; } /* ô ẩn thì hàng nút giữ lại đường kẻ */
   .rail.collapsed .rail-foot { justify-content: center; }       /* thu: chỉ còn nút, căn giữa */
 }
 
@@ -928,7 +934,7 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
     display: flex; align-items: center; gap: 6px; padding: 0 8px; }
   .hud-top-left, .hud-top-right { display: none; }    /* rỗng ở mobile: nút menu, chip model, nút thêm là con trực tiếp header */
   .hud-top .brand, .hud-top .navbar-brain,
-  .hud-top #themeToggle, .hud-top #studioOpenBtn,
+  .hud-top #themeToggle, .hud-top #soundToggle, .hud-top #studioOpenBtn,
   .hud-top #settingsBtn, .hud-top #ttsToggle, .hud-top #resetBtn { display: none; }
   .hud-center-title { display: none; }                /* mobile: ẩn tên workspace + ngày; chip model làm giữa header */
   /* 0.182.0 (owner: putting the chip in the composer on a phone "là sai lầm"): back to the top bar, centred, as before 0.180.0.
@@ -953,7 +959,6 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   .hud-top #mbPop { position: fixed; top: calc(50px + env(safe-area-inset-top, 0px)); bottom: auto; left: 50%; transform: translateX(-50%);
     width: min(340px, 92vw); z-index: 200; max-height: 70vh; }
   .model-bar { display: none; }                       /* hàng model gốc ẩn; chip bên trong dời đi (JS) */
-  #jv-sess-btn { display: none; }                     /* nút Lịch sử: ẩn ở mobile để header cockpit khỏi chồng/lệch */
 
   /* Rail: từ thanh đáy → ngăn kéo trượt từ trái */
   .rail {
@@ -995,9 +1000,11 @@ body.has-rail .hud { margin-left: var(--rail-w); width: calc(100% - var(--rail-w
   .rail-sys-btns:empty { display: none; }
   /* Light/dark switch in the drawer's foot, beside the collapse button (owner, 0.393.0): same size and outline, so the
      two read as one pair of small controls on the version row. */
-  .rail-foot #themeToggle { order: 2; margin-left: auto; display: inline-flex; align-items: center;
+  .rail-foot #themeToggle, .rail-foot #soundToggle { order: 2; margin-left: auto; display: inline-flex; align-items: center;
     justify-content: center; width: 32px; height: 28px; padding: 0; border-radius: 8px; flex: 0 0 auto; }
-  .rail-foot #themeToggle svg { width: 17px; height: 17px; }
+  .rail-foot #themeToggle svg, .rail-foot #soundToggle svg { width: 17px; height: 17px; }
+  /* The sound switch (2026-11-06) sits just left of the light/dark one: the pair stays together on the right. */
+  .rail-foot #soundToggle + #themeToggle { margin-left: 0; }
 
   /* Nền mờ khi mở ngăn kéo */
   /* Shown by the drawer's own state only (0.216.0): a dim screen with no drawer on it can no longer stay behind. */

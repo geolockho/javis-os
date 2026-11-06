@@ -556,6 +556,10 @@ button, input, select, textarea { font-family: inherit; }
 .theme-toggle .ic-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .ic-moon { display: none; }
 :root[data-theme="light"] .theme-toggle .ic-sun { display: block; }
+/* Nút âm thanh hiệu ứng: loa có sóng khi đang bật, loa gạch chéo khi đang tắt (báo trạng thái hiện tại). */
+.sound-toggle .ic-soff { display: none; }
+.sound-toggle[aria-pressed="false"] .ic-son { display: none; }
+.sound-toggle[aria-pressed="false"] .ic-soff { display: block; }
 
 /* BODY 3 cols */
 .hud-body {
@@ -1129,6 +1133,8 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
   color: var(--text3); font-size: 14px; font-style: italic;
 }
 .msg { animation: fadeIn 0.2s ease; }
+/* A bubble drawn from history (chat opened, F5, older messages loaded): no fade-in. See chatAppend in app.js. */
+.msg.msg-tinh { animation: none; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .msg-user { display: flex; flex-direction: column; align-items: flex-end; }
 .msg-user .bubble {
@@ -2423,13 +2429,9 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
 .cside-more:hover { background: var(--info-wash); border-color: var(--info-line);
   color: var(--text); }
 
-/* nút Lịch sử (sessions-ui): nằm INLINE trong hàng nút header (.hud-actions) để không đè
-   lên các nút Cài đặt/Đọc/Reset như khi còn position:fixed. Bấm vào là sang trang Trò chuyện. */
-#jv-sess-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
-  border-radius: 20px; white-space: nowrap; flex-shrink: 0;
-  border: 1px solid var(--info-line); background: var(--info-wash); color: var(--info-ink);
-  font: 600 12px/1 var(--font, system-ui); cursor: pointer; }
-#jv-sess-btn:hover { border-color: var(--info-line); color: var(--text-hi); }
+/* Nút Lịch sử và nút Reset hội thoại ở thanh trên cùng đã bỏ (06/11/2026, chủ repo: "không cần thiết").
+   #resetBtn vẫn nằm trong DOM nhưng ẩn: nút "+" hội thoại mới trên điện thoại (mobile-chat.js) bấm hộ nó. */
+#resetBtn { display: none !important; }
 
 /* ===== Thanh chọn model + effort ngay trên khung chat ===== */
 /* KHÔNG đặt overflow:hidden lên hàng này. Popup đổi model (.mb-pop) là con position:absolute
@@ -2455,6 +2457,13 @@ li.task-done > .dv-ttext { text-decoration: line-through; text-decoration-color:
 .mb-pin[hidden] { display: none; }
 .mb-pin svg, .mb-pin .ic { width: 12px; height: 12px; }
 .mb-chip.is-pin-broken .mb-pin { color: var(--warn-ink); }
+/* Owner, 05/11/2026: a fallback card is answering (the chosen one is out of quota): amber dot and border. */
+.mb-chip.is-fallback .mb-dot { background: var(--warn-ink); }
+.mb-chip.is-fallback { border-color: var(--warn-ink); }
+.mb-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px;
+  font-weight: 600; line-height: 1.5; vertical-align: middle; white-space: nowrap; }
+.mb-tag.is-limited { color: var(--warn-ink); border: 1px solid var(--warn-ink); }
+.mb-tag.is-running { color: var(--green); border: 1px solid var(--green); }
 
 .mb-caret { opacity: .6; font-size: 10px; }
 .mb-pop { position: absolute; bottom: calc(100% + 6px); left: 8px; z-index: 60; width: 340px;
@@ -4153,12 +4162,9 @@ div.cb-quyen > svg { flex: none; margin-top: 2px; }
 .pm-eye { flex: none; width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg3);
   color: var(--text2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .pm-eye:hover:not(:disabled) { color: var(--text); }
-.pm-eye[aria-pressed="true"] { color: var(--text3); border-style: dashed; }
 .pm-eye:disabled { opacity: .4; cursor: not-allowed; }
 .pm-eye svg { width: 17px; height: 17px; }
 .pm-x:hover:not(:disabled) { color: var(--red, #d64545); border-color: var(--red, #d64545); }
-.pm-row .pm-eye + .pm-eye { margin-left: 6px; }
-.pm-row.pm-hidden .ro-ic, .pm-row.pm-hidden .bp-label { opacity: .5; }
 .pm-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pm-row .bp-grip.pm-nograb { cursor: not-allowed; opacity: .4; }
 .pm-actions { flex-wrap: wrap; }
