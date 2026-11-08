@@ -121,7 +121,7 @@
 - [Logo monogram kc và bỏ dark mode của kubeconfig-generator](facts/logo-monogram-kc-bo-dark-mode.md) - Ngày 2026-10-29 user chọn logo 3 (monogram kc) và bỏ dark mode, giao diện chỉ còn bản sáng.
 - [Link tải Lens trên trang download của kubeconfig-generator](facts/lens-tai-tren-trang-download-kubeconfig.md) - User yêu cầu thêm link tải Lens (Windows) ở trang /dl cho dev, Javis đã thêm nhưng chưa commit hay push.
 - [Chỉ commit và push kubeconfig-generator khi user xác nhận](facts/xac-nhan-truoc-khi-push-kubeconfig.md) - Javis sửa code trong workspace, sync sang repo, rồi hỏi trước khi commit và push; user đã xác nhận từng lần.
-- [Chọn thuê VF6 cho chuyến Bình Liêu tháng 11](facts/chuyen-binh-lieu-thang-11-chon-vf6.md) - Người dùng đổi lựa chọn xe thuê cho chuyến Bình Liêu 6-8/11 sang VF6.
+- [Chuyến Bình Liêu tháng 11: thuê nhầm VF5 thay cho lựa chọn VF6](facts/chuyen-binh-lieu-thang-11-chon-vf6.md) - Ngày 06/11 người dùng báo chuyến 6-8/11 thực tế dùng VF5, pin khoảng 91%; kế hoạch sạc được tính lại, số liệu hành trình là ước tính.
 - [Dùng Jira quản lý task và muốn nhắc log work hằng ngày](facts/jira-quan-ly-task-va-nhac-log-work.md) - Người dùng dùng Jira quản lý task và muốn được nhắc log work mỗi ngày làm việc.
 - [Bên người dùng đang dùng Docker Hub](facts/dockerhub-dang-dung.md) - Đang tìm nguồn thay thế hoặc mirror cho bitnamilegacy trong môi trường dùng Docker Hub.
 - [Thông tin xác thực Jira đã được chia sẻ trong chat](facts/jira-thong-tin-xac-thuc-da-chia-se-trong-chat.md) - Mật khẩu và PAT Jira đã được gửi trong hội thoại; trạng thái đổi mật khẩu và thu hồi PAT chưa rõ.
@@ -142,3 +142,4 @@
 - [Kế hoạch thử affiliate qua Fanpage](facts/ke-hoach-thu-nghiep-affiliate-fanpage.md) - Thử affiliate qua Fanpage với ngân sách tối đa 2 triệu đồng và mục tiêu có click trong 14 ngày.
 - [Shopee Affiliate: đã đăng ký, việc comment link đang hoãn](facts/shopee-affiliate-dang-ky-cho-duyet.md) - Chờ duyệt tính đến 2026-11-05; việc comment 5 link/bài hoãn tới khi người dùng gửi App ID Open API.
 - [Nhà Nhỏ Sống Gọn: giọng văn tự nhiên, viết ngắn, ảnh thật](facts/nnsg-giong-van-va-anh-that.md) - 2026-11-05 chê giọng AI; chốt viết ngắn 1-3 câu kiểu Game Thủ Việt, link dưới comment, ảnh sản phẩm từ trang sản phẩm.
+- [Tạm dừng dự án kiếm tiền đến khi người dùng mở lại](facts/tam-dung-du-an-kiem-tien.md) - Dự án kiếm tiền đang tạm dừng theo yêu cầu của người dùng.
