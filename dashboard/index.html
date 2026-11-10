@@ -8,6 +8,9 @@
        chặn thêm bằng touch-action trong style.css làm lớp thứ hai. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Javis OS</title>
+  <!-- Private dashboard: keep it out of search results and AI even if the link leaks. The server also sends
+       X-Robots-Tag on every answer and /robots.txt (server/bot_shield.py); this tag covers a saved copy. -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, noai, noimageai">
   <!-- Favicon = logo hiện tại (/brand-logo): mặc định theo logo.png, và tự đổi theo ảnh user tải lên. -->
   <link rel="icon" href="/brand-logo?v=5">
   <link rel="apple-touch-icon" href="/brand-logo?v=5">
@@ -18,7 +21,13 @@
        rồi "Thêm vào MH chính" lại thì iOS mới đọc lại và chạy standalone. -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Status bar "default", NOT "black-translucent" (owner, iOS 27, 2026-11-08). With a see-through bar the page
+       draws under the clock, and iOS 26/27 lays a blur strip over that band in a home-screen app that no CSS turns off:
+       our fixed opaque header was already there and the strip still showed. With "default" the bar is solid and the
+       page starts below it, so nothing sits under it to blur. iOS reads this tag when the app is added to the Home
+       Screen: an icon added before this change keeps the blur until it is removed and added again. The CSS still
+       pads with env(safe-area-inset-*), which is 0 at the top now and still covers the notch in landscape. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Javis OS">
   <meta name="theme-color" content="#ffffff">
   <!-- manifest.json khai icon PNG vuông 192/512 có sizes rõ ràng: đó là điều kiện để
@@ -31,8 +40,8 @@
   <!-- Biến --ic-* cho icon dùng trong content: của CSS. Phải đứng TRƯỚC style.css
        vì style.css tham chiếu các biến này. -->
   <link rel="stylesheet" href="/static/vendor/lucide-icons.css?v=1">
-  <link rel="stylesheet" href="/static/style.css?v=163">
-  <link rel="stylesheet" href="/static/console.css?v=135">
+  <link rel="stylesheet" href="/static/style.css?v=169">
+  <link rel="stylesheet" href="/static/console.css?v=138">
   <!-- Áp tông đã lưu TRƯỚC khi vẽ để không nháy tối rồi mới đổi sang sáng.
        Giá trị cũ "dim" (tông tối-nhạt, gỡ ở 0.9.250) quy về tối; theme.js sẽ ghi đè lại.
        Chưa chọn gì thì SÁNG (2026-11-05; trước đó là "auto"). Chế độ "auto" (0.74.0) tính theo khung giờ "HH:MM-HH:MM", cùng quy tắc với lightAt() trong
@@ -40,6 +49,14 @@
   <script>(function(){try{var m=localStorage.getItem('javis.theme'),L=m!=='dark'&&m!=='dim';if(m==='auto'){var p=/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(localStorage.getItem('javis.theme.schedule')||'')||[0,6,0,18,0],a=p[1]*60+ +p[2],b=p[3]*60+ +p[4],d=new Date(),n=d.getHours()*60+d.getMinutes();L=a!==b&&(a<b?n>=a&&n<b:n>=a||n<b);}if(L)document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
 </head>
 <body>
+  <!-- Start-up screen (2026-11-09, boot-splash.js): on screen from the first paint, gone once the first page has its
+       data. Text comes from the dictionary (data-i18n); before it loads only the logo and the spinner show. -->
+  <div id="bootSplash" class="boot-splash" role="status" aria-live="polite" aria-busy="true">
+    <img class="boot-logo" src="/brand-logo?v=5" alt="" width="64" height="64">
+    <div class="boot-spin" aria-hidden="true"></div>
+    <div class="boot-text" data-i18n="boot.starting"></div>
+    <div class="boot-sub" id="bootSub" data-i18n="boot.just_started" hidden></div>
+  </div>
   <div class="hud">
 
     <!-- ===== TOP BAR ===== -->
@@ -59,11 +76,9 @@
           <select id="graphSource" class="graph-select">
             <option value="brain">Brain Default</option>
           </select>
-          <button class="graph-folder-btn" id="newBrainBtn" title="Tạo brain mới trong thư mục brains" data-i18n-title="top.brain_new"><i data-ic="plus"></i></button>
-          <button class="graph-folder-btn" id="renameBrainBtn" title="Đổi tên brain đang chọn (thư mục và liên kết giữ nguyên)" data-i18n-title="top.brain_rename"><i data-ic="pencil"></i></button>
-          <button class="graph-folder-btn" id="delBrainBtn" title="Xoá brain đang chọn (xác nhận gõ đúng tên)" data-i18n-title="top.brain_delete"><i data-ic="trash-2"></i></button>
-          <button class="graph-folder-btn" id="pickFolderBtn" title="Chọn brain từ folder ngoài bất kỳ" data-i18n-title="top.brain_pick"><i data-ic="folder-open"></i></button>
-          <span class="graph-stats" id="graphStats">-</span>
+          <!-- New, rename, delete and "outside folder" live inside the brain picker panel now (brain-picker.js, 2026-11-09).
+               This hidden button stays only because app.js opens the outside-folder browser from its click. -->
+          <button class="graph-folder-btn" id="pickFolderBtn" hidden tabindex="-1" aria-hidden="true"><i data-ic="folder-open"></i></button>
         </div>
       </div>
       <!-- NHÓM GIỮA: thanh trạng thái đang quá tải nên bỏ tên workspace lẫn ngày tháng theo
@@ -243,13 +258,16 @@
         <canvas id="starfield"></canvas>
         <div id="graph2d"></div>
         <div class="concept-labels" id="conceptLabels"></div>
+        <!-- Node and link counts of the graph, in its top-left corner (2026-11-09, owner: moved here from the top bar,
+             "hiển thị số đó trong đồ thị"). The eye button hides it with the folder labels and the stats bar. -->
+        <span class="graph-stats" id="graphStats">-</span>
         <div class="orb-overlay">
           <div class="orb-state" id="orbState" data-i18n="orb.ready">SẴN SÀNG</div>
           <div class="orb-interim" id="voiceInterim"></div>
         </div>
         <button class="brain-overlay-toggle" id="brainOverlayToggle" type="button"
                 aria-pressed="false" aria-label="Ẩn nhãn và số liệu brain" data-i18n-aria="orb.overlay_aria"
-                title="Ẩn nhãn thư mục và số liệu Agents / Skills / Workflows" data-i18n-title="orb.overlay_title">
+                title="Ẩn nhãn thư mục, số Node / Link và số liệu Agents / Skills / Workflows" data-i18n-title="orb.overlay_title">
           <svg class="brain-eye-on" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
             <circle cx="12" cy="12" r="2.75"></circle>
@@ -396,7 +414,7 @@
                   <span class="vc-saved" id="vcVoiceSaved" aria-live="polite"></span>
                 </div>
               </div>
-              <div class="qs-hint" id="vcVoiceNote" data-i18n="qs.voice_ml_note" hidden>Giọng đa ngôn ngữ hỗ trợ tiếng Việt.</div>
+              <div class="qs-hint" id="vcVoiceNote" data-i18n="qs.voice_ml_note" hidden>Tiếng Việt đọc bằng Hoài My hoặc Nam Minh, tiếng Anh bằng giọng đa ngôn ngữ, cùng giới giọng chọn.</div>
               <div class="vc-mismatch" id="vcMismatch" role="status" hidden>
                 <span id="vcMismatchTxt"></span>
                 <button class="gcard-btn" type="button" id="vcMismatchFix"></button>
@@ -638,7 +656,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
           <canvas class="dict-wave" id="dictWave" aria-hidden="true"></canvas>
-          <span class="dict-busy" id="dictBusy" hidden data-i18n="dict.busy">Đang chuyển thành chữ...</span>
+          <span class="dict-busy" id="dictBusy" hidden data-i18n="dict.busy">Đang viết lại câu cho đúng...</span>
           <span class="dict-time" id="dictTime" aria-live="off">0:00</span>
           <button type="button" class="dict-stop" id="dictStop" title="Dừng ghi, giữ chữ để sửa" data-i18n-title="dict.stop" aria-label="Dừng ghi, giữ chữ để sửa" data-i18n-aria="dict.stop">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
@@ -940,6 +958,8 @@
           <label id="setAuthCurLbl" hidden data-i18n="setm.cur_pass">Mật khẩu hiện tại</label>
           <input id="setAuthCur" type="password" autocomplete="current-password" placeholder="Mật khẩu đang dùng" data-i18n-ph="setm.cur_pass_ph" hidden>
           <label data-i18n="common.password">Mật khẩu</label><input id="setAuthPass" type="password" autocomplete="new-password" placeholder="Đặt mật khẩu (để trống nếu không đổi)" data-i18n-ph="setm.pass_ph">
+          <!-- Owner 2026-11-09: the new password is typed twice; app.js refuses to save when they differ. -->
+          <label data-i18n="setm.pass2">Nhập lại mật khẩu</label><input id="setAuthPass2" type="password" autocomplete="new-password" placeholder="Gõ lại đúng mật khẩu ở trên" data-i18n-ph="setm.pass2_ph">
           <div class="set-actions">
             <button class="s-btn" id="savePassword" data-i18n="setm.save_auth">Lưu tài khoản</button>
             <button class="s-btn-ghost" id="logoutBtn" data-i18n="setm.logout">Đăng xuất</button>
@@ -973,18 +993,20 @@
   <script src="/static/loi-may-khach.js?v=1"></script>
   <!-- Gộp các lượt đọc trùng nhau lúc mở app (fetch-gop.js, 0.416.0). Đứng trước mọi file gọi máy chủ. -->
   <script src="/static/fetch-gop.js?v=1"></script>
+  <!-- Recently opened chats kept in this browser for an instant first paint (chat-cache.js, 2026-11-08). Before app.js. -->
+  <script src="/static/chat-cache.js?v=1"></script>
   <!-- Code của từng trang nạp khi cần (nap-cham.js, 0.417.0): các file LỚN chỉ một trang dùng không còn chặn lúc mở app.
        Nhóm nào trang nào cần: console.js renderPage. Trang rảnh thì nạp nốt ở nền theo đúng thứ tự dưới đây. -->
   <script id="javis-lazy" type="application/json">{
  "congviec": [
-  "/static/agent-jobs.js?v=6",
+  "/static/agent-jobs.js?v=7",
   "/static/agent-pulse.js?v=4",
   "/static/agent-lessons-ui.js?v=4",
   "/static/agent-judge-ui.js?v=2"
  ],
  "teams": [
   "/static/team-github.js?v=1",
-  "/static/teams.js?v=24"
+  "/static/teams.js?v=26"
  ],
  "packs": [
   "/static/packs.js?v=5"
@@ -1001,7 +1023,7 @@
   "/static/inbox-v5.js?v=4",
   "/static/inbox-channels.js?v=5",
   "/static/inbox-stats.js?v=4",
-  "/static/conversations.js?v=28"
+  "/static/conversations.js?v=30"
  ],
  "usage": [
   "/static/usage.js?v=3"
@@ -1021,7 +1043,9 @@
   <script src="/static/nap-cham.js?v=1"></script>
   <script src="/static/auto-domain.js?v=1"></script>
   <script src="/static/i18n/index.js?v=2"></script>
-  <script src="/static/vendor/lucide-icons.js?v=18"></script>
+  <!-- Start-up screen logic (2026-11-09): right after the dictionary, before the page modules. -->
+  <script src="/static/boot-splash.js?v=1"></script>
+  <script src="/static/vendor/lucide-icons.js?v=19"></script>
   <script src="/static/icons.js?v=3"></script>
   <script src="/static/info-tip.js?v=2"></script>
   <!-- Timezone picker shared by the first-run setup and Settings (tz-picker.js, 0.443.0). -->
@@ -1044,7 +1068,7 @@
   <script src="/static/voice.js?v=29"></script>
   <script src="/static/graph.js?v=17"></script>
   <script src="/static/pan-zoom.js?v=1"></script>
-  <script src="/static/chat-render.js?v=23"></script>
+  <script src="/static/chat-render.js?v=24"></script>
   <script src="/static/code-hl.js?v=1"></script>
   <script src="/static/dataview.js?v=2"></script>
   <!-- window.JavisCopy: chép một chuỗi vào bảng nhớ tạm, có đường lui cho http trần. Đứng
@@ -1058,7 +1082,11 @@
   <script src="/static/word-count.js?v=1"></script>
   <!-- .html opens on its preview with a Code tab (0.430.2): before file-editor.js and console.js. -->
   <script src="/static/html-preview.js?v=1"></script>
-  <script src="/static/file-editor.js?v=15"></script>
+  <!-- Autosave and the dictation mic of the file editors (2026-11-09): before file-editor.js and console.js, which
+       attach them when a text file opens. editor-dictate.js uses window.JavisDictate at press time only. -->
+  <script src="/static/editor-autosave.js?v=1"></script>
+  <script src="/static/editor-dictate.js?v=1"></script>
+  <script src="/static/file-editor.js?v=16"></script>
   <!-- Insert images into a note (paste/drop/button): compress, then save into images/. After
        editor-cmds.js because it shares its editor lookup (contextFor). -->
   <script src="/static/note-images.js?v=1"></script>
@@ -1068,8 +1096,9 @@
   <!-- Lệnh "/" hệ thống (/status /model /compact /plan /goal ...): chạy lệnh mà chat-slash.js vừa nhận
        diện. Phải nạp TRƯỚC app.js (sendMessage gọi window.JavisLenh) và SAU chat-slash.js (đọc menu). -->
   <script src="/static/chat-goal.js?v=1"></script>
-  <script src="/static/chat-lenh.js?v=2"></script>
+  <script src="/static/chat-lenh.js?v=3"></script>
   <script src="/static/chat-acts.js?v=7"></script>
+  <script src="/static/chat-suggest.js?v=1"></script>
   <!-- One POST /upload with progress and stall watch, shared by the main chat and the Team chat (app.js, teams.js). -->
   <script src="/static/chat-upload.js?v=1"></script>
   <!-- Stick to the latest message, the jump button and its "New messages" pill, shared by app.js and teams.js. -->
@@ -1087,7 +1116,7 @@
   <script src="/static/chat-marks.js?v=5"></script>
   <!-- Khối tiến trình từng bước trong khung chat: phải đứng TRƯỚC app.js vì app.js gọi
        window.JavisSteps ngay khi khung tool_call đầu tiên về. -->
-  <script src="/static/chat-steps.js?v=2"></script>
+  <script src="/static/chat-steps.js?v=4"></script>
   <script src="/static/chat-viec.js?v=6"></script>
   <script src="/static/chat-nho.js?v=1"></script>
   <script src="/static/chat-doi.js?v=1"></script>
@@ -1104,7 +1133,7 @@
   <script src="/static/screen-awake.js?v=1"></script>
   <script src="/static/incoming-call.js?v=1"></script>
   <script src="/static/call-bar.js?v=1"></script>
-  <script src="/static/app.js?v=158"></script>
+  <script src="/static/app.js?v=160"></script>
   <!-- Sau app.js: dải việc nền đọc window.JavisSessions (app.js dựng) để biết phiên + brain. -->
   <script src="/static/background-strip.js?v=3"></script>
   <!-- Thân bảng chọn model dùng chung: phải đứng TRƯỚC model-picker.js (thanh chat) và
@@ -1118,17 +1147,17 @@
   <script src="/static/model-picker.js?v=19"></script>
   <script src="/static/composer-plus.js?v=3"></script>
   <script src="/static/composer-folder.js?v=4"></script>
-  <script src="/static/github-connect.js?v=3"></script>
+  <script src="/static/github-connect.js?v=5"></script>
   <script src="/static/branding.js?v=11"></script>
   <script src="/static/quick-settings.js?v=11"></script>
   <script src="/static/remote-access.js?v=2"></script>
   <script src="/static/chat-zoom.js?v=6"></script>
-  <script src="/static/brains-ui.js?v=9"></script>
+  <script src="/static/brains-ui.js?v=11"></script>
   <!-- Brain picker drawn by Javis over #graphSource (0.431.0): after brains-ui.js and app.js. -->
-  <script src="/static/brain-picker.js?v=1"></script>
+  <script src="/static/brain-picker.js?v=3"></script>
   <!-- One Reorder box (drag or arrows) for projects, pinned chats and tags (0.454.0). Before sessions-ui.js. -->
   <script src="/static/reorder-dialog.js?v=2"></script>
-  <script src="/static/sessions-ui.js?v=26"></script>
+  <script src="/static/sessions-ui.js?v=27"></script>
   <link rel="stylesheet" href="/static/improvement-candidates.css?v=3">
   <script src="/static/improvement-experiments.js?v=1"></script>
   <script src="/static/improvement-candidates.js?v=3"></script>
@@ -1140,14 +1169,14 @@
   <script src="/static/pulse-seen.js?v=1"></script>
   <!-- Tag filter bar and tag picker shared by Cộng sự and Team (0.195.0): load BEFORE workspace.js and teams.js. -->
   <script src="/static/tag-picker.js?v=1"></script>
-  <script src="/static/workspace.js?v=35"></script>
+  <script src="/static/workspace.js?v=36"></script>
   <!-- Hộp chọn thành viên kiểu Zalo (0.142.0): nạp TRƯỚC teams.js, teams.js gọi window.JavisTeamPicker. -->
   <script src="/static/team-picker.js?v=1"></script>
   <!-- Bộ phán xử nói / chờ / im của từng trợ lý (T3 phần J 0.156.0): lịch sử quyết định và nút sửa. Nạp TRƯỚC teams.js
        (ngăn Nhóm gọi window.JavisAgentJudge.hydrate); góp phần "judge" vào khung nhịp qua window.JavisPulseParts. -->
   <!-- Nút mic nhập chữ của khung soạn Nhóm (0.176.0): nạp TRƯỚC teams.js. -->
-  <script src="/static/dictate.js?v=4"></script>
-  <script src="/static/composer-dictate.js?v=5"></script>
+  <script src="/static/dictate.js?v=7"></script>
+  <script src="/static/composer-dictate.js?v=8"></script>
   <!-- Trang Hội thoại (hộp thư khách): nạp TRƯỚC console.js để renderConversations uỷ quyền được. -->
   <script src="/static/ht-media.js?v=3"></script>
   <!-- Dashboard Token (trang Mức dùng nâng cấp): nạp TRƯỚC console.js để renderUsage ủy quyền được. -->
@@ -1170,8 +1199,8 @@
   <script src="/static/login-vault.js?v=2"></script>
   <script src="/static/messenger-connect.js?v=3"></script>
   <script src="/static/voice-catalog.js?v=1"></script>
-  <script src="/static/console.js?v=209"></script>
-  <script src="/static/mobile-chat.js?v=16"></script>
+  <script src="/static/console.js?v=210"></script>
+  <script src="/static/mobile-chat.js?v=17"></script>
   <script src="/static/brain-view.js?v=1"></script>
   <script src="/static/push.js?v=3"></script>
   <script src="/static/install-nudge.js?v=2"></script>

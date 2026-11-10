@@ -21,6 +21,7 @@ from typing import Callable, Optional
 
 from fastapi import APIRouter, Form, Query
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 import channel_accounts
 import channels
@@ -216,7 +217,8 @@ def register(app, deps: ConversationsDeps):
                                  status: str = "", chat_type: str = "", tag: int = 0, has_contact: int = 0,
                                  sort: str = "", account_ids: str = "", who: str = "", tags_any: str = "",
                                  tags_none: str = "", date_from: str = Query("", alias="from"),
-                                 date_to: str = Query("", alias="to"), last_by: str = "", pinned: int = 0):
+                                 date_to: str = Query("", alias="to"), last_by: str = "", pinned: int = 0,
+                                 brain: str = ""):
         """Danh sách hội thoại mới nhất trước, kèm vài con số đầu trang (cùng bộ lọc).
 
         0.65.3: thêm `status` (unread | need_reply | human) và `chat_type` (group | private); mỗi hàng có `bot_name`;
@@ -235,13 +237,41 @@ def register(app, deps: ConversationsDeps):
 
         2026-10-25 (row menu): hidden conversations stay out of the list unless `status=hidden` asks for exactly them;
         a search (`q`) finds them too, so a customer the owner hid can always be looked up. `facets.status.hidden`
-        counts them."""
+        counts them.
+
+        #1243: `brain` leaves out the conversations of channel accounts assigned to another brain, in the list, the
+        counts and the facets, by the same rule as the Channels tab (`channel_accounts.keys_of_other_brains`). Without
+        it, every brain's conversations come back, as before (internal callers and "all brains")."""
+        # The store work runs in a worker thread (owner, 2026-11-07: the Chatbot page loaded slowly): this list is asked
+        # every 5 seconds, and done on the event loop it held up every other request of the server while it counted.
+        others = channel_accounts.keys_of_other_brains(brain) if str(brain or "").strip() else []
+        rows = await run_in_threadpool(_list_rows, channel, bot_id, account_id, q, mode, limit, offset, status, chat_type,
+                                       tag, has_contact, sort, account_ids, who, tags_any, tags_none, date_from, date_to,
+                                       last_by, pinned, others)
+        items, who_counts, total, hesitant, extra, ctx = rows
+        if offset > 0:
+            return {"ok": True, "items": items}
+        phone_lookup = None
+        if q and conversations.chuan_hoa_sdt(q) and channel in ("", "zalo_personal") \
+                and (not account_id or account_id.startswith("zalo_personal:")):
+            items, phone_lookup = await _tim_sdt_tren_zalo(items, q, dict(
+                channel=channel, bot_id=bot_id, account_id=account_id, q=q, mode=mode, limit=limit,
+                status=status, chat_type=chat_type, hesitant=hesitant, **extra))
+            await run_in_threadpool(_attach_state, items, ctx)
+        head = await run_in_threadpool(_first_page_extras, items, hesitant, bot_id, channel, account_id, others)
+        return {"ok": True, "items": items, "who_counts": who_counts, "total": total, **head, "phone_lookup": phone_lookup}
+
+    def _list_rows(channel, bot_id, account_id, q, mode, limit, offset, status, chat_type, tag, has_contact, sort,
+                   account_ids, who, tags_any, tags_none, date_from, date_to, last_by, pinned, others=()) -> tuple:
+        """The blocking part of GET /conversations: `(items, who_counts, total, hesitant, extra, ctx)`. From the second
+        page on the rows already carry `bot_name` and `need_reply`."""
         hesitant = _hesitant()
         hidden = "only" if status == "hidden" else ("" if q.strip() else "exclude")
         since, until = _day_range(date_from, date_to)
         extra = dict(tag=tag, has_contact=bool(has_contact), sort=sort, hidden=hidden,
                      account_ids=_ids_param(account_ids), tags_any=_ids_param(tags_any), tags_none=_ids_param(tags_none),
-                     since=since, until=until, last_by=last_by, pinned=bool(pinned))
+                     since=since, until=until, last_by=last_by, pinned=bool(pinned),
+                     exclude_account_ids=list(others or []))
         ctx = _StateCtx(hesitant)
         who = who if who in inbox_state.WHO else ""
         who_counts, total = None, None
@@ -262,7 +292,9 @@ def register(app, deps: ConversationsDeps):
             narrowed = bool(channel or bot_id or account_id or q or status or chat_type or tag or has_contact
                             or base["account_ids"] or base["tags_any"] or base["tags_none"] or since or until
                             or base["last_by"] or pinned)
-            every = conversations.state_rows(hesitant=hesitant, hidden="exclude") if narrowed else light
+            every = (conversations.state_rows(hesitant=hesitant, hidden="exclude",
+                                              exclude_account_ids=base["exclude_account_ids"])
+                     if narrowed else light)
             by_acc, you_total = {}, 0
             for r in every:
                 if ctx.of(r)["who"] == "you":
@@ -288,25 +320,21 @@ def register(app, deps: ConversationsDeps):
             for it in items:
                 it["bot_name"] = _ten_bot(str(it.get("bot_id") or ""))
                 it["need_reply"] = conversations.can_tra_loi(it, hesitant)
-            return {"ok": True, "items": items}
-        phone_lookup = None
-        if q and conversations.chuan_hoa_sdt(q) and channel in ("", "zalo_personal") \
-                and (not account_id or account_id.startswith("zalo_personal:")):
-            items, phone_lookup = await _tim_sdt_tren_zalo(items, q, dict(
-                channel=channel, bot_id=bot_id, account_id=account_id, q=q, mode=mode, limit=limit,
-                status=status, chat_type=chat_type, hesitant=hesitant, **extra))
-            _attach_state(items, ctx)
-        facets = conversations.dem_bo_loc(hesitant)
+        return items, who_counts, total, hesitant, extra, ctx
+
+    def _first_page_extras(items: list, hesitant, bot_id: str, channel: str, account_id: str, others=()) -> dict:
+        """What only the first page carries (counts, filter options, tags, channels); also names each row's bot."""
+        facets = conversations.dem_bo_loc(hesitant, exclude_account_ids=list(others or []))
         ten = {bid: _ten_bot(bid) for bid in facets["bots"] if bid}
         for it in items:
             it["bot_name"] = ten.get(str(it.get("bot_id") or "")) or _ten_bot(str(it.get("bot_id") or ""))
             it["need_reply"] = conversations.can_tra_loi(it, hesitant)
-        return {"ok": True, "items": items, "who_counts": who_counts, "total": total,
-                "stats": conversations.thong_ke(bot_id=bot_id, channel=channel, account_id=account_id),
+        return {"stats": conversations.thong_ke(bot_id=bot_id, channel=channel, account_id=account_id,
+                                                exclude_account_ids=list(others or [])),
                 "facets": facets,
                 "bots": [{"id": bid, "name": ten[bid], **facets["bots"][bid]} for bid in ten],
                 "tags": conversations.list_tags(),
-                "channels": channels.cho_giao_dien(), "phone_lookup": phone_lookup}
+                "channels": channels.cho_giao_dien()}
 
     async def _tim_sdt_tren_zalo(items: list, q: str, loc: dict) -> tuple:
         """0.216.0: ô tìm kiếm là một số điện thoại đầy đủ mà chưa khách nào trong hòm thư mang số đó: hỏi Zalo của các
@@ -346,10 +374,14 @@ def register(app, deps: ConversationsDeps):
             lt = time.localtime()
             midnight = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
             since, until = midnight - (n - 1) * 86400, now
+        # Counted in a worker thread: a month of a busy inbox takes a while, and the rest of the server must not wait on it.
+        return await run_in_threadpool(_insights, since, until, n, account)
+
+    def _insights(since: float, until: float, n: int, account: str) -> dict:
         accounts = conversations.stats_accounts()
         account = account if any(a["id"] == account for a in accounts) else ""
-        cur = conversations.insights(since, until, account)
-        prev = conversations.insights(since - n * 86400, since, account)
+        cur = conversations.insights_cached(since, until, account)
+        prev = conversations.insights_cached(since - n * 86400, since, account)
         ctx = _StateCtx(_hesitant())
         you = sum(1 for r in conversations.state_rows(hesitant=ctx.hesitant, hidden="exclude", account_ids=[account] if account else None)
                   if ctx.of(r)["who"] == "you")

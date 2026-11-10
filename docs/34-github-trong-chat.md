@@ -10,6 +10,14 @@ Thiết kế đầy đủ: [docs/dev/2026-10-github-trong-chat-spec.md](dev/2026
 
 Mở **Kết nối**. Thẻ **GitHub** luôn nằm đầu danh sách, có sẵn trong Javis, không phải cài gói nào.
 
+**Git đi trước.** Javis tải repo về bằng git, nên bấm **Kết nối** là Javis kiểm tra máy có git chưa. Thiếu thì Javis tự cài rồi mới mở bước đăng nhập, thường mất 1 đến 3 phút:
+
+- **Windows:** winget, không có winget thì bộ cài chính thức của Git for Windows. Cả hai cài cho riêng người dùng đang đăng nhập, không cần quyền quản trị.
+- **Mac:** Homebrew nếu máy có, không thì Apple mở hộp thoại cài công cụ dành cho lập trình viên: bấm **Cài đặt**, Javis tự đi tiếp khi xong.
+- **Linux/VPS:** trình quản lý gói (apt, dnf, yum, apk, pacman, zypper) khi Javis chạy bằng root hoặc có sudo không cần mật khẩu. Docker image chính thức đã có sẵn git.
+
+Không cài được thì hộp thoại hiện đúng lệnh để cài tay, nút **Thử lại** và nút **Bỏ qua, kết nối luôn**. Git cài tay trong lúc Javis đang chạy cũng được nhận ngay, không phải khởi động lại. Thẻ đã kết nối mà máy thiếu git có nút **Cài git** riêng.
+
 1. Trên github.com: **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
 2. Chọn các repo cho Javis làm việc. Bật quyền: **Contents**, **Pull requests**, **Workflows** (Read and write); **Checks**, **Actions**, **Commit statuses**, **Metadata** (Read).
 3. Dán token vào thẻ GitHub, bấm **Kết nối**.
@@ -34,10 +42,15 @@ Javis tự làm, không cần bạn nhắc:
 2. **Commit, đẩy lên, mở PR** (dạng nháp) dưới tên tài khoản GitHub của bạn.
 3. **Theo dõi CI** theo đúng commit vừa đẩy. Commit mới không bao giờ thừa hưởng kết quả xanh của commit cũ.
 4. **CI đỏ**: Javis mở lượt sửa ngay trong cuộc trò chuyện đó, kèm log. Tối đa **3 vòng**, quá thì báo kẹt kèm lý do. Đỏ cả trên nhánh chính thì báo không phải lỗi của việc này, không sửa lan.
-5. **Review chéo**: CI xanh rồi, một engine **khác hãng** với engine đã viết đọc diff và chỉ nêu lỗi có đường gây hỏng cụ thể. Tác giả kiểm chứng: đúng thì sửa, sai thì bác bỏ kèm lý do.
+5. **Review chéo (bạn quyết định, mặc định tắt)**: một model đọc diff và chỉ nêu lỗi có đường gây hỏng cụ thể. Javis không tự review nữa, trừ khi bạn bảo.
+   - **Bật cho một repo:** thẻ GitHub, dấu ba chấm của repo, **Review chéo**, bật **Review trước khi merge**. Từ đó mỗi commit có CI xanh được review trước khi merge.
+   - **Review một PR bất kỳ lúc nào:** bấm biểu tượng GitHub cạnh cuộc trò chuyện, chọn model rồi bấm **Review ngay**. Hoặc nhắn "review PR này", "review bằng DeepSeek". PR chưa merge cho tới khi review xong.
+   - **Model review:** mặc định là **chính model đang chat**, không cần khác hãng. Muốn model khác thì chọn trong ô **Model review** (theo repo, hay mỗi lần bấm Review ngay); model đó dùng đúng model và mức suy nghĩ bạn chọn trên thẻ của nó ở trang Models.
+   - **Có phát hiện:** Javis dừng, không merge, hiện danh sách lỗi kèm hai nút **Sửa các lỗi này** (giao cho model đã viết code kiểm chứng và sửa) và **Bỏ qua, merge**. Nhắn trong chat cũng được. Đẩy commit mới thì các phát hiện cũ không còn giữ PR.
+   - **Không review được:** gói ChatGPT, Grok Build và Antigravity chạy qua CLI còn công cụ đọc ghi file, nên không được đọc diff. Đang chat bằng một trong ba gói đó thì Javis dùng thẻ kế tiếp trên trang Models (Claude, hoặc một nhà dùng API key). Model review lỗi thì khung chat báo rõ model và lý do, rồi bỏ qua lần đó.
 6. **Merge**: CI xanh thì Javis **tự merge** theo kiểu merge repo cho phép. Không tự merge khi: tắt công tắc của repo, có thay đổi "ăn gian" cần người xem, repo không có CI, hay repo còn đòi người duyệt.
 
-Lệnh kiểm tra của từng repo sửa được ở thẻ GitHub trên trang Kết nối, nút **Lệnh kiểm tra**. Công tắc **Tự merge khi CI xanh** cũng ở đó, mặc định bật.
+Lệnh kiểm tra của từng repo sửa được ở thẻ GitHub trên trang Kết nối, nút **Lệnh kiểm tra**. Công tắc **Tự merge khi CI xanh** cũng ở đó, mặc định bật. **Review chéo** nằm trong dấu ba chấm của repo, mặc định tắt.
 
 ## 4. Bốn biểu tượng cạnh cuộc trò chuyện
 

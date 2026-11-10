@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import signal
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -89,8 +91,77 @@ def _workflow_triggers_on_change(on: Any) -> bool:
     return False
 
 
-def commands_from_workflow(text: str) -> List[Dict[str, str]]:
-    """`run:` steps of a workflow that make sense on this machine, in order. Each item: {name, run}."""
+def host_os() -> str:
+    """"linux", "macos" or "windows": the runner family this machine stands in for."""
+    if os.name == "nt":
+        return "windows"
+    return "macos" if sys.platform == "darwin" else "linux"
+
+
+_OS_LABEL = (("windows", re.compile(r"windows|win\d", re.I)), ("macos", re.compile(r"mac", re.I)),
+             ("linux", re.compile(r"ubuntu|linux|debian|fedora|alpine", re.I)))
+
+
+def _os_of(label: Any) -> str:
+    for fam, rx in _OS_LABEL:
+        if rx.search(str(label)):
+            return fam
+    return ""
+
+
+def runner_os(job: Dict[str, Any]) -> set:
+    """OS families a job's `runs-on` asks for. Empty = unknown (self-hosted, an expression we cannot resolve)."""
+    ro = job.get("runs-on")
+    if isinstance(ro, dict):
+        ro = ro.get("labels") or ro.get("group") or ""
+    labels = ro if isinstance(ro, list) else [ro]
+    out = set()
+    for label in labels:
+        m = re.fullmatch(r"\$\{\{\s*matrix\.([\w-]+)\s*\}\}", str(label or "").strip())
+        if m:
+            matrix = ((job.get("strategy") or {}).get("matrix") or {}) if isinstance(job.get("strategy"), dict) else {}
+            vals = matrix.get(m.group(1)) if isinstance(matrix, dict) else None
+            vals = vals if isinstance(vals, list) else []
+            vals += [i.get(m.group(1)) for i in (matrix.get("include") or []) if isinstance(i, dict)] \
+                if isinstance(matrix, dict) and isinstance(matrix.get("include"), list) else []
+            out |= {f for f in (_os_of(v) for v in vals if v) if f}
+        else:
+            fam = _os_of(label)
+            if fam:
+                out.add(fam)
+    return out
+
+
+_WIN_SHELLS = ("pwsh", "powershell", "cmd")
+
+
+def _default_dir(node: Any) -> str:
+    """`defaults.run.working-directory` of a workflow or a job, or ""."""
+    d = node.get("defaults") if isinstance(node, dict) else None
+    run = d.get("run") if isinstance(d, dict) else None
+    return str(run.get("working-directory") or "").strip() if isinstance(run, dict) else ""
+
+
+def _in_dir(run: str, wd: str, host: str) -> str:
+    """`run` started from `wd` the way CI starts it (#1109). An app in a subfolder (`working-directory: web`) used to
+    run its `npm ci` at the repo root, fail every time, and block the push from chat. Bash (`run_checks` uses
+    `bash -e`) stops on a failed `cd`; cmd gets one line with `/d` for another drive."""
+    wd = wd.strip()
+    if wd in ("", ".", "./", ".\\"):
+        return run
+    if host == "windows":
+        return f'cd /d "{wd}" && {run}'
+    q = shlex.quote(wd)
+    return f"cd {q} && {run}" if "\n" not in run else f"cd {q}\n{run}"
+
+
+def commands_from_workflow(text: str, host: Optional[str] = None) -> List[Dict[str, str]]:
+    """`run:` steps of a workflow that make sense on this machine, in order. Each item: {name, run}.
+
+    Jobs whose runner is another OS (a macos-latest installer smoke test on a Linux VPS) are left to CI: they cannot
+    pass here and used to hang or fail the gate, which stopped the push of a change that had nothing to do with them.
+    """
+    host = host or host_os()
     import fastyaml
     try:
         doc = fastyaml.safe_load(text) or {}
@@ -106,20 +177,30 @@ def commands_from_workflow(text: str) -> List[Dict[str, str]]:
     jobs = doc.get("jobs") or {}
     if not isinstance(jobs, dict):
         return []
+    workflow_dir = _default_dir(doc)
     for job in jobs.values():
         if not isinstance(job, dict):
             continue
         if _BRANCH_ONLY.search(str(job.get("if") or "")):
             continue
+        fams = runner_os(job)
+        if fams and host not in fams:
+            continue
+        job_dir = _default_dir(job) or workflow_dir
         for step in job.get("steps") or []:
             if not isinstance(step, dict) or not step.get("run"):
+                continue
+            if host != "windows" and str(step.get("shell") or "").split(" ")[0].lower() in _WIN_SHELLS:
                 continue
             run = str(step["run"]).strip()
             if _SKIP_STEP.search(run) or _BRANCH_ONLY.search(str(step.get("if") or "")):
                 continue
             if step.get("env") and "${{" in str(step.get("env")):
                 continue
-            item = {"name": str(step.get("name") or run.splitlines()[0])[:80], "run": run}
+            wd = str(step.get("working-directory") or "").strip() or job_dir
+            if "${{" in wd:
+                continue   # an expression only CI can fill in
+            item = {"name": str(step.get("name") or run.splitlines()[0])[:80], "run": _in_dir(run, wd, host)}
             if item not in out:
                 out.append(item)
     return out

@@ -503,6 +503,50 @@ def _file_co_danh_muc() -> Optional[Path]:
     return p if p.is_file() else None
 
 
+_FAMILY_TIERS = ("fable", "mythos", "opus", "sonnet", "haiku")
+
+
+def sort_models(ids) -> list:
+    """Full model ids -> family aliases first, then the ids NEWEST first. Anything that is not a model id is dropped.
+
+    Families go strongest tier first; inside a family the newer version comes first, and the
+    undated id sits above the dated one (`claude-haiku-4-5` before `claude-haiku-4-5-20251001`) because that is the
+    name people type. Aliases in the input are ignored and rebuilt from the ids, so the result has no duplicates.
+    """
+    hop, seen = [], set()
+    for mid in ids or []:
+        v = tach_phien_ban(mid)
+        if v and mid not in seen:
+            seen.add(mid)
+            hop.append((v[0], v[1], v[2], mid))
+    if not hop:
+        return []
+    moi_nhat = {}
+    for fam, ver, _, _ in hop:
+        if ver > moi_nhat.get(fam, ()):
+            moi_nhat[fam] = ver
+    # Known families go by tier, strongest first: by version alone Haiku 5.5 would sit above Fable 5.2. A family this
+    # code has never heard of follows them, newest version first, so a new line still shows without a code change.
+    def _tier(fam):
+        return _FAMILY_TIERS.index(fam) if fam in _FAMILY_TIERS else len(_FAMILY_TIERS)
+    hop.sort(key=lambda x: (_tier(x[0]), bac_phien_ban(moi_nhat[x[0]]), x[0], bac_phien_ban(x[1]), x[2], x[3]))
+    alias = []
+    for fam, _, _, _ in hop:
+        if fam not in alias:
+            alias.append(fam)
+    return alias + [mid for _, _, _, mid in hop]
+
+
+def merge_models(live, shipped) -> list:
+    """The catalog read from the installed `claude` binary, plus the models this Javis release ships with.
+
+    Owner report 2026-11-10: Fable 5.2 was out and Javis did not list it. The binary's catalog was the ONLY list
+    shown, so a machine whose Claude Code had not updated yet (Docker waits for a new image, the daily updater can
+    fail) never saw a model that the Javis release already knew. The union means either side can bring a new model.
+    """
+    return sort_models(list(live or []) + list(shipped or []))
+
+
 def list_models() -> Optional[list]:
     """Model của gói Claude Code: alias đứng trước, rồi id đầy đủ MỚI NHẤT trước.
 
@@ -526,28 +570,10 @@ def list_models() -> Optional[list]:
         tho = _doc_id_model(p)
     except Exception:
         return None
-    hop = []
-    for mid in tho:
-        v = tach_phien_ban(mid)
-        if v:
-            hop.append((v[0], v[1], v[2], mid))
-    if not hop:
+    ket_qua = sort_models(tho)[:40]
+    if not ket_qua:
         _MODELS_CACHE.update(sig=sig, ids=None)
         return None
-    # Dòng nào có bản mới nhất thì đứng trước; trong một dòng, bản mới trước, và bản KHÔNG
-    # gắn ngày đứng trên bản gắn ngày (`claude-haiku-4-5` trước `claude-haiku-4-5-20251001`)
-    # vì đó mới là tên người dùng gõ.
-    moi_nhat = {}
-    for fam, ver, _, _ in hop:
-        if ver > moi_nhat.get(fam, ()):
-            moi_nhat[fam] = ver
-    hop.sort(key=lambda x: (bac_phien_ban(moi_nhat[x[0]]), x[0], bac_phien_ban(x[1]), x[2], x[3]))
-    ids = [mid for _, _, _, mid in hop]
-    alias = []
-    for fam, _, _, _ in hop:
-        if fam not in alias:
-            alias.append(fam)
-    ket_qua = (alias + ids)[:40]
     _MODELS_CACHE.update(sig=sig, ids=list(ket_qua))
     return ket_qua
 
@@ -1209,6 +1235,12 @@ def claude_engine(system_prompt=None, cwd=None, tag="chat", allowed_tools=None, 
         plan_limits.cai_vao_claude_sdk()
     except Exception:  # noqa: BLE001 - a meter must never stop a turn
         pass
+    try:
+        # 2026-11-09 (owner incident): every Claude turn refuses tool calls on Javis' secret files (secret_guard.py).
+        import claude_secret_hook
+        claude_secret_hook.install()
+    except Exception as e:  # noqa: BLE001 - the guard must never stop a turn
+        print(f"[secret guard] Claude hook not installed: {type(e).__name__}: {e}", file=sys.stderr)
     eng = ClaudeSDK(system_prompt=system_prompt, cwd=cwd, tag=tag,
                     allowed_tools=allowed_tools, model=model)
     # Every run (chat, loops, reminders, bots) skips the repo CLAUDE.md and compacts at ~180k;
@@ -1662,6 +1694,32 @@ def _codex_home() -> Path:
     return Path(home) if home else _home_dir() / ".codex"
 
 
+def _windows() -> bool:
+    return os.name == "nt"
+
+
+def codex_windows_sandbox_config(sandbox: Optional[str], codex_home=None) -> list:
+    """`-c` overrides that make `--sandbox` mean what it says on Windows (#1133).
+
+    On Windows, with no `[windows] sandbox` in config.toml, Codex quietly downgrades `workspace-write` to `read-only`:
+    every background job at `auto` could read but not write, and stopped as if waiting for the owner. Javis asks for the
+    unelevated Windows sandbox (no admin prompt) whenever it sets a sandbox. A choice already made in config.toml of
+    that Codex home (for example `elevated`) is kept: an override would beat it. Nothing on other systems, nothing when
+    no sandbox is set (full access)."""
+    if not sandbox or not _windows():
+        return []
+    try:
+        import tomllib
+        cfg = Path(codex_home or _codex_home()) / "config.toml"
+        if cfg.is_file():
+            with open(cfg, "rb") as f:
+                if ((tomllib.load(f) or {}).get("windows") or {}).get("sandbox"):
+                    return []
+    except Exception:  # noqa: BLE001 - an unreadable config: still ask for the sandbox that makes writes work
+        pass
+    return ['windows.sandbox="unelevated"']
+
+
 # Báo lỗi khách 04/10/2026 (Windows, 0.71.0): mọi lượt chat ChatGPT chết với "Codex lỗi (exit 1):
 # WARNING: proceeding, even though we could not create PATH aliases: Could not find home
 # directory". Codex tự tìm home bằng `dirs::home_dir()`: trên Windows hàm đó hỏi thẳng hồ sơ người
@@ -1905,6 +1963,8 @@ class CodexCLI:
             args += ["-p", self.profile]
         for c in (self.extra_config or []):
             args += ["-c", c]
+        for c in codex_windows_sandbox_config(self.sandbox, self.codex_home):
+            args += ["-c", c]
         if self.hub_turn:
             # Built per query, inside the turn: the same CodexCLI serves many turns (and several
             # people in one group chat), so the key can never live in extra_config.
@@ -1968,12 +2028,11 @@ class CodexCLI:
             tinfo = {"timed_out": False}
             last = {"t": time.time()}
             from claude_sdk_engine import tran_watchdog
-            # Ba trần, None = không giới hạn. Parity với engine Claude SDK, kể cả mặc định:
-            # hai trần đo sự IM LẶNG của model đều bỏ trần (im lặng không phải treo - xem
-            # `tran_watchdog`), riêng trần chờ TOOL giữ 1 tiếng vì nó đo một tiến trình con
-            # có thật đang sống ngoài kia.
+            # Ba trần, None = không giới hạn. Parity với engine Claude SDK, kể cả mặc định: cả ba
+            # đều bỏ trần. Trần chờ TOOL (1 tiếng) cũng bỏ từ 2026-11-07 theo lời chủ repo ("bỏ hết
+            # các trần của các model"); muốn có lại thì đặt JAVIS_CLAUDE_TOOL_TIMEOUT.
             IDLE = tran_watchdog("JAVIS_CLAUDE_IDLE_TIMEOUT", "0")
-            TOOL_IDLE = tran_watchdog("JAVIS_CLAUDE_TOOL_TIMEOUT", "3600")
+            TOOL_IDLE = tran_watchdog("JAVIS_CLAUDE_TOOL_TIMEOUT", "0")
             FIRST_IDLE = tran_watchdog("JAVIS_CLAUDE_FIRST_TIMEOUT", "0")
             busy = {"n": 0}   # số item tool/lệnh đã started mà chưa completed
             seen = {"dong_dau": False}   # đã có dòng đầu tiên chưa (quyết định dùng trần nào)
@@ -2117,6 +2176,12 @@ class CodexCLI:
                     self.session_id = thread_id
                     # Phát ngay để caller lưu trước cả khi lượt bị ngắt giữa chừng.
                     yield {"type": "session", "session_id": thread_id}
+            elif t in ("item.started", "item.updated", "item.completed") \
+                    and (ev.get("item") or {}).get("type") == "todo_list":
+                # Codex's plan for this turn (update_plan). Each update carries the whole list; the chat draws it as a
+                # checklist (turn_plan.py). It used to fall through every branch and be dropped.
+                it = ev.get("item") or {}
+                yield {"type": "tool_call", "name": "todo_list", "item": it}
             elif t == "item.started":
                 # Codex báo lúc một bước BẮT ĐẦU (đo 08/10, Codex 0.160: lệnh `ping` 5 giây có
                 # item.started ở giây 8,8, item.completed ở giây 14). Trước 0.86.1 Javis chỉ nghe

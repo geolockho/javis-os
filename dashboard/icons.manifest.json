@@ -95,7 +95,9 @@
       "refresh-cw",
       "log-in",
       "unplug",
-      "plug-zap"
+      "plug-zap",
+      "archive",
+      "archive-restore"
     ],
     "dieu-huong": [
       "chevron-down",
@@ -162,6 +164,7 @@
       "volume-2",
       "link",
       "share-2",
+      "qr-code",
       "quote",
       "circle-help",
       "star",

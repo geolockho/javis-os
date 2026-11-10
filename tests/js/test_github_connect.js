@@ -56,6 +56,23 @@ check("no em dash in the module", js.indexOf("\u2014") === -1 && js.indexOf("\u2
     /JavisConnModal/.test(pop) && pop.includes("reposHtml(local)") && pop.includes('openChecks(b.getAttribute("data-gh-checks"), back)') && pop.includes('openMetrics(b.getAttribute("data-gh-metrics"), back)'));
 }
 
+// Owner, 06/11/2026: the repo popup takes the look of the Tasks page: card rows, a switch for auto-merge, and a "..."
+// sheet holding Checks, Numbers and Remove instead of a row of buttons.
+{
+  const row = js.slice(js.indexOf("function localRow(r)"), js.indexOf("// The repos of this brain"));
+  check("each repo is a card row with a meta line", row.includes('class="gh-rrow') && row.includes("gh-rmeta") && row.includes("gh.local_chats"));
+  check("auto-merge is a switch, its state written in the meta line",
+    row.includes('class="gh-sw" role="switch" aria-checked="') && row.includes("gh.auto_merge_off") && !row.includes('type="checkbox"'));
+  check("Checks, Numbers and Remove sit in the ... sheet, Remove in red",
+    row.includes("data-gh-menu") && /function repoSheet[\s\S]*data-gh-checks[\s\S]*data-gh-metrics[\s\S]*gh-mi danger" data-gh-remove/.test(row));
+  check("the sheet closes with Escape and on the scrim", row.includes('e.key === "Escape"') && row.includes("gh-sheet-scrim\" data-gh-close"));
+  check("the row helper does not clash with the picker's repoRow", (js.match(/function localRow\(/g) || []).length === 1);
+  const css = read("dashboard/style.css");
+  check("the dialog carries its own Tasks-page styles (tasks.css loads only on that page)",
+    /\.gh-rrow \{/.test(css) && /\.gh-sw\[aria-checked="true"\]/.test(css) && /\.gh-sheet \{/.test(css) && /\.gh-sheet-scrim \{[^}]*z-index: 210/.test(css));
+  check("new texts exist in both languages", ["gh.auto_merge_off", "gh.more", "gh.close"].every(function (k) { return vi[k] && en[k]; }));
+}
+
 // 0.368.0 (owner, 28/10/2026, after Claude Code's picker): the chip and + menu open "Change repo / Change branch";
 // the repo list has "Selected" and "Repos" sections; a branch list per repo.
 {
@@ -119,6 +136,58 @@ check("no em dash in the module", js.indexOf("\u2014") === -1 && js.indexOf("\u2
   check("GitHub reloading after the Pages keeps the Pages", gh.addToConnCount("gh", 1) === 5);
   check("disconnecting GitHub takes only its own share off", gh.addToConnCount("gh", 0) === 4 && cnt.textContent === "4 accounts");
   delete global.document; delete global.window;
+}
+
+// Owner, 08/11/2026: cross review is the person's call. A per-repo switch (off by default) with a reviewer picker, and on
+// the PR panel Review now, then Fix them / Skip and merge on the findings.
+{
+  const sheet = js.slice(js.indexOf("function repoSheet(name)"), js.indexOf("// The repos of this brain"));
+  check("the ... sheet has a Cross review item", sheet.includes("data-gh-review") && sheet.includes("gh.review"));
+  const dlg = js.slice(js.indexOf("async function openReview("), js.indexOf("// Local check commands"));
+  check("the review dialog has a switch and a reviewer picker, the chat's model first",
+    dlg.includes('role="switch"') && dlg.includes('data-f="prov"') && js.includes("gh.review_default") && dlg.includes('"/github/local/review"'));
+  const det = js.slice(js.indexOf("function detailHtml(d)"), js.indexOf("function openDetail(id)"));
+  check("Review now only on an open, unmerged PR that is not already being reviewed",
+    /canReview = !!r\.pr_number && r\.integ !== "merged" && !r\.reviewing && !r\.merging/.test(det) && det.includes("data-rv-now"));
+  check("findings come with Fix them and Skip and merge, and hide the plain Merge button",
+    det.includes("data-rv-fix") && det.includes("data-rv-skip") && det.includes("canMerge && !found.length"));
+  const od = js.slice(js.indexOf("function openDetail(id)"), js.indexOf("function init()"));
+  check("the panel follows a running review", /r\.merging \|\| r\.reviewing/.test(od));
+  check("the buttons call the review routes", od.includes('"/review"') && od.includes('"/review/fix"') && od.includes('"/review/skip"'));
+  check("review texts exist in both languages", ["gh.review", "gh.review_how", "gh.review_now", "gh.review_fix", "gh.review_skip",
+    "gh.reviewing", "gh.review_fixing", "gh.review_started", "gh.review_on_meta"].every(function (k) { return vi[k] && en[k]; }));
+}
+
+// Owner, 09/11/2026: check for git before connecting GitHub, and install it first when the machine has none.
+{
+  check("git step: an answer with git is ready", gh.gitPhase({ ok: true, has_git: true, install: "idle" }) === "ready");
+  check("git step: a running install keeps polling",
+    gh.gitPhase({ ok: true, has_git: false, install: "installing" }) === "installing" &&
+    gh.gitPhase({ ok: true, has_git: false, install: "installing", wait_user: true }) === "wait_user");
+  check("git step: a failed install shows retry", gh.gitPhase({ ok: true, has_git: false, install: "failed", can_install: true }) === "failed");
+  check("git step: no way to install here shows the manual command", gh.gitPhase({ ok: true, has_git: false, install: "idle", can_install: false }) === "manual");
+  check("git step: a network error is its own phase", gh.gitPhase(null) === "error" && gh.gitPhase({ ok: false }) === "error");
+  const of = js.slice(js.indexOf("function openForm(st)"), js.indexOf("async function setupGit"));
+  check("Connect goes through the git step when the machine has no git, then opens the sign-in form",
+    /st\.has_git === false\) \{ setupGit\(function \(g\) \{ connectForm\(st, g\); \}\)/.test(of) && of.includes("connectForm(st);"));
+  const sg = js.slice(js.indexOf("async function setupGit"), js.indexOf("function connectForm"));
+  check("the git step asks the server to install, then polls GET /github/git",
+    sg.includes('api("/github/git/install", {})') && sg.includes('api("/github/git")') && /setTimeout\(res, 2500\)/.test(sg));
+  check("the git step stops polling once the dialog is closed or replaced", (sg.match(/if \(!open\(\)\) return;/g) || []).length >= 3);
+  check("a failure offers Try again, the manual command and a way on", sg.includes('data-f="retry"') && sg.includes("g.manual") &&
+    sg.includes('data-f="skip"') && sg.includes("then(null)"));
+  check("the installing line uses the shared loading look", sg.includes('class="pg-loading"'));
+  const card = js.slice(js.indexOf("function cardHtml"), js.indexOf("async function loadCard"));
+  check("the card says Connect installs git first; a connected card gets an Install git button",
+    card.includes('"gh.no_git_auto"') && card.includes("data-gh-git") && js.includes('cardHost.querySelector("[data-gh-git]")'));
+  const gitKeys = ["gh.no_git", "gh.no_git_auto", "gh.git_install", "gh.git_head", "gh.git_checking", "gh.git_installing",
+    "gh.git_wait_apple", "gh.git_bg", "gh.git_ok", "gh.git_failed", "gh.git_manual", "gh.git_cmd", "gh.git_retry",
+    "gh.git_recheck", "gh.git_page", "gh.git_skip"];
+  check("git step texts exist in both languages", gitKeys.every(k => vi[k] && en[k]));
+  check("git step texts keep the {v} slot in both languages", vi["gh.git_ok"].includes("{v}") && en["gh.git_ok"].includes("{v}"));
+  check("the manual-install line names the button actually shown", vi["gh.git_cmd"].includes("{btn}") && en["gh.git_cmd"].includes("{btn}") &&
+    sg.includes('tw("gh.git_cmd", { btn: again })') && sg.includes("esc(again)"));
+  check("git step texts have no em or en dash", gitKeys.every(k => !/[\u2013\u2014]/.test(vi[k] + en[k])));
 }
 
 const keys = Array.from(new Set((js.match(/tw\("(gh\.[a-z_]+)"/g) || []).map(m => m.slice(4, -1))));

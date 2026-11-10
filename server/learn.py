@@ -1129,7 +1129,10 @@ class LearnFeature:
         mcpf = _empty_mcp_file()
         if not mcpf:
             return ""   # không tạo được file MCP rỗng → từ chối spawn (không để nuốt MCP máy)
-        gcli = claude_engine(system_prompt=self.deps.build_system_prompt(brain),
+        # 2026-11-09: built on a worker thread. It reads every skill, agent and plugin of the brain; on the event loop it
+        # froze the whole server for 2 to 5 s on the owner's VPS (GET /health/loop).
+        sysprompt = await asyncio.to_thread(self.deps.build_system_prompt, brain)
+        gcli = claude_engine(system_prompt=sysprompt,
                          cwd=self.deps.brain_root(brain), tag=tag,
                          allowed_tools=self.deps.readonly_tools)
         gcli.model = self._model(cfg)
@@ -2215,7 +2218,7 @@ class LearnFeature:
             return {"ok": True, "cancelled": cancel_all("learn") + cancel_all("curator")}
 
         @router.get("/learn/review")
-        async def learn_review(brain: str = Query("brain"), limit: int = Query(20)):
+        def learn_review(brain: str = Query("brain"), limit: int = Query(20)):
             """Danh sách commit học gần nhất (cho panel 'Javis đã tự học gì') + trạng thái git."""
             root = self.deps.brain_root(brain)
             return {"git_repo": git_brain.is_git_checkout(root),
@@ -2227,7 +2230,7 @@ class LearnFeature:
             return git_brain.revert_last_learn(self.deps.brain_root(brain))
 
         @router.get("/learn/log")
-        async def learn_log(brain: str = Query("brain"), limit: int = Query(15)):
+        def learn_log(brain: str = Query("brain"), limit: int = Query(15)):
             """Nhật ký học, mới nhất trước.
 
             Đọc tới khi ĐỦ `limit` mục chứ không cắt cứng ở 3 file như trước. Nhật ký ghi mỗi
@@ -2260,7 +2263,7 @@ class LearnFeature:
             return {"entries": entries[:want], "running": self.lock.locked()}
 
         @router.get("/learn/metrics")
-        async def learn_metrics(brain: str = Query("brain")):
+        def learn_metrics(brain: str = Query("brain")):
             cfg = self.read_config()
             root = self.deps.brain_root(brain)
             try:

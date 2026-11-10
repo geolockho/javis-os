@@ -68,6 +68,7 @@ from fastapi import APIRouter, Form, Query
 
 from claude_cli import claude_engine, cancel_all, _empty_mcp_file
 import aux_engine   # engine viec nen theo model phu nguoi dung chon
+import memory_control   # #1165: background writers are not stamped with a chat source
 import channel_context   # bóc khối JAVIS_* trước khi báo Telegram - kênh chữ, không phải web
 
 LEGACY_SLUG = "vong-lap-goc"
@@ -931,7 +932,9 @@ class LoopFeature:
             if not loop:
                 return {"ok": False, "error": localefmt.chu(f"Không tìm thấy loop '{slug}'", f"Loop '{slug}' not found")}
             try:
-                self._running = (str(Path(self.deps.brain_root(brain)).resolve()), slug)
+                # #1165: memories this loop writes are not stamped with a chat open at the same time.
+                with memory_control.background_writer(self.deps.brain_root(brain), loop.get("mode") or "full"):
+                    self._running = (str(Path(self.deps.brain_root(brain)).resolve()), slug)
                 return await self._run_cycle_inner(brain, slug, loop, reason)
             except Exception as e:
                 try:
@@ -1096,12 +1099,15 @@ class LoopFeature:
         if loop.get("agent") and self.deps.build_agent_prompt:
             # made in a partner chat -> this round runs as that assistant. Assistant gone -> plain Javis.
             try:
-                sysprompt, as_agent = self.deps.build_agent_prompt(brain, loop["agent"]), loop["agent"]
+                sysprompt = await asyncio.to_thread(self.deps.build_agent_prompt, brain, loop["agent"])
+                as_agent = loop["agent"]
             except Exception as _e:
                 print(f"[loops] {slug}: assistant '{loop['agent']}' unavailable, running as Javis: "
                       f"{type(_e).__name__}: {_e}", file=sys.stderr)
         if sysprompt is None:
-            sysprompt = self.deps.build_system_prompt(brain)
+            # 2026-11-09: built on a worker thread. It reads every skill, agent and plugin of the brain; on the event loop it
+            # froze the whole server for 2 to 5 s on the owner's VPS (GET /health/loop).
+            sysprompt = await asyncio.to_thread(self.deps.build_system_prompt, brain)
         gcli = self._make_cli(loop, cwd, sysprompt, brain=brain)
         if gcli is None:
             return _finish("Lỗi: không tạo được file MCP rỗng để cô lập (profile code từ chối chạy)", "", True)
@@ -1232,7 +1238,7 @@ class LoopFeature:
         # ---------- API mới /loops/* ----------
 
         @router.get("/loops")
-        async def loops_list(brain: str = Query("brain")):
+        def loops_list(brain: str = Query("brain")):
             self.ensure_migrated()
             st_all = self.read_state(brain)
             loops = [self.loop_view(brain, lp, st_all) for lp in self.list_loops(brain)]
