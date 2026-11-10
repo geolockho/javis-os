@@ -58,3 +58,4 @@ Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
 - [[Ephemeral storage của container Kubernetes]] - Nếu container không khai báo request hoặc limit cho `ephemeral-storage`, request
 - [[ephemeral-storage trong Kubernetes]] - Kubernetes không tự đặt một dung lượng cố định cho `ephemeral-storage` khi không
 - [[Chọn SonarQube Community Build hay Developer Edition]] - `Application version` là phiên bản ứng dụng trong metadata của chart, còn Commun
+- [[Ước lượng resource request theo pod nặng nhất và pod cũ nhất]] - Khi ước lượng request cho service có mức tiêu thụ lệch giữa các pod, cần xét pod
