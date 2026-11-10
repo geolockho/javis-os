@@ -52,3 +52,4 @@ Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `req
 - [[Đổi tên Facebook Page]] - ## Các bước đổi tên
 
 Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
+- [[Solution .NET (.sln)]] - File `.sln` là solution, dùng để nhóm và quản lý các project liên quan trong một

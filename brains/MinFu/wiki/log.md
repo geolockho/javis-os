@@ -147,3 +147,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Đổi tên Facebook Page]]
+
+## [2026-11-10] ingest | tự học từ chat
+
+Đã tạo:
+- [[Solution .NET (.sln)]]

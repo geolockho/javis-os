@@ -146,3 +146,4 @@
 - [Mục tiêu tự động điều chỉnh request/limit cho fsel-prod](facts/muc-tieu-tu-dong-dieu-chinh-request-limit-fsel-prod.md) - Người dùng muốn tăng ổn định fsel-prod bằng cách tự động hóa việc giám sát và điều chỉnh request/limit.
 - [Duyệt thay đổi request/limit qua Slack, thực hiện lúc 00:00](facts/duyet-thay-doi-request-limit-qua-slack-luc-0h.md) - Khi triển khai tự động điều chỉnh request/limit cho fsel-prod.
 - [Snapshot RAM pod trên node fsel-prod ngày 2026-11-10](facts/snapshot-ram-pod-node-fsel-prod-2026-11-10.md) - Số liệu pod và RAM của node fke-fsel-djtaj383-appnodes-stag-z1-84477-fdzk9 lúc 11:15 ngày 2026-11-10.
+- [Muốn giải thích kỹ thuật dễ hiểu](facts/giai-thich-ky-thuat-de-hieu.md) - Khi hỏi về phát triển phần mềm, người dùng muốn được giải thích dễ hiểu, không giả định họ là dev.
