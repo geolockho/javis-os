@@ -144,3 +144,4 @@
 - [Nhà Nhỏ Sống Gọn: giọng văn tự nhiên, viết ngắn, ảnh thật](facts/nnsg-giong-van-va-anh-that.md) - 2026-11-05 chê giọng AI; chốt viết ngắn 1-3 câu kiểu Game Thủ Việt, link dưới comment, ảnh sản phẩm từ trang sản phẩm.
 - [Tạm dừng dự án kiếm tiền đến khi người dùng mở lại](facts/tam-dung-du-an-kiem-tien.md) - Bốn lịch tự chạy được dời đến 2027-11-01; bot Fanpage có thể vẫn hoạt động và cần tắt riêng.
 - [Mục tiêu tự động điều chỉnh request/limit cho fsel-prod](facts/muc-tieu-tu-dong-dieu-chinh-request-limit-fsel-prod.md) - Người dùng muốn tăng ổn định fsel-prod bằng cách tự động hóa việc giám sát và điều chỉnh request/limit.
+- [Duyệt thay đổi request/limit qua Slack, thực hiện lúc 00:00](facts/duyet-thay-doi-request-limit-qua-slack-luc-0h.md) - Khi triển khai tự động điều chỉnh request/limit cho fsel-prod.
