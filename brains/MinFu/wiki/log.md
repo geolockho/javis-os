@@ -157,3 +157,13 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Stage .pre trong GitLab CI/CD]]
+
+## [2026-11-10] ingest | tự học từ chat
+
+Đã tạo:
+- [[Lưu trữ bền vững của SonarQube trên Kubernetes]]
+
+## [2026-11-10] ingest | tự học từ chat
+
+Đã tạo:
+- [[Ephemeral storage của container Kubernetes]]

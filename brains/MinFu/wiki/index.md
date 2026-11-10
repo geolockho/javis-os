@@ -54,3 +54,5 @@ Vertical Pod Autoscaler (VPA) tự đề xuất hoặc tự điều chỉnh `req
 Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
 - [[Solution .NET (.sln)]] - File `.sln` là solution, dùng để nhóm và quản lý các project liên quan trong một
 - [[Stage .pre trong GitLab CI/CD]] - GitLab có stage đặc biệt `.pre`; job dùng stage này chạy trước các stage thông t
+- [[Lưu trữ bền vững của SonarQube trên Kubernetes]] - PostgreSQL lưu dữ liệu SonarQube như project, cấu hình và lịch sử phân tích; PVC
+- [[Ephemeral storage của container Kubernetes]] - Nếu container không khai báo request hoặc limit cho `ephemeral-storage`, request
