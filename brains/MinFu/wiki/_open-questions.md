@@ -35,3 +35,5 @@ Questions the wiki cannot fully answer yet. One per line:
 - [ ] (2026-10-26) [[Cấp kubeconfig theo namespace có duyệt admin]]: đề xuất bổ sung từ chat 2026-10-26 (dedup) - status: open
 
 - [ ] (2026-11-01) [[Điều khiển và hỗ trợ lái trên VinFast VF 6]]: đề xuất bổ sung từ chat 2026-11-01 (dedup) - status: open
+
+- [ ] (2026-11-11) [[Ước lượng resource request theo pod nặng nhất và pod cũ nhất]]: đề xuất bổ sung từ chat 2026-11-11 (dedup) - status: open
