@@ -56,3 +56,5 @@ Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
 - [[Stage .pre trong GitLab CI/CD]] - GitLab có stage đặc biệt `.pre`; job dùng stage này chạy trước các stage thông t
 - [[Lưu trữ bền vững của SonarQube trên Kubernetes]] - PostgreSQL lưu dữ liệu SonarQube như project, cấu hình và lịch sử phân tích; PVC
 - [[Ephemeral storage của container Kubernetes]] - Nếu container không khai báo request hoặc limit cho `ephemeral-storage`, request
+- [[ephemeral-storage trong Kubernetes]] - Kubernetes không tự đặt một dung lượng cố định cho `ephemeral-storage` khi không
+- [[Chọn SonarQube Community Build hay Developer Edition]] - `Application version` là phiên bản ứng dụng trong metadata của chart, còn Commun
