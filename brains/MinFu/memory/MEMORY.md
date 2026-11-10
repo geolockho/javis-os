@@ -137,9 +137,10 @@
 - [Kết quả xét nghiệm hỗ trợ sinh sản được trao đổi ngày 2026-11-01](facts/ket-qua-xet-nghiem-sinh-san-2026-11-01.md) - Bản đọc trong chat ghi tinh dịch đồ, nhóm AB+ và AMH 3,37; chủ thể phiếu máu và đơn vị AMH chưa xác nhận.
 - [Lịch báo cáo tài nguyên fsel-prod từ 8h đến 18h và tổng kết cuối ngày](facts/yeu-cau-thong-ke-tai-nguyen-fsel-prod-2026-11-02.md) - Báo cáo tài nguyên fsel-prod chạy mỗi 2 giờ trong khung 8h-18h, kèm một bản tổng kết cuối ngày như cũ.
 - [Chốt giờ chạy hai việc Jira lúc 05:30](facts/lich-jira-hang-ngay-5h30-hai-tai-khoan.md) - Hai việc định kỳ Jira chuyển từ 18:00 sang 05:30 theo yêu cầu của người dùng.
-- [Chốt giờ chạy hai việc Jira lúc 17:30](facts/lich-jira-hang-ngay-17h30-hai-tai-khoan.md) - Lịch định kỳ Jira chạy 17:30 ngày làm việc; người dùng giữ cấu hình mẫu issue sau khi đối chiếu FD-1/FD-2, label DevOps và due date theo ngày tạo vẫn là yêu cầu.
+- [Chốt giờ chạy hai việc Jira lúc 17:30](facts/lich-jira-hang-ngay-17h30-hai-tai-khoan.md) - Lịch Jira chạy 17:30 ngày làm việc; ngày 09/11 kết nối lỗi, sau đó theo yêu cầu đã chạy bù FD-15/FD-16 với worklog 6h, nhưng chưa truy vấn xác nhận độc lập.
 - [Muốn dùng Javis tìm cách kiếm thêm thu nhập](facts/muc-tieu-tim-cach-kiem-them-thu-nhap-bang-javis.md) - Vốn 2 triệu, mục tiêu 5 triệu/tháng, tối đa 90 ngày; đến 2026-11-05 Fanpage đã kết nối, đăng 2 bài/ngày; Shopee Affiliate đang chờ duyệt.
 - [Kế hoạch thử affiliate qua Fanpage](facts/ke-hoach-thu-nghiep-affiliate-fanpage.md) - Thử affiliate qua Fanpage với ngân sách tối đa 2 triệu đồng và mục tiêu có click trong 14 ngày.
 - [Shopee Affiliate: đã đăng ký, việc comment link đang hoãn](facts/shopee-affiliate-dang-ky-cho-duyet.md) - Chờ duyệt tính đến 2026-11-05; việc comment 5 link/bài hoãn tới khi người dùng gửi App ID Open API.
 - [Nhà Nhỏ Sống Gọn: giọng văn tự nhiên, viết ngắn, ảnh thật](facts/nnsg-giong-van-va-anh-that.md) - 2026-11-05 chê giọng AI; chốt viết ngắn 1-3 câu kiểu Game Thủ Việt, link dưới comment, ảnh sản phẩm từ trang sản phẩm.
-- [Tạm dừng dự án kiếm tiền đến khi người dùng mở lại](facts/tam-dung-du-an-kiem-tien.md) - Dự án kiếm tiền đang tạm dừng theo yêu cầu của người dùng.
+- [Tạm dừng dự án kiếm tiền đến khi người dùng mở lại](facts/tam-dung-du-an-kiem-tien.md) - Bốn lịch tự chạy được dời đến 2027-11-01; bot Fanpage có thể vẫn hoạt động và cần tắt riêng.
+- [Mục tiêu tự động điều chỉnh request/limit cho fsel-prod](facts/muc-tieu-tu-dong-dieu-chinh-request-limit-fsel-prod.md) - Người dùng muốn tăng ổn định fsel-prod bằng cách tự động hóa việc giám sát và điều chỉnh request/limit.
