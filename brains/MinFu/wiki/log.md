@@ -182,3 +182,8 @@ Chưng cất trao đổi về cache của Docker builder trên host và Buildah 
 
 Đã tạo:
 - [[Ước lượng resource request theo pod nặng nhất và pod cũ nhất]]
+
+## [2026-11-11] ingest | tự học từ chat
+
+Đã tạo:
+- [[Điều phối job và lỗi giữa các GitLab CI stages]]

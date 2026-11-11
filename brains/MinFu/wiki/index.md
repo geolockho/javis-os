@@ -59,3 +59,6 @@ Trên máy tính, chuyển sang dùng Facebook với tư cách Trang,
 - [[ephemeral-storage trong Kubernetes]] - Kubernetes không tự đặt một dung lượng cố định cho `ephemeral-storage` khi không
 - [[Chọn SonarQube Community Build hay Developer Edition]] - `Application version` là phiên bản ứng dụng trong metadata của chart, còn Commun
 - [[Ước lượng resource request theo pod nặng nhất và pod cũ nhất]] - Khi ước lượng request cho service có mức tiêu thụ lệch giữa các pod, cần xét pod
+- [[Điều phối job và lỗi giữa các GitLab CI stages]] - ## Job trong cùng stage
+
+Các job trong cùng stage có thể chạy đồng thời, nhưng s
