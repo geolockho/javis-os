@@ -148,4 +148,5 @@
 - [Snapshot RAM pod trên node fsel-prod ngày 2026-11-10](facts/snapshot-ram-pod-node-fsel-prod-2026-11-10.md) - Số liệu pod và RAM của node fke-fsel-djtaj383-appnodes-stag-z1-84477-fdzk9 lúc 11:15 ngày 2026-11-10.
 - [Muốn giải thích kỹ thuật dễ hiểu](facts/giai-thich-ky-thuat-de-hieu.md) - Khi hỏi về phát triển phần mềm, người dùng muốn được giải thích dễ hiểu, không giả định họ là dev.
 - [Repo fsel_src đã có stage test trong GitLab CI](facts/fsel-src-da-them-stage-test.md) - Dùng khi xem xét thứ tự kiểm thử và tích hợp SonarQube vào pipeline.
-- [Ưu tiên pod nặng nhất và pod cũ nhất khi đề xuất resource request](facts/tinh-resource-request-theo-pod-nang-nhat-va-pod-cu-nhat.md) - Người dùng muốn tính request có xét pod dùng nhiều nhất hoặc pod cũ nhất, cùng mức sàn tối thiểu theo service.
+- [Ưu tiên pod nặng nhất và pod cũ nhất khi đề xuất resource request](facts/tinh-resource-request-theo-pod-nang-nhat-va-pod-cu-nhat.md) - Tính p95 theo pod nặng nhất/cũ nhất, kiểm tra đỉnh theo phút với HPA và tôn trọng sàn service do người dùng xác nhận; ffmpeg có sàn CPU 500m.
+- [Các project trong D:\FSEL\Web dùng TypeScript](facts/fsel-web-projects-ngon-ngu-typescript.md) - Bản kiểm tra local ghi nhận TypeScript là ngôn ngữ chính của 10 project trong D:\FSEL\Web.
