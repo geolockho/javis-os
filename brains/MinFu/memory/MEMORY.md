@@ -150,3 +150,4 @@
 - [Repo fsel_src đã có stage test trong GitLab CI](facts/fsel-src-da-them-stage-test.md) - Dùng khi xem xét thứ tự kiểm thử và tích hợp SonarQube vào pipeline.
 - [Ưu tiên pod nặng nhất và pod cũ nhất khi đề xuất resource request](facts/tinh-resource-request-theo-pod-nang-nhat-va-pod-cu-nhat.md) - Tính p95 theo pod nặng nhất/cũ nhất, kiểm tra đỉnh theo phút với HPA và tôn trọng sàn service do người dùng xác nhận; ffmpeg có sàn CPU 500m.
 - [Các project trong D:\FSEL\Web dùng TypeScript](facts/fsel-web-projects-ngon-ngu-typescript.md) - Bản kiểm tra local ghi nhận TypeScript là ngôn ngữ chính của 10 project trong D:\FSEL\Web.
+- [Ưu tiên tách job GitLab CI thành file riêng](facts/uu-tien-job-gitlab-ci-tach-file.md) - Các job dùng chung nên nằm trong file template riêng để từng GitLab CI khai báo sử dụng khi cần.
