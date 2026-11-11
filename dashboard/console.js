@@ -3413,6 +3413,7 @@
     const accts = m.accounts || {};
     ACCT_NAMES = {};
     ACCT_ITEMS = {};
+    ACCT_KEYED = { "anthropic-cli": claudeP.auth_mode === "api_key" };
     PLAN_CLI.forEach(pid => {
       const l = accts[pid] || [];
       ACCT_ITEMS[pid] = l;
@@ -3634,7 +3635,7 @@
       };
       if (p.kind === "oauth") {
         const st = on
-          ? t("models.st_connected") + esc(acctNameTag(p.id)) + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
+          ? t("models.st_connected") + esc(acctLine(p.id, [p.plan])) + " · " + p.models.length + " model"
           : t("models.st_not_connected") + " · " + p.models.length + " model";
         return `${cardOpen(p, ord)}
           ${provHead(p, on, "Device code", st, false, ord)}
@@ -3657,8 +3658,7 @@
         // 0.30-0.32.1 từng thử (và tắc trên Windows vì không có pseudo-terminal).
         const dn = p.dang_nhap || {};
         const st = on
-          ? t("models.st_logged_in") + esc(acctNameTag(p.id)) + (p.account ? " · " + esc(p.account) : "")
-            + (p.plan ? " · " + esc(p.plan) : "") + " · " + p.models.length + " model"
+          ? t("models.st_logged_in") + esc(acctLine(p.id, [p.account, p.plan])) + " · " + p.models.length + " model"
           : (p.cli_found ? t("models.st_cli_no_login") : t("models.st_no_cli", { ten: "Grok Build CLI" }));
         return `${cardOpen(p, ord)}
           ${provHead(p, on, "MCP/skill", st, true, ord)}
@@ -3823,6 +3823,10 @@
 
     const swapRow = (i) => `<div class="ord-swap-row"><button type="button" class="ord-swap" data-swap="${i}" aria-label="${esc(t("models.ord_swap_aria", { a: connList[i - 1].label, b: connList[i].label }))}">${ORD_SWAP} ${esc(t("models.ord_swap"))}</button></div>`;
     const bgName = bgCfg.model || defName(bgCfg.provider);
+    // Automatic (10/11/2026): Javis picks two models of MAIN's provider, one for its own work, one for handed-over jobs.
+    const bgAuto = !!bgCfg.auto;
+    const bgAutoSub = bgAuto ? t("models.bg_auto_sub", { nha: bgP.label || bgCfg.provider,
+      nhe: bgCfg.light || defName(bgCfg.provider), giua: bgName }) : "";
     const useP = bgUse ? (pById(bgUse.provider) || {}) : {};
     const bgLine = !bgUse ? `<div class="aux-note warn">${WARN_ICON} ${esc(t("models.bg_none"))}</div>`
       : bgUse.step !== "background" ? `<div class="aux-note">${esc(t("models.bg_using", { bg: bgName,
@@ -3852,8 +3856,8 @@
           <div class="aux-now">
             <span class="prov-logo ic-tile aux-ic">${ic("cpu")}</span>
             <div class="aux-now-txt">
-              <div class="aux-now-model">${esc(bgName)}</div>
-              <div class="aux-now-prov">${esc(bgP.label || bgCfg.provider)}</div>
+              <div class="aux-now-model">${esc(bgAuto ? t("models.bg_auto") : bgName)}</div>
+              <div class="aux-now-prov">${esc(bgAuto ? bgAutoSub : (bgP.label || bgCfg.provider))}</div>
             </div>
             <div class="aux-now-act ord-chips" data-p="__bg">
               ${effChip("__bg", bgCfg.reasoning)}
@@ -4170,6 +4174,7 @@
   // card keeps it as account 1's label (plan_accounts), an API card as its first key's label. Filled on every draw.
   let ACCT_NAMES = {};      // plan card id -> account 1's label
   let ACCT_ITEMS = {};      // plan card id -> its account list, so saving a name keeps order and on/off
+  let ACCT_KEYED = {};      // plan card id -> true while it runs on an API key (no plan account is in use)
   const acctNameField = (pid) => `<input class="js-input prov-acname" data-acname="${esc(pid)}" maxlength="60" autocomplete="off"
     spellcheck="false" placeholder="${esc(t("models.acname_ph"))}" value="${esc(ACCT_NAMES[pid] || "")}">`;
   // The typed name, "" when the card has no name box, or null after pointing at the empty box: the sign-in waits.
@@ -4195,6 +4200,22 @@
   }
   // " · name" for a plan card's status line, "" when account 1 has none yet.
   const acctNameTag = (pid) => ACCT_NAMES[pid] ? " · " + ACCT_NAMES[pid] : "";
+  // The EXTRA account a plan card runs on now (the first one switched on, signed in and not resting), or null while
+  // account 1 runs. The status line then names that account, its e-mail and its plan: it used to keep showing account
+  // 1's, so a card running on a Max account still read "Pro" (owner's video, 10/11/2026).
+  const acctInUse = (pid) => {
+    const nowS = Date.now() / 1000;
+    const l = ACCT_KEYED[pid] ? [] : (ACCT_ITEMS[pid] || []);
+    const cur = l.length > 1 ? l.find(a => a.enabled && a.signed_in && !(a.resting_until > nowS)) : null;
+    return cur && !(cur.main || cur.id === "main") ? cur : null;
+  };
+  // " · name · e-mail · plan" of the account in use. `own` is what the card's own login (account 1) reports.
+  const acctLine = (pid, own) => {
+    const cur = acctInUse(pid);
+    if (!cur) return acctNameTag(pid) + (own || []).filter(Boolean).map(x => " · " + x).join("");
+    const no = (ACCT_ITEMS[pid] || []).indexOf(cur) + 1;
+    return [cur.label || t("models.pacct_n", { n: no }), cur.email, cur.plan].filter(Boolean).map(x => " · " + x).join("");
+  };
   // A subscription CLI with nothing set picks its own model by plan, which Javis cannot read: say so instead of "default".
   const PLAN_CLI = ["anthropic-cli", "openai-oauth", "grok-cli", "antigravity-cli"];
   const defName = (pid) => MODEL_DEFAULTS[pid] ? t("models.mp_default_is", { m: MODEL_DEFAULTS[pid] })
@@ -4253,12 +4274,16 @@
       return { pop: pop, body: pop.querySelector(".ord-sheet-body"), sheet: true, back: back };
     };
     el._ordClose = closePop;
-    if (!el._ordDocBound) {
-      el._ordDocBound = true;
+    // One pair of document listeners for every visit of the page (2026-11-10): `el` is a new element each time, and
+    // a pair bound per element stayed on the document with its old page for good. They act on the page drawn last.
+    MO._closeOwner = el;
+    if (!MO._closeBound) {
+      MO._closeBound = true;
       document.addEventListener("pointerdown", (e) => {
-        if (el._ordClose && !(e.target.closest && e.target.closest(".ord-chips, .ord-pop"))) el._ordClose();
+        const o = MO._closeOwner;
+        if (o && o._ordClose && !(e.target.closest && e.target.closest(".ord-chips, .ord-pop"))) o._ordClose();
       }, true);
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && el._ordClose) el._ordClose(); });
+      document.addEventListener("keydown", (e) => { const o = MO._closeOwner; if (e.key === "Escape" && o && o._ordClose) o._ordClose(); });
     }
     const opened = (btn, sh, slider, onClose) => {
       openPop = { el: sh.pop, btn: btn || null, slider: slider || null, back: sh.back || null, onClose: onClose || null };
@@ -4770,11 +4795,15 @@
       const st = { expanded: c.bgCfg.provider, filter: "" };
       const draw = async () => {
         const o = { providers: c.connList, connectedOnly: true, expanded: st.expanded, filter: st.filter, noWait: true,
-                    selected: { provider: c.bgCfg.provider, model: c.bgCfg.model }, searchId: "ordBgSearch" };
+                    selected: c.bgCfg.auto ? { provider: "", model: "" } : { provider: c.bgCfg.provider, model: c.bgCfg.model },
+                    searchId: "ordBgSearch" };
         const html = await window.JavisModelList.render(o);
         if (!openPop || openPop.el !== pop) return;
         const typing = document.activeElement && document.activeElement.id === "ordBgSearch";
-        sh.body.innerHTML = html;
+        // First row: back to Automatic. Picking any model below is a choice by hand, which Javis then never replaces.
+        const autoRow = `<div class="mb-item ${c.bgCfg.auto ? "cur" : ""}" data-bgauto="1" role="option"><span class="tick">`
+          + `${c.bgCfg.auto ? ic("check", { cls: "ic-ok" }) : ""}</span><span>${esc(t("models.bg_auto_pick"))}</span></div>`;
+        sh.body.innerHTML = autoRow + html;
         const inp = sh.body.querySelector("#ordBgSearch");
         if (inp) {
           inp.oninput = () => { st.filter = inp.value; draw(); };
@@ -4783,6 +4812,7 @@
         if (o.cho.length) Promise.all(o.cho).then(() => { if (openPop && openPop.el === pop) draw(); });
       };
       sh.body.onclick = (e) => {
+        if (e.target.closest("[data-bgauto]")) { closePop(); save({ auxiliary: { auto: true } }); return; }
         const it = e.target.closest(".mb-item[data-model]");
         if (it) { closePop(); save({ auxiliary: { provider: it.dataset.prov, model: it.dataset.model } }); return; }
         const h = e.target.closest(".mb-prov[data-prov]");
@@ -4922,7 +4952,7 @@
     }
     if (d.connected) {
       st.className = "prov-status on";
-      st.textContent = t("models.st_connected") + acctNameTag("anthropic-cli") + (d.email ? " · " + d.email : "") + (d.plan ? " · " + d.plan : "")
+      st.textContent = t("models.st_connected") + acctLine("anthropic-cli", [d.email, d.plan])
         + (d.stale ? " · " + t("models.st_stale") : "");
       // A card in the usage order has Disconnect in its own button row (and its ⋯ sheet), so none here.
       if (act.closest && act.closest(".ord-card")) { act.innerHTML = ""; return; }
@@ -4971,7 +5001,13 @@
     const parts = [];
     if (cn.sau) parts.push(t("models.cc_upd_ver", { v: cn.sau }));
     if (cn.ts) parts.push(t("models.cc_upd_last", { luc: new Date(cn.ts * 1000).toLocaleString(LOC(), { dateStyle: "short", timeStyle: "short" }) }));
-    box.innerHTML = `${parts.length ? `<div>${esc(parts.join(" · "))}</div>` : ""}
+    // The Claude Agent SDK package follows the same switch (server/sdk_update.py). The running server keeps the
+    // version it started with, so a newer one on disk is announced as waiting for a restart.
+    const sdk = d.sdk || {};
+    const sdkRun = sdk.loaded || sdk.installed;
+    if (sdkRun) parts.push(t("models.cc_sdk_ver", { v: sdkRun }));
+    const sdkWait = sdk.restart_needed && sdk.installed ? `<div>${esc(t("models.cc_sdk_restart", { v: sdk.installed }))}</div>` : "";
+    box.innerHTML = `${parts.length ? `<div>${esc(parts.join(" · "))}</div>` : ""}${sdkWait}
       <div class="cc-auto-row" style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:16px">
         <label for="cliAutoUpd" style="flex:1;cursor:pointer">${esc(t("models.cc_auto_label"))}${infoBtn()}</label>
         <label class="toggle"><input type="checkbox" id="cliAutoUpd"${autoOn ? " checked" : ""}${envOff ? " disabled" : ""}><span></span></label>
@@ -5003,11 +5039,15 @@
       try { r = await (await fetch("/claude/update", { method: "POST" })).json(); }
       catch (e) { btn.disabled = false; msg.textContent = t("common.net_err"); return; }
       btn.disabled = false;
-      if (!r.ok) { msg.innerHTML = Icons.warn(t("models.cc_upd_fail") + " " + (r.error || "")); return; }
-      if (!r.doi) { msg.textContent = t("models.cc_upd_same", { v: r.sau || "" }); return; }
+      // The same press also looked for a newer Agent SDK: say so after the Claude Code result, whatever that was.
+      const sk = r.sdk || {};
+      const sdkNote = sk.changed ? " " + t("models.cc_sdk_done", { truoc: sk.from || "?", sau: sk.to || "" })
+        : (sk.ok === false && !sk.docker && sk.error ? " " + t("models.cc_sdk_fail") + " " + sk.error : "");
+      if (!r.ok) { msg.innerHTML = Icons.warn(t("models.cc_upd_fail") + " " + (r.error || "") + sdkNote); return; }
+      if (!r.doi) { msg.textContent = t("models.cc_upd_same", { v: r.sau || "" }) + sdkNote; return; }
       const moi = (r.model_moi || []).join(", ");
       msg.innerHTML = CHECK_ICON + " " + esc(t("models.cc_upd_done", { truoc: r.truoc || "?", sau: r.sau })
-        + (moi ? " " + t("models.cc_upd_new", { ds: moi }) : ""));
+        + (moi ? " " + t("models.cc_upd_new", { ds: moi }) : "") + sdkNote);
     };
   }
 
@@ -5893,7 +5933,7 @@
   function openAccountMenu(el, c, con) {
     const m = connModal(mHead(esc(c.label || window.t("cs.cn_account_fallback")))
       + '<div class="conn-menu">'
-      + ((c.connector_id || "custom") === "custom" && c.auth !== "oauth"
+      + ((c.connector_id || "custom") === "custom"
           ? '<button class="conn-menu-btn" data-m="edit">' + ic("settings") + ' ' + esc(window.t("cs.mf_menu_edit")) + '</button>' : "")
       + '<button class="conn-menu-btn" data-m="test">' + ic("rotate-cw") + ' ' + esc(window.t("cs.cn_menu_test")) + '</button>'
       + '<button class="conn-menu-btn" data-m="rekey">' + ic("repeat") + ' ' + esc(window.t("cs.cn_menu_rekey")) + '</button>'
@@ -6456,6 +6496,7 @@
   function openMcpForm(el, server) {
     const P = window.JavisMcpParse;
     let editId = server ? server.id : "";
+    let savedEndpointUrl = server ? (server.url || "") : "";
     // Kết nối đã chuyển sang OAuth thì Lưu phải GIỮ chế độ đó: gửi auth=header là token thôi
     // được gắn, máy chủ trả 401 và người dùng bị đẩy đi đăng nhập lại vô cớ.
     let dangOauth = !!(server && server.auth === "oauth");
@@ -6616,6 +6657,9 @@
       err.textContent = ""; $("#mfKq").innerHTML = "";
       const name = $("#mfTen").value.trim();
       if (!name) { err.textContent = window.t("cs.cn_mcp_need_name"); $("#mfTen").focus(); return; }
+      if (dangOauth && kieu !== "url") {
+        err.textContent = window.t("cs.mf_oauth_origin_locked"); return;
+      }
       const body = { name: name, transport: kieu === "url" ? $("#mfGiao").value : "stdio" };
       const dong = docDong().filter(x => x.k);
       const bang = {};
@@ -6626,6 +6670,20 @@
       if (kieu === "url") {
         body.url = $("#mfUrl").value.trim();
         if (!/^https?:\/\//i.test(body.url)) { err.textContent = window.t("cs.mf_need_url"); $("#mfUrl").focus(); return; }
+        // Existing OAuth credentials must stay on their original server origin.
+        if (dangOauth) {
+          let sameOrigin = false;
+          try {
+            const currentEndpoint = new URL(savedEndpointUrl);
+            const updatedEndpoint = new URL(body.url);
+            sameOrigin = currentEndpoint.origin === updatedEndpoint.origin
+              && !updatedEndpoint.username && !updatedEndpoint.password;
+          } catch (_) { /* Invalid endpoints are rejected before any update. */ }
+          if (!sameOrigin) {
+            err.textContent = window.t("cs.mf_oauth_origin_locked");
+            $("#mfUrl").focus(); return;
+          }
+        }
         body.auth = dangOauth ? "oauth" : "header"; body.headers = bang;
         if (editId) body.env = {};
       } else {
@@ -6651,6 +6709,7 @@
         luu.disabled = false; luu.textContent = window.t("cs.mf_save_test");
         err.textContent = (r && r.error) || window.t("app.err_cap"); return;
       }
+      savedEndpointUrl = body.url || "";
       luu.textContent = window.t("cs.cn_testing");
       let t;
       try { t = await postJson("/connect/test", { id: editId }); } catch (e) { t = { ok: false, error: String(e) }; }
